@@ -1,0 +1,26 @@
+<RCC>
+    <qresource prefix="icons">
+        <file>icons/checkmark.svg</file>
+        <file>icons/delete_dark.svg</file>
+        <file>icons/done_dark.svg</file>
+        <file>icons/down.svg</file>
+        <file>icons/up.svg</file>
+        <file>icons/add_road.svg</file>
+        <file>icons/add.svg</file>
+        <file>icons/arrow_downward.svg</file>
+        <file>icons/cancel.svg</file>
+        <file>icons/close.svg</file>
+        <file>icons/delete.svg</file>
+        <file>icons/car.svg</file>
+        <file>icons/done.svg</file>
+        <file>icons/file_open.svg</file>
+        <file>icons/function.svg</file>
+        <file>icons/menu.svg</file>
+        <file>icons/edit.svg</file>
+        <file>icons/remove.svg</file>
+        <file>icons/save_as.svg</file>
+        <file>icons/save.svg</file>
+        <file>icons/settings.svg</file>
+        <file>icons/side_navigation.svg</file>
+    </qresource>
+</RCC>

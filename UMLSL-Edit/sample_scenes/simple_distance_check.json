@@ -1,0 +1,84 @@
+{
+  "meta": {
+    "version": 2
+  },
+  "roads": [
+    {
+      "uid": "d050b211-5103-4a05-9e6c-d3f73755fd4c",
+      "name": "R1",
+      "orientation": "HORIZONTAL",
+      "position": 0.0,
+      "number_of_forward_lanes": 1,
+      "number_of_backward_lanes": 1
+    },
+    {
+      "uid": "319447d0-a095-44f2-91ca-10069fe0b9da",
+      "name": "R2",
+      "orientation": "VERTICAL",
+      "position": 8.0,
+      "number_of_forward_lanes": 1,
+      "number_of_backward_lanes": 1
+    }
+  ],
+  "cars": [
+    {
+      "uid": "2caf86fd-f810-4971-8bfd-253e721a1757",
+      "name": "C1",
+      "road_uid": "d050b211-5103-4a05-9e6c-d3f73755fd4c",
+      "lane_index": -1,
+      "position_on_lane": 16.576307054499583,
+      "transition": 0.0,
+      "speed": 10.0,
+      "length": 1,
+      "color": "lightblue",
+      "acceleration": 1.0,
+      "next_turn": {
+        "direction": "LEFT",
+        "target_lane": {
+          "road_uid": "319447d0-a095-44f2-91ca-10069fe0b9da",
+          "lane_index": -1
+        }
+      }
+    },
+    {
+      "uid": "ef1d921e-59ee-469d-9a5f-8f718581e68c",
+      "name": "C2",
+      "road_uid": "d050b211-5103-4a05-9e6c-d3f73755fd4c",
+      "lane_index": 0,
+      "position_on_lane": -5.475,
+      "transition": 0.0,
+      "speed": 10.0,
+      "length": 1,
+      "color": "red",
+      "acceleration": 1.0,
+      "next_turn": null
+    },
+    {
+      "uid": "b682da06-ef4f-4018-958f-6c687059f1ea",
+      "name": "C3",
+      "road_uid": "d050b211-5103-4a05-9e6c-d3f73755fd4c",
+      "lane_index": 0,
+      "position_on_lane": 4.175000000000001,
+      "transition": 0.0,
+      "speed": 10.0,
+      "length": 1,
+      "color": "green",
+      "acceleration": 1.0,
+      "next_turn": null
+    }
+  ],
+  "queries": [
+    {
+      "uid": "3f2b5cc0-dcc5-4e73-b96d-1c4e90f695a8",
+      "latex": "<hchop{re{C1}}{free and l < 1}{cs}>",
+      "should_only_evaluate_on_cars_lane": true,
+      "assigned_car_uid": "2caf86fd-f810-4971-8bfd-253e721a1757"
+    },
+    {
+      "uid": "10dc9a8d-b087-426a-83dc-562316057090",
+      "latex": "<hchop{re{C2}}{free and l > 2}>",
+      "should_only_evaluate_on_cars_lane": true,
+      "assigned_car_uid": "ef1d921e-59ee-469d-9a5f-8f718581e68c"
+    }
+  ]
+}

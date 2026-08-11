@@ -1,0 +1,105 @@
+from umlsl_sim.constants import *
+from umlsl_sim.simulation.road_network.road_network import Direction, Road, LaneSegment, CrossingSegment, true_direction
+from typing import List, Tuple
+
+from umlsl_sim.gui.map_colors import *
+
+
+def get_xy_crossingseg(seg: CrossingSegment) -> Tuple[int, int]:
+    """
+    Gets the x and y coordinates of a crossing segment, using the connected segments to a lane segment.
+
+    Args:
+        seg (CrossingSegment): The crossing segment.
+
+    Returns:
+        Tuple[int, int]: The x and y coordinates of the crossing segment.
+    """
+    x = 0
+    y = 0
+    right = False
+    down = False
+    count_right = 0
+    count_down = 0
+    x_seg = seg
+    y_seg = seg
+
+    if seg.connected_segments[Direction.LEFT] is not None:
+        right = True
+        while not isinstance(x_seg, LaneSegment):
+            count_right += 1
+            x_seg = x_seg.connected_segments[Direction.LEFT]
+        x = x_seg.begin
+    elif seg.connected_segments[Direction.RIGHT] is not None:
+        while not isinstance(x_seg, LaneSegment):
+            count_right += 1
+            x_seg = x_seg.connected_segments[Direction.RIGHT]
+        x = x_seg.begin
+
+    if seg.connected_segments[Direction.DOWN] is not None:
+        down = True
+        while not isinstance(y_seg, LaneSegment):
+            count_down += 1
+            y_seg = y_seg.connected_segments[Direction.DOWN]
+        y = y_seg.begin
+    elif seg.connected_segments[Direction.UP] is not None:
+        while not isinstance(y_seg, LaneSegment):
+            count_down += 1
+            y_seg = y_seg.connected_segments[Direction.UP]
+        y = y_seg.begin
+
+    x = x + count_right * BLOCK_SIZE + (
+            count_right - 1) * LANE_DISPLACEMENT if right else x - count_right * BLOCK_SIZE - (
+            count_right - 1) * LANE_DISPLACEMENT
+    y = y + count_down * BLOCK_SIZE + (
+            count_down - 1) * LANE_DISPLACEMENT if down else y - count_down * BLOCK_SIZE - (
+            count_down - 1) * LANE_DISPLACEMENT
+
+    return x, y
+
+
+def find_greatest_gap(roads: List[Road]) -> Tuple[int, int, int, int]:
+    """
+    Finds the greatest gap between two roads. Iterate over all roads and find the greatest gap between two roads,
+    returning the x,y coordinates of the top left corner and the width and height of the gap.
+
+    Args:
+        roads (List[Road]): A list of roads, with top and bottom parameters.
+
+    Returns:
+        Tuple[int, int, int, int]: The x,y coordinates of the top left corner and the width and height of the gap.
+    """
+    # Find the greatest gap between two roads, differentiating between horizontal and vertical roads
+    if len(roads) == 0:
+        return 0, 0, 0, 0
+
+    # seperate horizontal and vertical roads
+
+    horizontal_roads = [road for road in roads if road.horizontal]
+    vertical_roads = [road for road in roads if not road.horizontal]
+
+    # sort roads by their top value
+
+    horizontal_roads.sort(key=lambda road: road.top)
+    vertical_roads.sort(key=lambda road: road.top)
+
+    # calculate the gap between each road (compare last.bottom with next.top)
+
+    horizontal_gaps = [horizontal_roads[i + 1].top - horizontal_roads[i].bottom for i in
+                       range(len(horizontal_roads) - 1)]
+    vertical_gaps = [vertical_roads[i + 1].top - vertical_roads[i].bottom for i in range(len(vertical_roads) - 1)]
+
+    # find the largest gap
+
+    max_horizontal_gap = max(horizontal_gaps) if len(horizontal_gaps) > 0 else 0
+    max_vertical_gap = max(vertical_gaps) if len(vertical_gaps) > 0 else 0
+
+    # find the top left corner of the gap
+
+    vertical_index = vertical_gaps.index(max_vertical_gap) if len(vertical_gaps) > 0 else 0
+    horizontal_index = horizontal_gaps.index(max_horizontal_gap) if len(horizontal_gaps) > 0 else 0
+
+    x = vertical_roads[vertical_index].bottom
+    y = horizontal_roads[horizontal_index].bottom
+
+    return x, y, max_vertical_gap, max_horizontal_gap

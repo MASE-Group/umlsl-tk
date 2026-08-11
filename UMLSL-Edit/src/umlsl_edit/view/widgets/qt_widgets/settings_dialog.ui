@@ -1,0 +1,577 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Settings_Dialog</class>
+ <widget class="QDialog" name="Settings_Dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>324</width>
+    <height>233</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>999999</width>
+    <height>9999</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Settings</string>
+  </property>
+  <property name="autoFillBackground">
+   <bool>false</bool>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QDialog {
+    background-color: #011C26;
+}
+
+QWidget {
+	font: 13pt &quot;Helvetica&quot;;
+    color: #F9F9F9;
+}
+
+QLabel[class=label] {
+	font: 10pt;
+    color: #F9F9F9;
+}
+
+QWidget[class=container] {
+    background: #042F40;
+	border-radius: 10px
+}
+
+QLabel[class=hint] {
+	color: #799582;
+}
+
+QLabel[class=title] {
+	font: 700 24pt;
+}
+
+QLineEdit{
+	background-color: #011C26;
+	border: none;
+	border-radius: 6px;
+
+}
+
+/* --- Main Box --- */
+QComboBox {
+    background-color: #011C26;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 10px;
+    color: #F9F9F9;
+    /* This helps selection color in some styles */
+    selection-background-color: #011C26;
+}
+
+/* --- The Dropdown Frame --- */
+/* We target QListView specifically to override Mac defaults */
+QComboBox QListView {
+    background-color: #011C26;
+    border: 1px solid #042F40; /* Your custom border */
+    outline: 0px; /* Removes the dotted/blue focus line */
+    padding: 0px;
+}
+
+
+
+/* --- The Arrow Button Area --- */
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 24px;
+    border-left: 1px solid #042F40; /* Optional: adds a separator */
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+QComboBox::down-arrow {
+    image: url(:/icons/icons/down.svg);
+    width: 10px;
+    height: 10px;
+}
+
+/* --- Main Spinbox Styling (Applies to both) --- */
+QSpinBox, QDoubleSpinBox {
+    background-color: #011C26;
+    border: none;
+    border-radius: 6px;
+    color: #F9F9F9;
+    padding: 5px 10px;
+    padding-right: 15px;
+}
+
+/* --- The Button Container Areas --- */
+QSpinBox::up-button, QDoubleSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 25px;
+
+    border-left: 1px solid #042F40;
+    border-top-right-radius: 6px;
+    border-bottom: 1px solid #042F40;
+
+    background-color: #011C26;
+}
+
+QSpinBox::down-button, QDoubleSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 25px;
+
+    border-left: 1px solid #042F40;
+    border-bottom-right-radius: 6px;
+
+    background-color: #011C26;
+}
+
+/* --- Hover Effects --- */
+QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover,
+QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover, QComboBox::drop-down:hover {
+    background-color: #042F40;
+}
+
+/* --- The Arrow Icons --- */
+/* (Assuming you are using the CSS Arrow hack from before.
+   If using images, replace these with your image: url(...) code) */
+
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
+    image: url(:/icons/icons/up.svg); /* You need to create this file */
+    width: 10px;
+    height: 10px;
+}
+
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
+    image: url(:/icons/icons/down.svg); /* You need to create this file */
+    width: 10px;
+    height: 10px;
+}
+
+QToolButton {
+    background-color: #032F40;
+    border-radius: 16px;
+    border: none;
+    text-align: center;
+}
+
+QToolButton:hover {
+    background-color: #314250;
+}
+
+QToolButton:pressed {
+    background-color: #032F40;
+}
+
+QPushButton {
+	color: #011C26;
+	border-radius: 16px
+}
+
+QPushButton#b_save {
+	background-color: #799582
+}
+
+QPushButton#b_delete {
+	background-color: #D97855
+}
+
+/* 1. Base setup for the checkbox text and spacing */
+QCheckBox {
+    spacing: 12px;
+    color: #ffffff; /* Text color */
+}
+
+/* 2. Define the size and shape of the box (The Indicator) */
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 6px;  /* This creates the &quot;squircle&quot; roundness */
+    border: 2px solid #9ab5a3; /* The Sage Green border */
+}
+
+/* 3. The Unchecked State (Empty with outline) */
+QCheckBox::indicator:unchecked {
+    background-color: transparent;
+}
+
+/* Optional: Slight hover effect for unchecked */
+QCheckBox::indicator:unchecked:hover {
+    background-color: rgba(154, 181, 163, 0.2);
+}
+
+/* 4. The Checked State (Filled Green) */
+QCheckBox::indicator:checked {
+    background-color: #9ab5a3;
+    border: 2px solid #9ab5a3;
+
+    /* CRITICAL: You must replace this path with your own icon!
+       Since we painted over the native box, we have to put the checkmark back manually. */
+    image: url(:/icons/icons/checkmark.svg);
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_3">
+   <property name="sizeConstraint">
+    <enum>QLayout::SizeConstraint::SetFixedSize</enum>
+   </property>
+   <item>
+    <widget class="QWidget" name="widget" native="true">
+     <layout class="QVBoxLayout" name="General">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <property name="sizeConstraint">
+       <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>8</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item alignment="Qt::AlignmentFlag::AlignLeft">
+       <widget class="QWidget" name="widget_3" native="true">
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <property name="leftMargin">
+          <number>8</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>4</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>Rendering</string>
+           </property>
+           <property name="margin">
+            <number>0</number>
+           </property>
+           <property name="class" stdset="0">
+            <string>label</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="widget" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>300</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>300</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="class" stdset="0">
+         <string>container</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout">
+         <property name="verticalSpacing">
+          <number>16</number>
+         </property>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_9">
+           <property name="minimumSize">
+            <size>
+             <width>75</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Show coordinate system</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1" colspan="2">
+          <widget class="QCheckBox" name="c_coordinate_system">
+           <property name="layoutDirection">
+            <enum>Qt::LayoutDirection::RightToLeft</enum>
+           </property>
+           <property name="text">
+            <string notr="true"/>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <property name="autoRepeat">
+            <bool>false</bool>
+           </property>
+           <property name="tristate">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_6">
+           <property name="minimumSize">
+            <size>
+             <width>75</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Show background grid</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1" colspan="2">
+          <widget class="QCheckBox" name="c_grid">
+           <property name="layoutDirection">
+            <enum>Qt::LayoutDirection::RightToLeft</enum>
+           </property>
+           <property name="text">
+            <string notr="true"/>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <property name="autoRepeat">
+            <bool>false</bool>
+           </property>
+           <property name="tristate">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="l_reserved">
+           <property name="minimumSize">
+            <size>
+             <width>75</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Show reserved space</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <spacer name="s_reserved">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>0</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item row="2" column="2">
+          <widget class="QCheckBox" name="c_savty_space">
+           <property name="layoutDirection">
+            <enum>Qt::LayoutDirection::RightToLeft</enum>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="widget" native="true">
+     <layout class="QVBoxLayout" name="Lanes">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <property name="sizeConstraint">
+       <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QWidget" name="widget" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <property name="spacing">
+          <number>8</number>
+         </property>
+         <property name="leftMargin">
+          <number>8</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>4</number>
+         </property>
+         <property name="bottomMargin">
+          <number>4</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_3">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Simulation</string>
+           </property>
+           <property name="class" stdset="0">
+            <string>label</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="widget_2" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>75</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="class" stdset="0">
+         <string>container</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_2" columnstretch="4,1,3">
+         <property name="leftMargin">
+          <number>8</number>
+         </property>
+         <property name="topMargin">
+          <number>4</number>
+         </property>
+         <property name="rightMargin">
+          <number>4</number>
+         </property>
+         <property name="bottomMargin">
+          <number>4</number>
+         </property>
+         <property name="horizontalSpacing">
+          <number>4</number>
+         </property>
+         <property name="verticalSpacing">
+          <number>8</number>
+         </property>
+         <item row="1" column="2">
+          <widget class="QDoubleSpinBox" name="s_braking">
+           <property name="maximum">
+            <double>10000.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_11">
+           <property name="minimumSize">
+            <size>
+             <width>75</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Braking deceleration</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLabel" name="label_4">
+           <property name="text">
+            <string>u/s^2</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+           </property>
+           <property name="class" stdset="0">
+            <string>hint</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label_7">
+           <property name="text">
+            <string>Max velocity</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLabel" name="label_8">
+           <property name="text">
+            <string>u/s</string>
+           </property>
+           <property name="class" stdset="0">
+            <string>hint</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="2">
+          <widget class="QDoubleSpinBox" name="s_accerleration">
+           <property name="maximum">
+            <double>10000.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="resources.qrc"/>
+ </resources>
+ <connections/>
+</ui>

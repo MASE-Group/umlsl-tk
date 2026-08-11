@@ -1,0 +1,274 @@
+import random
+
+from typing import Tuple, List
+from umlsl_sim.car_control.astar_car_controller import AstarCarController
+from umlsl_sim.simulation.factories.create_cars import (
+    create_goal,
+    create_predefined_car,
+    create_random_car,
+    total_lane_segments,
+)
+from umlsl_sim.simulation.car import Car
+from umlsl_sim.simulation.car_types import CarType
+from umlsl_sim.simulation.event_checks import collision_check, reached_goal
+from umlsl_sim.simulation.road_network.road_network import Direction, Road, Problem
+from umlsl_sim.simulation.factories.create_segments import create_segments
+from umlsl_sim.constants import *
+from umlsl_sim.simulation.reservations.reservation_management import ReservationManagement
+from umlsl_sim.simulation.episode_history import GameHistory
+from umlsl_sim.reinforcement_learning.rl_modes import RLMode
+from umlsl_sim.scenario_io.car_spec import CarSpec
+
+class TrafficEnv:
+    """
+    A class to represent the traffic environment.
+
+    Attributes:
+        roads (List[Road]): List of roads in the environment.
+        segments (List[Segment]): List of segments created from the roads.
+        npcs (int): Number of npcs in the environment.
+        agents (int): Number of ai controlled agents in the environment.
+        cars_controllers (Dict[Car, Optional[AstarCarController]]): Dictionary of cars and corresponding controllers.
+        moved (bool): Flag to indicate if a car has moved.
+        time (int): Current time in the environment.
+    """
+
+    def __init__(self,
+                 roads: List[Road],
+                 players: int,
+                 predefined_cars: None | List[CarSpec] = None,
+                 rl_mode: None | RLMode = None):
+        """
+        Initialize the TrafficEnv.
+
+        Args:
+            roads (List[Road]): List of roads in the environment.
+            players (int): Total number of NPC cars in the environment. Any
+                predefined NPC cars count toward this total — random NPCs are
+                spawned to top up to `players`.
+            predefined_cars (Optional[List[CarSpec]]): Optional scenario-supplied
+                car specs. May include at most one car of type AGENT, which
+                replaces the random agent car when `rl_mode` is set.
+            rl_mode (Optional[RLMode]): If set, the env spawns an agent car.
+        """
+        super().__init__()
+        self.roads = roads
+        self.segments, self.intersections = create_segments(roads)
+        self.npcs: int = players
+        self.agent: bool = False if rl_mode is None else True
+
+        self.predefined_cars: List[CarSpec] = list(predefined_cars) if predefined_cars else []
+        agent_specs = [s for s in self.predefined_cars if s.type == CarType.AGENT]
+        if len(agent_specs) > 1:
+            raise ValueError(
+                f"At most one predefined car of type AGENT is allowed; got {len(agent_specs)}"
+            )
+        self._predefined_agent: None | CarSpec = agent_specs[0] if agent_specs else None
+        if self._predefined_agent is not None and rl_mode is None:
+            raise ValueError(
+                "Scenario defines a predefined AGENT car but `rl_mode` is None; "
+                "set an rl_mode or change the car type to NPC."
+            )
+        self._predefined_npcs: List[CarSpec] = [s for s in self.predefined_cars if s.type == CarType.NPC]
+        if len(self._predefined_npcs) > self.npcs:
+            raise ValueError(
+                f"Scenario defines {len(self._predefined_npcs)} predefined NPCs "
+                f"but `players` is {self.npcs}; reduce predefined NPCs or raise players."
+            )
+
+        # Randomly placed cars each need a lane segment of their own, so the
+        # segment count is a hard ceiling. Check it here rather than letting
+        # create_random_car fail partway through building the world.
+        capacity = total_lane_segments(roads)
+        needed = self.npcs + (1 if self.agent else 0)
+        if needed > capacity:
+            raise ValueError(
+                f"This road network has {capacity} lane segments but {needed} cars "
+                f"were requested ({self.npcs} players"
+                f"{' + 1 RL agent' if self.agent else ''}). Lower `players` to at "
+                f"most {capacity - (1 if self.agent else 0)}, or add roads/lanes."
+            )
+
+        # self.scores = None
+        self.moved: bool = True
+        self.time: int = 0
+
+        self.cars: List[Car] = []
+        self.npc_cars: List[Car] = []
+        self.agent_car: None | Car = None
+        self.controllers: List[AstarCarController] = []
+
+        self.total_crashes: int = 0
+        self.crashes: dict = {}
+
+        self.reservation_management: ReservationManagement = ReservationManagement()
+        self.game_history: GameHistory = GameHistory()
+
+        self.reset()
+
+    def reset(self) -> None:
+        """
+        Reset the environment to its initial state.
+        """
+        for intersection in self.intersections:
+            intersection.intersection_state.reset()
+            for crossing_segment in intersection.segments:
+                crossing_segment.crossing_segment_state.reset()
+
+        # init display
+        self.moved = True
+        self.time = 0
+
+        self.cars.clear()
+        self.npc_cars.clear()
+        self.agent_car = None
+        self.controllers.clear()
+
+        self.reservation_management.reset() 
+        self.game_history.reset_history()
+
+        if self.agent:
+            if self._predefined_agent is not None:
+                self.agent_car = create_predefined_car(
+                    self._predefined_agent, self.roads, self.cars, self.reservation_management
+                )
+            else:
+                self.agent_car = create_random_car(
+                    self.roads, self.cars, CarType.AGENT, self.reservation_management
+                )
+            self.cars.append(self.agent_car)
+
+        for spec in self._predefined_npcs:
+            car = create_predefined_car(spec, self.roads, self.cars, self.reservation_management)
+            self.cars.append(car)
+            self.npc_cars.append(car)
+
+        random_npcs_to_spawn = self.npcs - len(self._predefined_npcs)
+        for _ in range(random_npcs_to_spawn):
+            car = create_random_car(self.roads, self.cars, CarType.NPC, self.reservation_management)
+            self.cars.append(car)
+            self.npc_cars.append(car)
+
+        for car in self.npc_cars:
+            self.controllers.append(AstarCarController(car, self.cars, self.reservation_management))
+
+        self.game_history.set_list_of_cars(self.cars)
+        self.game_history.set_map(self.roads)
+
+        self.total_crashes = 0
+        self.crashes = {Direction.RIGHT: 0, Direction.UP: 0, Direction.LEFT: 0, Direction.DOWN: 0}
+
+    def play_step(self, action: None | Tuple[int, int] = None) -> None | str:
+        """
+        Execute a step in the environment for each car.
+
+        Returns:
+            bool: A boolean indicating if the game is over.
+        """
+        game_over = []
+
+        if self.agent:
+            if self.agent_car is not None and action is not None:
+                game_over.append(
+                    self._execute_action(car=self.agent_car, action=action) if not self.agent_car.get_death_status() else True
+                )
+                self.game_history.add_taken_action(self.agent_car, action)
+
+        random.shuffle(self.controllers)
+        actions: dict[Car, Tuple[int, int]] = dict()
+        for controller in self.controllers:
+            car = controller.car
+            npc_action = controller.get_action()
+            if not car.get_death_status():
+                actions[car] = npc_action
+            else:
+                game_over.append(True)
+        for car, action in actions.items():
+            game_over.append(self._execute_action(car, action))
+            self.game_history.add_taken_action(car, action)
+
+        deadlock = [True if car.speed == 0 else False for car in self.cars]
+        if all(game_over):
+            print("Game Over!")
+            return 'game_over'
+        if all(deadlock):
+            print("Deadlock!")
+            return 'deadlock'
+
+        return None
+    
+    def _execute_action(self, car: Car, action: Tuple[int, int]) -> bool:
+        """
+        Execute an action for a car.
+
+        Returns:
+            bool: A boolean indicating if the game is over for this car.
+        """
+        # update the head
+        moved = self._move(car, action)
+
+        # increment time
+        self.time += 1
+        # Check if the action was possible
+        if isinstance(moved, Problem):
+            if car is self.agent_car:
+                car.illegal_move = True
+            else:
+                car.handle_car_death(self.reservation_management)
+                return True
+
+        # Crash detection:
+        for other_car in self.cars:
+            if other_car != car:
+                if collision_check(car, other_car, self.reservation_management):
+                    self.total_crashes += 1
+                    self.crashes[car.direction] += 1
+                    car.handle_car_death(self.reservation_management)
+                    other_car.handle_car_death(self.reservation_management)
+                    print(f"Collision Detected! {car.name} Car with {other_car.name} Car!")
+                    return True
+
+        # Place new goal if the goal is reached
+        if reached_goal(car, self.reservation_management):
+            car.score += 1
+            car.goal = car.second_goal
+            car_segment = self.reservation_management.get_car_reservation(car.id, 0).segment
+            car.second_goal = create_goal(car.color, car_segment, self.roads, car.goal)
+
+        # Player won!
+        return car.score > WINNING_SCORE
+
+    def _move(self, car: Car, action: Tuple[int, int]) -> bool | Problem:
+        """
+        Move the car based on the action.
+
+        Args:
+            car (Car): The car to move.
+            action (Tuple[int, int]): The action to be executed.
+
+        Returns:
+            bool: True if the action was successful, False otherwise.
+        """
+        acceleration, lane_change = action
+        car.change_speed(acceleration)
+
+        action_worked = True
+        if lane_change != 0:
+            action_worked = action_worked and car.change_lane(self.reservation_management, lane_change, self.cars)
+
+        action_worked = car.move(self.reservation_management) and action_worked
+
+        return action_worked
+
+    def current_state(self):
+        print("---------------------")
+        print("Game State:\n")
+        game_over = True
+
+        for car in self.cars:
+            print(f"{car.type}: {car.name} | Score: {car.score} | Dead: {car.get_death_status()}")
+            game_over = car.get_death_status() and game_over
+
+        print(f"Game Over -> {game_over}")
+        print("---------------------\n")
+

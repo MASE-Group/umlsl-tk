@@ -1,0 +1,65 @@
+{
+  "meta": {
+    "version": 2
+  },
+  "roads": [
+    {
+      "uid": "d050b211-5103-4a05-9e6c-d3f73755fd4c",
+      "name": "R1",
+      "orientation": "HORIZONTAL",
+      "position": 0.0,
+      "number_of_forward_lanes": 1,
+      "number_of_backward_lanes": 1
+    },
+    {
+      "uid": "319447d0-a095-44f2-91ca-10069fe0b9da",
+      "name": "R2",
+      "orientation": "VERTICAL",
+      "position": 8.0,
+      "number_of_forward_lanes": 1,
+      "number_of_backward_lanes": 1
+    }
+  ],
+  "cars": [
+    {
+      "uid": "2caf86fd-f810-4971-8bfd-253e721a1757",
+      "name": "C1",
+      "road_uid": "d050b211-5103-4a05-9e6c-d3f73755fd4c",
+      "lane_index": -1,
+      "position_on_lane": 15.601307054499582,
+      "transition": 0.0,
+      "speed": 10.0,
+      "length": 1,
+      "color": "lightblue",
+      "acceleration": 1.0,
+      "next_turn": {
+        "direction": "LEFT",
+        "target_lane": {
+          "road_uid": "319447d0-a095-44f2-91ca-10069fe0b9da",
+          "lane_index": -1
+        }
+      }
+    },
+    {
+      "uid": "e932f82c-2989-4902-95e6-c3d4c9d8ed23",
+      "name": "C2",
+      "road_uid": "d050b211-5103-4a05-9e6c-d3f73755fd4c",
+      "lane_index": 0,
+      "position_on_lane": 2.8981505659978453,
+      "transition": 0.0,
+      "speed": 10.0,
+      "length": 1,
+      "color": "red",
+      "acceleration": 1.0,
+      "next_turn": null
+    }
+  ],
+  "queries": [
+    {
+      "uid": "3f2b5cc0-dcc5-4e73-b96d-1c4e90f695a8",
+      "latex": "forall c: (c!=C1 =>  !<re{C1} and re{c}>)",
+      "should_only_evaluate_on_cars_lane": false,
+      "assigned_car_uid": "2caf86fd-f810-4971-8bfd-253e721a1757"
+    }
+  ]
+}

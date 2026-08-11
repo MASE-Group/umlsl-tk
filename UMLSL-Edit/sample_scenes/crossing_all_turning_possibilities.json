@@ -1,0 +1,261 @@
+{
+  "meta": {
+    "version": 2
+  },
+  "roads": [
+    {
+      "uid": "776c9689-0ea8-4721-8bf9-3ca7c8c13c45",
+      "name": "R1",
+      "orientation": "HORIZONTAL",
+      "position": 3.0,
+      "number_of_forward_lanes": 3,
+      "number_of_backward_lanes": 3
+    },
+    {
+      "uid": "49b0367c-63c7-4da9-9f64-33bd3a1c6636",
+      "name": "R2",
+      "orientation": "VERTICAL",
+      "position": 4.87,
+      "number_of_forward_lanes": 3,
+      "number_of_backward_lanes": 3
+    }
+  ],
+  "cars": [
+    {
+      "uid": "06d76186-68d5-47e4-a4b3-e3b85d972671",
+      "name": "a",
+      "road_uid": "776c9689-0ea8-4721-8bf9-3ca7c8c13c45",
+      "lane_index": 0,
+      "position_on_lane": 0.41355012467994356,
+      "transition": 0.0,
+      "speed": 10.0,
+      "length": 1,
+      "color": "pink",
+      "acceleration": 1.0,
+      "next_turn": {
+        "direction": "LEFT",
+        "target_lane": {
+          "road_uid": "49b0367c-63c7-4da9-9f64-33bd3a1c6636",
+          "lane_index": 0
+        }
+      }
+    },
+    {
+      "uid": "ac0c8944-de18-4f94-9201-f9b4887edeea",
+      "name": "C2",
+      "road_uid": "776c9689-0ea8-4721-8bf9-3ca7c8c13c45",
+      "lane_index": 1,
+      "position_on_lane": 0.49130707908529825,
+      "transition": 0.2,
+      "speed": 10.0,
+      "length": 1,
+      "color": "yellow",
+      "acceleration": 1.0,
+      "next_turn": null
+    },
+    {
+      "uid": "dd7b3235-8b8f-446f-b415-449087545976",
+      "name": "C3",
+      "road_uid": "776c9689-0ea8-4721-8bf9-3ca7c8c13c45",
+      "lane_index": -2,
+      "position_on_lane": 9.18,
+      "transition": 0.0,
+      "speed": 10.0,
+      "length": 1,
+      "color": "darkgreen",
+      "acceleration": 1.0,
+      "next_turn": null
+    },
+    {
+      "uid": "0f537428-008f-474e-86fa-4224c20003f6",
+      "name": "C4",
+      "road_uid": "776c9689-0ea8-4721-8bf9-3ca7c8c13c45",
+      "lane_index": -3,
+      "position_on_lane": 8.91,
+      "transition": 0.0,
+      "speed": 10.0,
+      "length": 1,
+      "color": "lightgreen",
+      "acceleration": 1.0,
+      "next_turn": {
+        "direction": "RIGHT",
+        "target_lane": {
+          "road_uid": "49b0367c-63c7-4da9-9f64-33bd3a1c6636",
+          "lane_index": 2
+        }
+      }
+    },
+    {
+      "uid": "7ffc3ae2-c1e4-479c-bfb8-330b2a4d8855",
+      "name": "C5",
+      "road_uid": "776c9689-0ea8-4721-8bf9-3ca7c8c13c45",
+      "lane_index": 2,
+      "position_on_lane": 0.5554204711030923,
+      "transition": 0.0,
+      "speed": 10.0,
+      "length": 1,
+      "color": "white",
+      "acceleration": 1.0,
+      "next_turn": {
+        "direction": "RIGHT",
+        "target_lane": {
+          "road_uid": "49b0367c-63c7-4da9-9f64-33bd3a1c6636",
+          "lane_index": -3
+        }
+      }
+    },
+    {
+      "uid": "802e952d-59f2-407c-8698-b0c8e9772773",
+      "name": "C6",
+      "road_uid": "776c9689-0ea8-4721-8bf9-3ca7c8c13c45",
+      "lane_index": -1,
+      "position_on_lane": 9.36,
+      "transition": 0.0,
+      "speed": 10.0,
+      "length": 1,
+      "color": "orange",
+      "acceleration": 1.0,
+      "next_turn": {
+        "direction": "LEFT",
+        "target_lane": {
+          "road_uid": "49b0367c-63c7-4da9-9f64-33bd3a1c6636",
+          "lane_index": -1
+        }
+      }
+    },
+    {
+      "uid": "1790e07b-36c3-49a9-8365-634e0a091f8c",
+      "name": "C7",
+      "road_uid": "49b0367c-63c7-4da9-9f64-33bd3a1c6636",
+      "lane_index": 0,
+      "position_on_lane": -1.56,
+      "transition": 0.0,
+      "speed": 10.0,
+      "length": 1,
+      "color": "green",
+      "acceleration": 1.0,
+      "next_turn": {
+        "direction": "LEFT",
+        "target_lane": {
+          "road_uid": "776c9689-0ea8-4721-8bf9-3ca7c8c13c45",
+          "lane_index": -1
+        }
+      }
+    },
+    {
+      "uid": "8db07c2c-a02c-4e65-b491-7b9e8fbe05b9",
+      "name": "C8",
+      "road_uid": "49b0367c-63c7-4da9-9f64-33bd3a1c6636",
+      "lane_index": 1,
+      "position_on_lane": -1.68,
+      "transition": 0.0,
+      "speed": 10.0,
+      "length": 1,
+      "color": "lightblue",
+      "acceleration": 1.0,
+      "next_turn": null
+    },
+    {
+      "uid": "501f3adf-69f5-4d6b-bf27-d6f939a1f38b",
+      "name": "C9",
+      "road_uid": "49b0367c-63c7-4da9-9f64-33bd3a1c6636",
+      "lane_index": 2,
+      "position_on_lane": -1.73,
+      "transition": 0.0,
+      "speed": 10.0,
+      "length": 1,
+      "color": "darkblue",
+      "acceleration": 1.0,
+      "next_turn": {
+        "direction": "RIGHT",
+        "target_lane": {
+          "road_uid": "776c9689-0ea8-4721-8bf9-3ca7c8c13c45",
+          "lane_index": 2
+        }
+      }
+    },
+    {
+      "uid": "5e51dec2-2416-4e3f-ae0c-7493fb0158c1",
+      "name": "C10",
+      "road_uid": "49b0367c-63c7-4da9-9f64-33bd3a1c6636",
+      "lane_index": -3,
+      "position_on_lane": 7.84,
+      "transition": 0.0,
+      "speed": 10.0,
+      "length": 1,
+      "color": "chocolate",
+      "acceleration": 1.0,
+      "next_turn": {
+        "direction": "RIGHT",
+        "target_lane": {
+          "road_uid": "776c9689-0ea8-4721-8bf9-3ca7c8c13c45",
+          "lane_index": -3
+        }
+      }
+    },
+    {
+      "uid": "bc71c218-687d-42b9-bf1c-b6bd0abdab6c",
+      "name": "C11",
+      "road_uid": "49b0367c-63c7-4da9-9f64-33bd3a1c6636",
+      "lane_index": -2,
+      "position_on_lane": 7.94,
+      "transition": 0.0,
+      "speed": 10.0,
+      "length": 1,
+      "color": "darkred",
+      "acceleration": 1.0,
+      "next_turn": null
+    },
+    {
+      "uid": "e8108caf-cfcf-48e0-8cfb-bdb89b1c2fa0",
+      "name": "C12",
+      "road_uid": "49b0367c-63c7-4da9-9f64-33bd3a1c6636",
+      "lane_index": -1,
+      "position_on_lane": 7.76,
+      "transition": 0.0,
+      "speed": 10.0,
+      "length": 1,
+      "color": "red",
+      "acceleration": 1.0,
+      "next_turn": {
+        "direction": "LEFT",
+        "target_lane": {
+          "road_uid": "776c9689-0ea8-4721-8bf9-3ca7c8c13c45",
+          "lane_index": 0
+        }
+      }
+    }
+  ],
+  "queries": [
+    {
+      "uid": "2c400461-6279-41e4-a488-c0a38a05ddfd",
+      "latex": "<vchop{re{a}}{re{C2}}>",
+      "should_only_evaluate_on_cars_lane": false,
+      "assigned_car_uid": "ac0c8944-de18-4f94-9201-f9b4887edeea"
+    },
+    {
+      "uid": "fcfdedf2-ad93-4cb0-80a3-86d3a5bde2d1",
+      "latex": "!exists c: (c != a and <re{a}  and re{c}>)",
+      "should_only_evaluate_on_cars_lane": true,
+      "assigned_car_uid": "06d76186-68d5-47e4-a4b3-e3b85d972671"
+    },
+    {
+      "uid": "ec04dee3-7d16-4384-8292-36f8a109786d",
+      "latex": "<cs and re{C3} and re{a}>",
+      "should_only_evaluate_on_cars_lane": false,
+      "assigned_car_uid": "06d76186-68d5-47e4-a4b3-e3b85d972671"
+    },
+    {
+      "uid": "ff560c3c-0663-48ec-815f-859d65c91bd7",
+      "latex": "<cl{C8}>",
+      "should_only_evaluate_on_cars_lane": false,
+      "assigned_car_uid": "1790e07b-36c3-49a9-8365-634e0a091f8c"
+    },
+    {
+      "uid": "17a5c547-e070-4fa2-adb1-efd1fb1e7909",
+      "latex": "<hchop{re{C9}}{free and l > 2} {cs}>",
+      "should_only_evaluate_on_cars_lane": true,
+      "assigned_car_uid": "501f3adf-69f5-4d6b-bf27-d6f939a1f38b"
+    }
+  ]
+}

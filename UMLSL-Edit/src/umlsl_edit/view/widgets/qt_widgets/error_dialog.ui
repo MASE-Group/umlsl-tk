@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Error_Dialog</class>
+ <widget class="QDialog" name="Error_Dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>320</width>
+    <height>157</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>320</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>320</width>
+    <height>16777215</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string/>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QDialog {
+    background-color: #011C26; 
+}
+
+QWidget {	
+	font: 13pt &quot;Helvetica&quot;;
+    color: #F9F9F9;
+}
+
+QLabel[class=label] {	
+	font: 10pt;
+    color: #F9F9F9;
+}
+
+QWidget[class=container] {	
+    background: #042F40;
+	border-radius: 10px;
+}
+
+QLabel[class=hint] {
+	color: #799582;
+}
+
+QLabel[class=title] {
+	font: 700 24pt;
+}
+
+QLineEdit{
+	background-color: #011C26;
+	border: none;
+	border-radius: 6px;
+	
+}
+
+/* --- Main Box --- */
+QComboBox {
+    background-color: #011C26;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 10px;
+    color: #F9F9F9;
+    /* This helps selection color in some styles */
+    selection-background-color: #011C26; 
+}
+
+/* --- The Dropdown Frame --- */
+/* We target QListView specifically to override Mac defaults */
+QComboBox QListView {
+    background-color: #011C26;
+    border: 1px solid #042F40; /* Your custom border */
+    outline: 0px; /* Removes the dotted/blue focus line */
+    padding: 0px;
+}
+
+
+
+/* --- The Arrow Button Area --- */
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 24px;
+    border-left: 1px solid #042F40; /* Optional: adds a separator */
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+QComboBox::down-arrow {
+    image: url(:/icons/icons/down.svg);
+    width: 10px;
+    height: 10px;
+}
+
+/* --- Main Spinbox Styling (Applies to both) --- */
+QSpinBox, QDoubleSpinBox {
+    background-color: #011C26;
+    border: none;
+    border-radius: 6px;
+    color: #F9F9F9;
+    padding: 5px 10px;
+    padding-right: 15px; 
+}
+
+/* --- The Button Container Areas --- */
+QSpinBox::up-button, QDoubleSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 25px;
+    
+    border-left: 1px solid #042F40;
+    border-top-right-radius: 6px;
+    border-bottom: 1px solid #042F40;
+    
+    background-color: #011C26;
+}
+
+QSpinBox::down-button, QDoubleSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 25px;
+    
+    border-left: 1px solid #042F40;
+    border-bottom-right-radius: 6px;
+    
+    background-color: #011C26;
+}
+
+/* --- Hover Effects --- */
+QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover,
+QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover, QComboBox::drop-down:hover {
+    background-color: #042F40;
+}
+
+/* --- The Arrow Icons --- */
+/* (Assuming you are using the CSS Arrow hack from before. 
+   If using images, replace these with your image: url(...) code) */
+
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
+    image: url(:/icons/icons/up.svg); /* You need to create this file */
+    width: 10px;
+    height: 10px;
+}
+
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
+    image: url(:/icons/icons/down.svg); /* You need to create this file */
+    width: 10px;
+    height: 10px;
+}
+
+QToolButton {
+    background-color: #032F40; 
+    border-radius: 16px;       
+    border: none;
+    text-align: center;
+}
+
+QToolButton:hover {
+    background-color: #314250; 
+}
+
+QToolButton:pressed {
+    background-color: #032F40;
+}
+
+QPushButton {
+	color: #011C26;
+	border-radius: 16px;
+}
+
+QPushButton#b_close {
+	background-color: #042F40;
+	color: #F9F9F9
+}
+
+QPushButton#b_close:hover {
+    background-color: #314250; 
+}
+QPushButton#b_close:pressed {
+    background-color: #042F40; 
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="sizeConstraint">
+    <enum>QLayout::SizeConstraint::SetFixedSize</enum>
+   </property>
+   <item>
+    <widget class="QLabel" name="l_titel">
+     <property name="text">
+      <string>Unable to Load File</string>
+     </property>
+     <property name="class" stdset="0">
+      <string>title</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="l_content">
+     <property name="minimumSize">
+      <size>
+       <width>300</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>300</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>An error occurred while parsing  the selected file.  The file may be corrupted  or not in the valid JSON format.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="topMargin">
+      <number>8</number>
+     </property>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="b_close">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>141</width>
+         <height>32</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>141</width>
+         <height>32</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>Close</string>
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>:/icons/icons/cancel.svg</normaloff>:/icons/icons/cancel.svg</iconset>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="resources.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>b_close</sender>
+   <signal>clicked()</signal>
+   <receiver>Error_Dialog</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>236</x>
+     <y>121</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>252</x>
+     <y>200</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

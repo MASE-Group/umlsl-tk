@@ -1,0 +1,64 @@
+Metadata-Version: 2.4
+Name: umlsl-edit
+Version: 2026.5.2
+Summary: Visual traffic-snapshot editor and UMLSL model checker
+Project-URL: Repository, https://github.com/QaisHamarneh/umlsl-toolkit
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE.md
+Requires-Dist: PySide6==6.10.1
+Requires-Dist: networkx==3.6.1
+Requires-Dist: matplotlib==3.10.8
+Dynamic: license-file
+
+# UMLSL-Edit
+
+The scenario-editing and model-checking component of the UMLSL toolkit (UMLSL-TK):
+a visual editor for building traffic snapshots (cars, roads, and intersections)
+and evaluating UMLSL language queries.
+
+## Installation
+
+**Prerequisites:** Python 3.11+
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/69420pm/UMLSL-traffic-editor.git
+   cd UMLSL-Edit
+   ```
+2. *(Recommended)* Create and activate a virtual environment.
+3. Install the required dependencies:
+   ```bash
+   pip install -e .
+   ```
+
+## Running the Program
+
+Run the application from the root directory:
+
+```bash
+python -m umlsl_edit.main
+```
+
+**Open a file directly:**
+Launch the editor and load a specific traffic snapshot by passing the file path as an argument:
+```bash
+python -m umlsl_edit.main <path/to/snapshot_file>
+```
+
+## Editor Features & Navigation
+
+* **Canvas Navigation:** Click and drag the left mouse button or use the arrow keys to pan across the canvas. Zoom using the mouse wheel or the `+`/`-` buttons.
+* **Entity Management:** Use the left panel to manage your environment. Click `+` to add entities, or use the pen icon to edit/delete them.
+* **Drag & Drop:** Select any car or road and drag it with the mouse to quickly reposition it.
+* **Settings & Files:** Access `Settings` and `File` management (`Load`, `Save`, `Save As`) from the top-left menu.
+
+## Keyboard Shortcuts
+
+| Action | Shortcut |
+| :--- | :--- |
+| Add Car | `C` |
+| Add Road | `R` |
+| Add Query | `Q` |
+| Edit Selected | `E` |
+| Delete Selected | `Backspace` |
