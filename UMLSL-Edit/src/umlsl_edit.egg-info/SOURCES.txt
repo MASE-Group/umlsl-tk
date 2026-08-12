@@ -215,4 +215,5 @@ tests/test_model_interval.py
 tests/test_model_observables_settings.py
 tests/test_model_traffic_value_objects.py
 tests/test_model_umlsl_queries.py
+tests/test_query_critical_points.py
 tests/test_view_ui_utils.py

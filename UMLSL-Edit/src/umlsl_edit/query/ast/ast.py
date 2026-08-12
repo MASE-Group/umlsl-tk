@@ -49,6 +49,16 @@ class ASTNode(ABC):
         """
         pass
 
+    def length_constants(self) -> set[float]:
+        """
+        The set of constants this subtree compares the length of the observed space against.
+
+        These constants are needed as critical points by the horizontal chop: a formula such as
+        "l >= 2 and l <= 2" is only satisfied by the single split at distance 2 from the start of the
+        observed space, which is in general not the endpoint of any car, reservation or claim.
+        """
+        return set()
+
 
 class AtomNode(ASTNode, ABC):
     """
@@ -70,6 +80,9 @@ class UnaryNode(ASTNode, ABC):
     def __init__(self, child: ASTNode):
         super().__init__(Precedence.UNARY)
         self._child = child
+
+    def length_constants(self) -> set[float]:
+        return self._child.length_constants()
 
     def to_latex(self) -> str:
         child_text = self._child.to_latex()
@@ -93,6 +106,9 @@ class BinaryNode(ASTNode, ABC):
         super().__init__(precedence)
         self._left = left
         self._right = right
+
+    def length_constants(self) -> set[float]:
+        return self._left.length_constants() | self._right.length_constants()
 
     def to_latex(self) -> str:
         left_text = self._left.to_latex()

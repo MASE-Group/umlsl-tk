@@ -20,19 +20,19 @@ class FreeNode(AtomNode):
             return False
 
         horizon = view.horizon
-        # We shrink the horizon a little bit to avoid conflicts with "{reserve, claim} hchop free" (since on the boundary,
-        # they won't evaluate true). Therefore, hchop would not be able to detect the collision directly (when evaluated
-        # specifically at the boundaries) but only when iterating through the horizon with a certain step size - lowering
-        # the precision to detect such instances.
-        horizon_reduction = 0.001
 
-        smaller_start = horizon.start + horizon_reduction
-        smaller_end = max(smaller_start, horizon.end - horizon_reduction)
-        smaller_horizon = Interval(smaller_start, smaller_end)
-
-        for intersecting_car_uids, segment_intervals in view.get_visible_cars().items():
-            for segment, interval in segment_intervals.items():
-                if smaller_horizon.intersects(interval):
-                    return False
+        # free is the derived formula  neg exists c: <re(c) or cl(c)>, so it is the reservations and
+        # the claims that make a space occupied, not the physical extent of the cars: a car's safety
+        # envelope reaches beyond its body, and that space is not free.
+        #
+        # Two spaces that merely touch do not overlap. A reservation ending exactly where this
+        # observed space begins therefore leaves it free, which is what makes "re(c) hchop free"
+        # satisfiable at the endpoint of c's reservation.
+        for occupancy in (view.get_reserved_segments(), view.get_claimed_segments()):
+            for segment_intervals in occupancy.values():
+                for segment, interval in segment_intervals.items():
+                    overlap = horizon.intersection(interval)
+                    if overlap is not None and overlap.length() > 0:
+                        return False
 
         return True

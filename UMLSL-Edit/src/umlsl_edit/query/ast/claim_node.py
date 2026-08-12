@@ -24,30 +24,22 @@ class ClaimNode(AtomNode):
         if len(view.virtual_lanes) != 1 or view.horizon.length() <= 0:
             return False
 
-        single_lane = view.virtual_lanes[0]
-        segments_on_lane = list(map(lambda si: si.segment, single_lane.segment_intervals))
-
+        # cl(C) holds iff the observed space lies entirely inside the space claimed by C, mirroring
+        # re(C). Claims are tracked per segment, so every segment the observed space runs over has
+        # to be claimed by C, and the observed space has to be covered by those claimed intervals.
         car_eval = self._car_resolve.resolve(variable_car_map)
-        claimed_segment_intervals: dict[Segment, Interval] = view.get_claimed_segments().get(car_eval.uid, {})
-        claimed_crossing_segments = map(
-            lambda seg_interval: seg_interval.segment,
-            filter(lambda segment: not segment.is_lane_segment, claimed_segment_intervals.keys())
-        )
-
-        # claim evaluates true if all segments (in the horizon) are crossing segments reserved by the (eval) car
-        if all(map(lambda claimed: claimed in claimed_crossing_segments, segments_on_lane)):
-            return True
-
-        # otherwise, we need to check whether the horizon is fully contained in the segment of the (eval) car
-        if len(segments_on_lane) != 1:
+        claimed_segments = view.get_claimed_segments().get(car_eval.uid)
+        if not claimed_segments:
             return False
 
-        single_segment = segments_on_lane[0]
+        single_lane = view.virtual_lanes[0]
+        claimed_intervals: list[Interval] = []
+        for segment_interval in single_lane.segment_intervals:
+            segment: Segment = segment_interval.segment
+            interval = claimed_segments.get(segment)
+            if interval is None:
+                return False
 
-        for physically_occupied_segment, physically_occupied_interval in view.get_visible_cars().get(car_eval.uid,
-                                                                                                     {}).items():
-            if physically_occupied_segment.uid == single_segment.uid \
-                    and view.horizon.subset_of([physically_occupied_interval]):
-                return True
+            claimed_intervals.append(interval)
 
-        return False
+        return view.horizon.subset_of(Interval.union(claimed_intervals))

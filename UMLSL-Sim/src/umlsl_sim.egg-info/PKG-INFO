@@ -15,6 +15,7 @@ Requires-Dist: stable-baselines3>=2.7.0; extra == "rl"
 Requires-Dist: tqdm>=4.67.1; extra == "rl"
 Requires-Dist: rich>=14.1.0; extra == "rl"
 Requires-Dist: optuna>=4.5.0; extra == "rl"
+Requires-Dist: pandas>=2.2.0; extra == "rl"
 Requires-Dist: pyarrow>=22.0.0; extra == "rl"
 Requires-Dist: plotly>=6.5.2; extra == "rl"
 Requires-Dist: scikit-learn>=1.8.0; extra == "rl"
@@ -47,7 +48,18 @@ scenarios from `site-packages` instead of from this working tree.
 
 ## Quick Start
 
-To run a simple traffic simulation without AI (interactive driving):
+### Interactive control GUI
+
+```bash
+python -m umlsl_sim.run_control_gui
+```
+
+Pick a scenario and the number of NPC cars, start / pause / rerun the run,
+configure the RL options, and save a paused run as a new scenario.
+
+### Scripted
+
+To run a simple traffic simulation without AI:
 
 ```python
 from umlsl_sim.main import main
@@ -61,18 +73,25 @@ main(
 )
 ```
 
+`load_scenario` returns exactly the `scenario_name` / `roads` / `players` /
+`predefined_cars` keys `main()` expects, which is why `**` works.
+
+There are also two small standalone launchers:
+`python -m umlsl_sim.run_scenario` (one scenario, no RL) and
+`python -m umlsl_sim.run_manual_drive` (drive a car with the arrow keys).
+
 ## Function Parameters
 
 ### `main()` Function Signature
 
 ```python
 def main(
-    players,                          # Number of cars
+    scenario_name,                    # Name of the scenario (used in result paths)
     roads,                            # List of Road objects
-    scenario_name,                    # Name of the scenario
+    players,                          # Number of NPC cars
     render_mode,                      # RenderMode.GUI or RenderMode.NO_GUI
     show_reservation,                 # Show reserved segments of cars
-    rl_mode=None,                     # Which RL mode to use (train, optimize_hyperparams, etc.)
+    rl_mode=None,                     # Which RL mode to use (train, optimize, etc.)
     rl_algorithm_type=None,           # Which RL algorithm to use
     observation_model_type=None,      # How agent perceives the world
     reward_type=None,                 # Reward strategy for learning
@@ -83,16 +102,25 @@ def main(
 )
 ```
 
+Every parameter except the first five is RL-only and requires the optional
+`[rl]` extra; passing `rl_mode` without it raises a `RuntimeError` naming the
+missing dependency.
+
 ### Core Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `players` | int | Yes | Number of a* controlled vehicles in simulation |
+| `players` | int | Yes | Number of A\*-controlled NPC vehicles in the simulation |
 | `roads` | list | Yes | Road network configuration (from `load_scenario`) |
 | `predefined_cars` | list | No | Scenario-supplied car specs (from `load_scenario`) |
 | `scenario_name` | str | Yes | Name of scenario (for logging/saving) |
 | `render_mode` | RenderMode | Yes | `RenderMode.GUI` (show window) or `RenderMode.NO_GUI` (headless) |
 | `show_reservation` | bool | Yes | Show reserved segments of cars |
+
+Randomly placed cars each need a lane segment of their own, so `players` is
+capped by the number of lane segments in the road network (plus one more
+segment for the RL agent car when `rl_mode` is set). Exceeding it raises a
+`ValueError` reporting both numbers.
 
 ### Reinforcement Learning Parameters
 
@@ -212,10 +240,17 @@ main(
     render_mode=RenderMode.GUI,
     show_reservation=True,
     rl_mode=RLMode.LOAD_HISTORY,
+    rl_algorithm_type=RLAlgorithmType.PPO,
+    observation_model_type=ObservationModelType.NUMERIC_OBSERVATION,
+    reward_type=RewardType.INITIAL_REWARD,
     id_model="2025-10-29 18:26:52",      # Model that created recording
     id_history="23:41:20_1768.pkl"       # Episode to replay
 )
 ```
+
+`rl_algorithm_type`, `observation_model_type` and `reward_type` are required
+here too, even though nothing is trained: they are what locates the recording
+under `rl_results/` (see [Output Structure](#output-structure)).
 
 ---
 
@@ -276,23 +311,52 @@ Guidance signal for learning. Currently supported (expand with other reward type
 
 ### `RewardType.INITIAL_REWARD`
 
-Default reward strategy.
+Simple sparse reward: `+1` per goal reached, `-1` for an illegal move, `-5` on
+deadlock, `-10` on crash, `0` otherwise.
 
 ```python
 reward_type=RewardType.INITIAL_REWARD
+```
+
+### `RewardType.SAFETY_AWARE_REWARD`
+
+Consults a `SafetyController` and adds potential-based distance shaping:
+penalties for accelerating beyond the safe maximum and for unsafe lane changes,
+a large bonus per goal, a large penalty for crashing, plus a small per-step term
+proportional to the progress made toward the current goal. The magnitudes live in
+[`rl_constants.py`](src/umlsl_sim/reinforcement_learning/rl_constants.py) as the
+`REWARD_*` constants.
+
+```python
+reward_type=RewardType.SAFETY_AWARE_REWARD
 ```
 
 ---
 
 ## Common Workflows
 
+Every snippet below assumes this preamble:
+
+```python
+from umlsl_sim.main import main
+from umlsl_sim.gui.render_mode import RenderMode
+from umlsl_sim.scenario_io.loader import load_scenario
+from umlsl_sim.reinforcement_learning.rl_modes import RLMode
+from umlsl_sim.reinforcement_learning.algorithms.rl_algorithm_types import RLAlgorithmType
+from umlsl_sim.reinforcement_learning.gymnasium_env.observation_spaces.observation_model_types import ObservationModelType
+from umlsl_sim.reinforcement_learning.gymnasium_env.reward_types import RewardType
+
+scenario = load_scenario("TWO_CROSSINGS")
+```
+
+Everything but the first three imports needs the `[rl]` extra.
+
 ### Workflow 1: Quick Test of New Scenario
 
 ```python
-
 # Test scenario visually
 main(
-    **load_scenario("TWO_CROSSINGS"),
+    **scenario,
     render_mode=RenderMode.GUI,
     show_reservation=True
 )
@@ -301,13 +365,9 @@ main(
 ### Workflow 2: Train New Agent
 
 ```python
-
 # Train agent from scratch
 main(
-    scenario_name=scenario["scenario_name"],
-    roads=scenario["roads"],
-    players=scenario["players"],
-    predefined_cars=scenario["predefined_cars"],
+    **scenario,
     render_mode=RenderMode.NO_GUI,
     show_reservation=False,
     rl_mode=RLMode.TRAIN,
@@ -320,12 +380,8 @@ main(
 ### Workflow 3: Optimize Hyperparameters
 
 ```python
-
 main(
-    scenario_name=scenario["scenario_name"],
-    roads=scenario["roads"],
-    players=scenario["players"],
-    predefined_cars=scenario["predefined_cars"],
+    **scenario,
     render_mode=RenderMode.NO_GUI,
     show_reservation=False,
     rl_mode=RLMode.OPTIMIZE,
@@ -338,13 +394,9 @@ main(
 ### Workflow 4: Optimize Then Train
 
 ```python
-
 # Optimize hyperparameters, then train with best ones
 main(
-    scenario_name=scenario["scenario_name"],
-    roads=scenario["roads"],
-    players=scenario["players"],
-    predefined_cars=scenario["predefined_cars"],
+    **scenario,
     render_mode=RenderMode.NO_GUI,
     show_reservation=False,
     rl_mode=RLMode.OPTIMIZE_AND_TRAIN,
@@ -357,13 +409,9 @@ main(
 ### Workflow 5: Test Trained Agent
 
 ```python
-
 # Load and visualize trained model
 main(
-    scenario_name=scenario["scenario_name"],
-    roads=scenario["roads"],
-    players=scenario["players"],
-    predefined_cars=scenario["predefined_cars"],
+    **scenario,
     render_mode=RenderMode.GUI,
     show_reservation=True,
     rl_mode=RLMode.LOAD_TRAINED_MODEL,
@@ -377,16 +425,15 @@ main(
 ### Workflow 6: Replay Episode
 
 ```python
-
 # Replay a recorded episode
 main(
-    scenario_name=scenario["scenario_name"],
-    roads=scenario["roads"],
-    players=scenario["players"],
-    predefined_cars=scenario["predefined_cars"],
+    **scenario,
     render_mode=RenderMode.GUI,
     show_reservation=True,
     rl_mode=RLMode.LOAD_HISTORY,
+    rl_algorithm_type=RLAlgorithmType.PPO,
+    observation_model_type=ObservationModelType.NUMERIC_OBSERVATION,
+    reward_type=RewardType.INITIAL_REWARD,
     id_model="2025-10-29 18:26:52",
     id_history="23:41:20_1768.pkl"
 )
@@ -420,12 +467,16 @@ Use the exact timestamp format: `"YYYY-MM-DD HH:MM:SS"`
 
 ### Hyperparameter Configuration
 
-Edit `reinforcement_learning/rl_constants.py`:
+Edit [`src/umlsl_sim/reinforcement_learning/rl_constants.py`](src/umlsl_sim/reinforcement_learning/rl_constants.py).
+The shipped values are tuned for a real training run, not for a quick smoke
+test — lower them substantially if you just want to see the pipeline work:
 
 ```python
-TRAINING_TIMESTEPS = 10_000              # Training length
-HYPERPARAMS_TRAINING_TIMESTEPS = 1_000   # Optuna trial length
-OPTUNA_TRIALS = 2                        # Number of optimization trials
+TRAINING_TIMESTEPS = 1_000_000            # Training length
+HYPERPARAMS_TRAINING_TIMESTEPS = 100_000  # Optuna trial length
+OPTUNA_TRIALS = 50                        # Number of optimization trials
+OPTUNA_PARALLEL_JOBS = 1                  # Parallel trials (only 1 works today)
+MAX_EPISODE_STEPS = 500                   # Hard cap on env steps per episode
 ```
 
 ---
@@ -451,4 +502,25 @@ rl_results/
             └── param_importance.html   # Visualization
 ```
 
+`rl_results/` is resolved **relative to the current working directory**, not to
+the package — run your training and your `LOAD_TRAINED_MODEL` / `LOAD_HISTORY`
+replays from the same directory, or the saved runs will not be found. The
+control GUI's "Saved model" dropdown scans the same CWD-relative tree.
+
+The first three path components after `models/` come from `scenario_name`, the
+algorithm, the observation model and the reward type, which is why the LOAD_\*
+modes need those enums passed even though they train nothing.
+
 ---
+
+## Tests
+
+UMLSL-Sim has no unit-test suite. [`manual_tests/`](manual_tests/) holds
+integration checks that exercise the Gymnasium environment against the real
+Stable-Baselines3 stack; they need the `[rl]` extra:
+
+```bash
+pytest manual_tests/ -v          # or: python manual_tests/test_train.py
+```
+
+The editor's suite lives in [`../UMLSL-Edit/tests/`](../UMLSL-Edit/tests/).

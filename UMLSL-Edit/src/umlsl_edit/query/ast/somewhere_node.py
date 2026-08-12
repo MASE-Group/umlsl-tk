@@ -17,14 +17,18 @@ class SomewhereNode(UnaryNode):
     """
 
     def evaluate(self, traffic_snapshot: "TrafficSnapshotModel", view: View, variable_car_map: dict[str, Car]) -> bool:
-        somewhere_node = HorizontalChopNode.create_nested_hchop(
-            [
-                TrueNode(),
-                VerticalChopNode.create_nested_vchop([TrueNode(), self._child, TrueNode()]),
-                TrueNode()
-            ]
-        )
-        return somewhere_node.evaluate(traffic_snapshot, view, variable_car_map)
+        # The expansion depends only on the child, so it is built once and reused: evaluate is
+        # called once per candidate split of every enclosing chop, and rebuilding the tree there
+        # dominated the cost of the surrounding search.
+        if getattr(self, "_expansion", None) is None:
+            self._expansion = HorizontalChopNode.create_nested_hchop(
+                [
+                    TrueNode(),
+                    VerticalChopNode.create_nested_vchop([TrueNode(), self._child, TrueNode()]),
+                    TrueNode()
+                ]
+            )
+        return self._expansion.evaluate(traffic_snapshot, view, variable_car_map)
 
     def to_latex(self) -> str:
         # we do not need to encapsulate anything in parentheses, it is already clear because of <...>

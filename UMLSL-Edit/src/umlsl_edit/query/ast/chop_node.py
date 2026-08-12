@@ -6,7 +6,12 @@ from umlsl_edit.query.ast.ast import View, BinaryNode, Precedence, ASTNode
 if typing.TYPE_CHECKING:
     from umlsl_edit.model.domain_models.traffic_snapshot_model import TrafficSnapshotModel
 
-SMALLEST_STEP_SIZE = 0.4
+# Safety valves for the critical-point construction. Length constants compose along a chain of
+# nested chops, so the number of distinct offsets grows with the chop depth; these bound that growth
+# for formulas that nest many chops over many distinct constants. Dropping offsets keeps the search
+# sound, and only costs completeness for formulas deeper than the bound.
+MAX_CRITICAL_POINTS = 4096
+MAX_OFFSET_SUMMANDS = 8
 
 
 class HorizontalChopNode(BinaryNode):
@@ -30,51 +35,92 @@ class HorizontalChopNode(BinaryNode):
             return cls(operands[0], cls.create_nested_hchop(operands[1:]))
 
     def evaluate(self, traffic_snapshot: "TrafficSnapshotModel", view: View, variable_car_map: dict[str, Car]) -> bool:
-        horizon = view.horizon
-        horizon_length = horizon.length()
-
-        # we first iterate through interesting values of the horizon, i.e., the start and end positions of cars
-        # for example, by doing so, hchop can be precisely used to detect collisions
-        interesting_splits = [horizon.start, horizon.end]
-        for physically_occupied_intervals in view.get_visible_cars().values():
-            for segment, interval in physically_occupied_intervals.items():
-                interesting_splits.extend([interval.start, interval.end])
-        for reserved_intervals in view.get_reserved_segments().values():
-            for segment, interval in reserved_intervals.items():
-                interesting_splits.extend([interval.start, interval.end])
-        for claimed_intervals in view.get_claimed_segments().values():
-            for segment, interval in claimed_intervals.items():
-                interesting_splits.extend([interval.start, interval.end])
-
-        for split in interesting_splits:
+        for split in self.critical_points(view):
             if self.evaluate_at_split(view, traffic_snapshot, variable_car_map, split):
                 return True
 
-        # if hchop did not succeed, we iterate through the horizon with exponentially decreasing step sizes
-        level = 0
-        while True:
-            computed_step_size = 1.0 / (2 ** (1.5 * level + 1)) * horizon_length
-            step_size = max(SMALLEST_STEP_SIZE, computed_step_size)
-
-            if self.evaluate_with_step_size(view, traffic_snapshot, variable_car_map, step_size):
-                return True
-
-            if computed_step_size < SMALLEST_STEP_SIZE:
-                return False
-
-            level += 1
-
-    def evaluate_with_step_size(self, view: View, traffic_snapshot: "TrafficSnapshotModel",
-                                variable_car_map: dict[str, Car], step_size: float):
-        horizon = view.horizon
-        split_value = view.horizon.start
-
-        while split_value < horizon.end:
-            if self.evaluate_at_split(view, traffic_snapshot, variable_car_map, split_value):
-                return True
-            split_value += step_size
-
         return False
+
+    def critical_points(self, view: View) -> list[float]:
+        """
+        The split positions the horizontal chop has to try.
+
+        The truth of a subformula over an observed space [b, r] can only change when r crosses a
+        position at which some atomic proposition changes: the endpoint of a car, of a reservation,
+        of a claim, or of a segment. Between two consecutive such positions every atom keeps its
+        value, so one representative per open gap suffices, and we use the midpoint. Formulas that
+        constrain the length of the observed space add further critical positions, namely the
+        constants they compare against, measured from either end of the observed space.
+
+        Returns the base points first (a witness is far more often an endpoint than an interior
+        point), then the offsets, then the gap representatives.
+        """
+        horizon = view.horizon
+        b, e = horizon.start, horizon.end
+
+        def within(position: float) -> bool:
+            return b < position < e
+
+        base: set[float] = {b, e}
+
+        # endpoints of everything that can make an atom change its truth value
+        for occupancy in (view.get_visible_cars(), view.get_reserved_segments(), view.get_claimed_segments()):
+            for intervals in occupancy.values():
+                for interval in intervals.values():
+                    base.update(p for p in (interval.start, interval.end) if within(p))
+
+        # segment borders, which is where `cs` changes
+        for virtual_lane in view.virtual_lanes:
+            for segment_interval in virtual_lane.segment_intervals:
+                interval = segment_interval.interval
+                base.update(p for p in (interval.start, interval.end) if within(p))
+
+        offsets: set[float] = set()
+        constants = {constant for constant in self.length_constants() if 0.0 < constant < e - b}
+        if constants:
+            # A chain of n nested chops can compose up to n constants, so the reachable offsets are
+            # the sums of constants with repetition, bounded by the chop depth of this subtree.
+            #
+            # The offsets are measured from the two ends of the observed space only, never from the
+            # interior points. A length constraint always constrains the space it is evaluated on,
+            # and the recursion evaluates the operands on spaces that begin or end at this split, so
+            # an offset from an interior point p is generated again -- as an offset from an end --
+            # by the recursive call on the space starting at p. Anchoring at every base point
+            # instead multiplies the number of candidates by the size of the view at every level of
+            # nesting, which is what made deeply nested length formulas intractable.
+            sums: set[float] = {0.0}
+            for _ in range(min(self.chop_depth(), MAX_OFFSET_SUMMANDS)):
+                grown = {s + c for s in sums for c in constants if s + c <= e - b}
+                if grown <= sums or len(grown) > MAX_CRITICAL_POINTS:
+                    break
+                sums |= grown
+            sums.discard(0.0)
+
+            for anchor in (b, e):
+                for offset in sums:
+                    offsets.update(p for p in (anchor + offset, anchor - offset) if within(p))
+
+        ordered = sorted(base | offsets)
+        gap_representatives = [
+            (ordered[i] + ordered[i + 1]) / 2.0
+            for i in range(len(ordered) - 1)
+            if ordered[i + 1] - ordered[i] > 0.0
+        ]
+
+        return sorted(base) + sorted(offsets) + gap_representatives
+
+    def chop_depth(self) -> int:
+        """
+        The largest number of horizontal chops on any path through this subtree, i.e. how many
+        length constants can be composed along a chain of nested chops.
+        """
+        def depth(node: ASTNode) -> int:
+            children = [child for child in (getattr(node, "_left", None), getattr(node, "_right", None),
+                                            getattr(node, "_child", None)) if child is not None]
+            below = max((depth(child) for child in children), default=0)
+            return below + 1 if isinstance(node, HorizontalChopNode) else below
+
+        return max(depth(self), 1)
 
     def evaluate_at_split(self, view: View, traffic_snapshot: "TrafficSnapshotModel", variable_car_map: dict[str, Car],
                           split_value: float):
