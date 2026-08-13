@@ -96,11 +96,7 @@ class Car:
         self._extend_reservations(rm)
         # `reservations` is the live list — appended items are visible.
 
-        last = reservations[-1]
-        if last.segment.length - abs(last.end) <= BLOCK_SIZE:
-            state = last.segment.end_crossing.intersection.intersection_state
-            if not state.get_car_priority(self.id):
-                state.add_car_priority(self.id, self.time)
+        self._update_crossing_claim(rm)
 
         while abs(self.loc) > reservations[0].segment.length:
             passed = rm.pop_car_reservation(self.id, 0)
@@ -132,6 +128,30 @@ class Car:
 
         self.update_position(rm)
         return True
+
+    def _update_crossing_claim(self, rm: ReservationManagement) -> None:
+        """Register or renew this car's claim on the intersection ahead of it.
+
+        The claim is registered once the reservation reaches within BLOCK_SIZE
+        of the end of the last reserved lane segment, and renewed on every tick
+        after that. IntersectionState holds it as a lease: renewals that report
+        no progress eventually reorder the claim behind the other contenders
+        and then withdraw it, so a car that cannot move stops holding the
+        intersection closed against everybody else. A withdrawn claim is simply
+        registered again by the next tick on which the car is still approaching,
+        which puts it at the back of the queue.
+        """
+        tail = rm.get_car_reservation(self.id, -1)
+        segment = tail.segment
+        if not isinstance(segment, LaneSegment) or segment.end_crossing is None:
+            return
+
+        state = segment.end_crossing.intersection.intersection_state
+        if state.get_car_priority(self.id) is None:
+            if segment.length - abs(tail.end) <= BLOCK_SIZE:
+                state.add_car_priority(self.id, self.time)
+        else:
+            state.renew_car_priority(self.id, self.time, made_progress=self.speed > 0)
 
     def _extend_reservations(self, rm: ReservationManagement) -> None:
         reservations = rm.get_car_reservations_view(self.id)
@@ -668,9 +688,16 @@ class Car:
 
     def handle_car_death(self, reservation_management: ReservationManagement) -> None:
         index = len(self.get_size_segments(reservation_management))
+        # A dead car never moves again, so it can never renew or release a claim
+        # of its own. Withdraw every claim it holds -- including the one on the
+        # intersection ahead of a lane segment it was still queued on, which
+        # would otherwise block that intersection for the rest of the run.
         for seg_info in reservation_management.get_car_reservations(self.id):
-            if isinstance(seg_info.segment, CrossingSegment):
-                seg_info.segment.intersection.intersection_state.pop_car_priority(self.id)
+            segment = seg_info.segment
+            if isinstance(segment, CrossingSegment):
+                segment.intersection.intersection_state.pop_car_priority(self.id)
+            elif isinstance(segment, LaneSegment) and segment.end_crossing is not None:
+                segment.end_crossing.intersection.intersection_state.pop_car_priority(self.id)
 
         while index < len(reservation_management.get_car_reservations(self.id)):
             reservation_management.pop_car_reservation(self.id, index)

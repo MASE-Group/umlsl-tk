@@ -47,8 +47,17 @@ class RLAlgorithm(ABC):
     ## Attributes
         env (MlslEnv): The Gymnasium environment to train on
         algorithm (BaseAlgorithm): The underlying learning algorithm implementation
+
+    ## Class attributes
+        requires_action_masks (bool): True for algorithms that consume an
+            invalid-action mask (e.g. MaskablePPO). Callers read this *before*
+            instantiating the algorithm, to switch the environment's safety
+            shield on and to pick the maskable training / evaluation helpers.
+            Leave it False for ordinary algorithms.
     """
-    
+
+    requires_action_masks: bool = False
+
     def __init__(self, env: MlslEnv, params: None | Dict[str, Any] = None):
         """Initialize the RL algorithm.
         

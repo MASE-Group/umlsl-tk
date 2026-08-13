@@ -10,6 +10,8 @@ Two run modes are supported:
 
 * ``plain``   – NPC-only ``TrafficEnv.play_step()`` loop.
 * ``rl_eval`` – load a saved model and drive ``env.step(model.predict(obs))``.
+  Models trained behind the safety shield are run behind it too, with the
+  current action mask handed to every prediction.
 
 RL training / optimization is long-running and headless; it lives in
 ``rl_support`` and runs on a worker thread rather than here.
@@ -43,6 +45,9 @@ class SimulationEngine:
         self._env = None
         self._model = None
         self._obs = None
+        # Set for shielded models: returns the current action mask to hand to
+        # predict(). None for ordinary models.
+        self._action_masks: Optional[Callable[[], object]] = None
         self._restart: Optional[Callable[[], None]] = None
         self._on_finish: Optional[Callable[[str], None]] = None
 
@@ -118,7 +123,13 @@ class SimulationEngine:
                 render_mode=RenderMode.NO_GUI,   # we render ourselves
                 show_reservation=show_reservation,
             )
-            rl_algorithm = get_rl_algo(rl_algorithm_type)(env)
+            # A model trained behind the safety shield must be run behind it
+            # too: the mask is part of the policy, not of the training loop.
+            algo_class = get_rl_algo(rl_algorithm_type)
+            if algo_class.requires_action_masks:
+                env.enable_action_shield()
+
+            rl_algorithm = algo_class(env)
             path_center = get_path_center(
                 scenario=scenario_name,
                 rl_algo=rl_algorithm_type.name,
@@ -130,6 +141,7 @@ class SimulationEngine:
             self.game_model = game_model
             self._env = env
             self._model = model
+            self._action_masks = env.action_masks if algo_class.requires_action_masks else None
             self._obs, _info = env.reset()
             self.mode = "rl_eval"
             self.paused = False
@@ -152,6 +164,7 @@ class SimulationEngine:
         self._env = None
         self._model = None
         self._obs = None
+        self._action_masks = None
         self._restart = None
         self.status = "No simulation loaded."
 
@@ -179,7 +192,12 @@ class SimulationEngine:
             if result is not None:
                 self._finish("Game over." if result == "game_over" else "Deadlock.")
         elif self.mode == "rl_eval":
-            action, _ = self._model.predict(self._obs, deterministic=True)
+            if self._action_masks is None:
+                action, _ = self._model.predict(self._obs, deterministic=True)
+            else:
+                action, _ = self._model.predict(
+                    self._obs, deterministic=True, action_masks=self._action_masks()
+                )
             self._obs, _reward, terminated, truncated, _info = self._env.step(action)
             if terminated or truncated:
                 self._finish("Episode finished." if terminated else "Episode truncated.")

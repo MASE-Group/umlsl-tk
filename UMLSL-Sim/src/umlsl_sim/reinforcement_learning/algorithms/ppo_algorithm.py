@@ -57,11 +57,9 @@ class PPOAlgorithm(RLAlgorithm):
         """
         from stable_baselines3 import PPO
 
-        if params == None:
+        if params is None:
             return PPO("MlpPolicy", self.env)
-        else:
-            print(params)
-            return PPO("MlpPolicy", self.env, **params)
+        return PPO("MlpPolicy", self.env, **params)
 
     def get_sample_params(self, trial: "optuna.Trial") -> Dict[str, Any]:
         """Sample PPO hyperparameters for Optuna optimization.

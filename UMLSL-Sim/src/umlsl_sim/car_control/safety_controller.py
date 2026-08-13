@@ -25,7 +25,8 @@ class SafetyController:
         self.reservation_management: ReservationManagement = reservation_management
         # Set by get_accelerate after each call: True iff at least one tried
         # acceleration was rejected solely because of an intersection priority
-        # check. get_action uses this to drop a stuck priority and break deadlocks.
+        # check. get_action uses this to give up our own claim, so that we do
+        # not hold the queue behind us while waiting on a car ahead of us.
         self._last_call_priority_blocked: bool = False
 
     def get_max_acceleration(self) -> int:
@@ -63,8 +64,8 @@ class SafetyController:
                                     self.get_accelerate([lane_change_segment_info], False))
             
         # Break intersection deadlocks: if the only thing forcing us to brake
-        # fully was a lower-priority contender at the upcoming intersection,
-        # yield our priority so they can proceed.
+        # fully was a claimant ranked ahead of us at the upcoming intersection,
+        # withdraw our own claim so the cars ranked behind us can proceed.
         max_dec_floor = -min(MAX_DEC, self.car.speed)
         if max_possible_acc <= max_dec_floor and priority_blocked:
             self._drop_pending_priority(reservations)
@@ -116,7 +117,7 @@ class SafetyController:
         respects the intersection-priority ordering.
 
         Side effect: writes self._last_call_priority_blocked. get_action reads
-        it to decide whether to drop a stuck priority and break a deadlock.
+        it to decide whether to withdraw our own crossing claim.
         """
         self._last_call_priority_blocked = False
         if not segments:
@@ -230,8 +231,8 @@ class SafetyController:
              The car may only enter strictly after each earlier car has left the crossing segment.
           2. Intersection priority for crossings that are NEW in the projection
              (not already in the car's current reservation). The car may only
-             enter when no other contender at the same intersection holds an
-             earlier (smaller) priority value.
+             enter while no other claimant ranks ahead of it at that
+             intersection (see IntersectionState, which ages the claims).
           3. Trailing-car overlap on the projection's final lane segment.
         """
         # CROSSING_MAX_SPEED is the cap inside any crossing; on the upstream
@@ -263,11 +264,8 @@ class SafetyController:
         for seg_info in projected:
             if isinstance(seg_info.segment, CrossingSegment) and id(seg_info.segment) not in current_segment_ids:
                 intersection: Intersection = seg_info.segment.intersection
-                my_priority = intersection.intersection_state.get_car_priority(self.car.id)
-                if my_priority is not None:
-                    for other_id, other_time in intersection.intersection_state.get_priority_items():
-                        if other_id != self.car.id and other_time < my_priority:
-                            return True, True
+                if intersection.intersection_state.outranked(self.car.id):
+                    return True, True
                 break
 
         cars_by_id = {c.id: c for c in self.cars}
@@ -277,11 +275,14 @@ class SafetyController:
         return False, False
 
     def _drop_pending_priority(self, segments: list[SegmentInfo]) -> None:
-        """Yield this car's intersection priority at the upcoming intersection.
+        """Withdraw this car's claim on the upcoming intersection.
+
         Called by get_action when get_accelerate was forced to brake fully and
-        the priority check rejected at least one tried acceleration -- this
-        prevents priority FIFO from holding the queue when the head of the
-        queue cannot move for unrelated reasons."""
+        the priority check rejected at least one tried acceleration: we are
+        going nowhere this tick, so holding a claim only blocks the cars ranked
+        behind us. IntersectionState withdraws stalled claims on its own timer
+        as well; this is the immediate case, where the car already knows the
+        claim is doing no good."""
         for seg_info in reversed(segments):
             seg = seg_info.segment
             if isinstance(seg, LaneSegment) and seg.end_crossing is not None:

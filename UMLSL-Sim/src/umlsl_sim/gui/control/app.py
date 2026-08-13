@@ -194,11 +194,11 @@ class ControlWindow(pyglet.window.Window):
             inner_x, yb, inner_w, 34, rl_support.rl_mode_labels(), self._on_rlmode_change,
         )
 
-        # RL algorithm
-        caption("RL algorithm", rl=True)
+        # RL algorithm (also selects the safety mechanism: MASKABLE_PPO shields)
+        caption("RL algorithm / safety mechanism", rl=True)
         yb = slot(34)
         self.algo_dd = self._add_dropdown(
-            inner_x, yb, inner_w, 34, rl_support.algorithm_names() or ["—"], self._on_rlconfig_change,
+            inner_x, yb, inner_w, 34, rl_support.algorithm_names() or ["—"], self._on_algo_change,
         )
 
         # Observation model
@@ -338,6 +338,14 @@ class ControlWindow(pyglet.window.Window):
     def _on_rlconfig_change(self, _value: str) -> None:
         self._refresh_model_dd()
 
+    def _on_algo_change(self, value: str) -> None:
+        # The algorithm dropdown doubles as the safety-mechanism switch, so say
+        # in the log which mechanism the user just picked.
+        self._refresh_model_dd()
+        description = rl_support.algorithm_description(value)
+        if description:
+            self.log(description)
+
     def _refresh_model_dd(self) -> None:
         if not rl_support.ENUMS_AVAILABLE:
             self.model_dd.set_options(["—"], selected="—")
@@ -418,7 +426,8 @@ class ControlWindow(pyglet.window.Window):
             rl_algorithm_type=algo, observation_model_type=obs, reward_type=reward,
         )
         if started:
-            self.log(f"Launched {mode.name} (headless). Watch the terminal for progress.")
+            self.log(f"Launched {mode.name} with {algo.name} / {reward.name} (headless). "
+                     "Watch the terminal for progress.")
 
     def _on_play_pause(self) -> None:
         self.engine.toggle_pause()

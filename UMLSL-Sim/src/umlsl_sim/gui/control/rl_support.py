@@ -95,6 +95,23 @@ def algorithm_names() -> List[str]:
     return [m.name for m in RLAlgorithmType] if ENUMS_AVAILABLE else []
 
 
+# How each algorithm handles unsafe actions. The choice of algorithm *is* the
+# choice of safety mechanism, so the GUI spells it out rather than leaving the
+# user to infer it from the enum name.
+_ALGORITHM_DESCRIPTIONS = {
+    "PPO": "PPO: unsafe actions stay available; safety comes from the reward.",
+    "MASKABLE_PPO": (
+        "MASKABLE_PPO: safety shield on — the safety controller masks unsafe "
+        "actions before the agent acts."
+    ),
+}
+
+
+def algorithm_description(name: str) -> str:
+    """One-line explanation of what an algorithm choice means for safety."""
+    return _ALGORITHM_DESCRIPTIONS.get(name, "")
+
+
 def observation_names() -> List[str]:
     return [m.name for m in ObservationModelType] if ENUMS_AVAILABLE else []
 

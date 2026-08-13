@@ -1,10 +1,12 @@
 import random
 import time
 
+import numpy as np
+
 from abc import ABC, abstractmethod
 from gymnasium import Env
 from gymnasium import spaces
-from typing import Tuple, Dict
+from typing import TYPE_CHECKING, Tuple, Dict
 from umlsl_sim.simulation.traffic_environment import TrafficEnv
 from umlsl_sim.constants import MAX_ACC, MAX_DEC, TIME_PER_FRAME
 from umlsl_sim.gui.render_mode import RenderMode
@@ -13,6 +15,8 @@ from umlsl_sim.reinforcement_learning.rl_constants import MAX_EPISODE_STEPS
 
 # pyglet and GameWindow are imported lazily so headless training and unit
 # tests can import this module without pulling in the GUI stack.
+if TYPE_CHECKING:
+    from umlsl_sim.car_control.action_shield import ActionShield
 
 class MlslEnv(Env, ABC):
     """Abstract Gymnasium environment for MLSL traffic simulation.
@@ -57,11 +61,20 @@ class MlslEnv(Env, ABC):
     - Lane change: [0, 1, 2] → maps to [-1, 0, 1]
     
     ## Episode Termination
-    
+
     Episodes end when:
     - `done=True`: Agent reached goal or collision (terminal state)
     - `truncated=True`: Deadlock detected (time limit equivalent)
-    
+
+    ## Safety Shield (optional)
+
+    Safety can be enforced by masking instead of by reward shaping. Call
+    `enable_action_shield()` to attach an `ActionShield`; `action_masks()` then
+    reports which actions the SafetyController considers safe, and a masking
+    algorithm (`RLAlgorithmType.MASKABLE_PPO`) never samples the others. Without
+    it, `action_masks()` allows everything and behaviour is unchanged, so
+    reward-based safety keeps working exactly as before.
+
     ## Attributes
         game_model (TrafficEnv): The traffic simulation instance
         observation_model (Observation): Converts game state to observations
@@ -69,6 +82,8 @@ class MlslEnv(Env, ABC):
         action_space (spaces.MultiDiscrete): Agent action space specification
         observation_space (spaces.Space): Agent observation space specification
         render_mode (str | None): Rendering mode ('human' or None)
+        action_shield (ActionShield | None): Safety shield, or None when the
+            agent's action set is unrestricted
     """
 
     def __init__(self, 
@@ -109,6 +124,10 @@ class MlslEnv(Env, ABC):
         # accelaration = [0, MAX_DEC + MAX_ACC] and lange changes = [0, 2]
         self.action_space = spaces.MultiDiscrete([MAX_ACC + MAX_DEC + 1, 3])
         self.observation_space = self.observation_model.space()
+
+        # Off by default: an unshielded env allows every action, which is what
+        # the reward-based safety profiles expect.
+        self.action_shield: "ActionShield | None" = None
 
         self.done: bool = False
         self.truncated: bool = False
@@ -226,6 +245,39 @@ class MlslEnv(Env, ABC):
         self.game_window.on_draw()
         pyglet.clock.tick()
         self.game_window.flip()
+
+    def enable_action_shield(self) -> "ActionShield":
+        """Attach a safety shield, switching this env to masked actions.
+
+        Called by the controller when the selected algorithm consumes action
+        masks (see `RLAlgorithm.requires_action_masks`). Idempotent: a second
+        call returns the shield already in place, keeping its counters.
+
+        Returns:
+            ActionShield: The shield now serving `action_masks()`.
+        """
+        if self.action_shield is None:
+            from umlsl_sim.car_control.action_shield import ActionShield
+
+            self.action_shield = ActionShield(self.game_model)
+        return self.action_shield
+
+    def action_masks(self) -> np.ndarray:
+        """Report which actions are currently available to the agent.
+
+        This is the hook sb3-contrib's maskable algorithms look for (through
+        `get_wrapper_attr`, so wrapping in Monitor keeps it reachable). It is
+        queried before each action is chosen, i.e. against the pre-step state.
+
+        Returns:
+            np.ndarray: Boolean array with one entry per value of each action
+                dimension, concatenated: `MAX_ACC + MAX_DEC + 1` acceleration
+                flags followed by 3 lane-change flags. All true when no shield
+                is attached.
+        """
+        if self.action_shield is None:
+            return np.ones(int(self.action_space.nvec.sum()), dtype=bool)
+        return self.action_shield.action_masks()
 
     def _pre_step(self, decoded_action: Tuple[int, int]) -> None:
         """Hook invoked just before the simulation advances on each step.

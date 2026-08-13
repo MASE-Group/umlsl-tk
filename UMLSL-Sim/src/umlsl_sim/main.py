@@ -86,13 +86,25 @@ if __name__ == '__main__':
     # the LOAD_* modes need an `id_*` that actually exists under rl_results/ —
     # see UMLSL-Sim/README.md, "Finding Model/History IDs".
 
-    # Train an agent from scratch:
+    # Train an agent from scratch, with safety left to the reward:
     # main(
     #     **scenario,
     #     render_mode=RenderMode.NO_GUI,
     #     show_reservation=False,
     #     rl_mode=RLMode.TRAIN,
     #     rl_algorithm_type=RLAlgorithmType.PPO,
+    #     observation_model_type=ObservationModelType.NUMERIC_OBSERVATION,
+    #     reward_type=RewardType.SAFETY_AWARE_REWARD,
+    # )
+
+    # The same, with the safety shield instead: unsafe actions are masked out
+    # before the agent acts, so the reward only has to score the objective.
+    # main(
+    #     **scenario,
+    #     render_mode=RenderMode.NO_GUI,
+    #     show_reservation=False,
+    #     rl_mode=RLMode.TRAIN,
+    #     rl_algorithm_type=RLAlgorithmType.MASKABLE_PPO,
     #     observation_model_type=ObservationModelType.NUMERIC_OBSERVATION,
     #     reward_type=RewardType.INITIAL_REWARD,
     # )

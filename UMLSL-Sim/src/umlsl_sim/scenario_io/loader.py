@@ -7,6 +7,11 @@ from umlsl_sim.scenario_io.car_spec import CarSpec
 _DATA_DIR = Path(__file__).resolve().parent.parent / "scenarios"
 
 
+def available_scenarios() -> list[str]:
+    """Keys of the bundled scenarios, sorted, as accepted by `load_scenario`."""
+    return sorted(p.stem for p in _DATA_DIR.glob("*.json"))
+
+
 def load_scenario(scenario_key: str) -> dict:
     filepath = _DATA_DIR / f"{scenario_key.lower()}.json"
     with open(filepath) as f:

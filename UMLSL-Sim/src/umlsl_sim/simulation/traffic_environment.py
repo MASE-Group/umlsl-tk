@@ -31,6 +31,7 @@ class TrafficEnv:
         cars_controllers (Dict[Car, Optional[AstarCarController]]): Dictionary of cars and corresponding controllers.
         moved (bool): Flag to indicate if a car has moved.
         time (int): Current time in the environment.
+        stalled_frames (int): Consecutive frames on which every car stood still.
     """
 
     def __init__(self,
@@ -92,6 +93,7 @@ class TrafficEnv:
         # self.scores = None
         self.moved: bool = True
         self.time: int = 0
+        self.stalled_frames: int = 0
 
         self.cars: List[Car] = []
         self.npc_cars: List[Car] = []
@@ -118,6 +120,7 @@ class TrafficEnv:
         # init display
         self.moved = True
         self.time = 0
+        self.stalled_frames = 0
 
         self.cars.clear()
         self.npc_cars.clear()
@@ -187,11 +190,19 @@ class TrafficEnv:
             game_over.append(self._execute_action(car, action))
             self.game_history.add_taken_action(car, action)
 
-        deadlock = [True if car.speed == 0 else False for car in self.cars]
+        # A deadlock is a stall that does not resolve itself, so one frame of
+        # standing traffic is not enough to declare one: count the consecutive
+        # frames on which no car moves and report only once they reach
+        # DEADLOCK_FRAMES. Any car moving resets the count.
+        if all(car.speed == 0 for car in self.cars):
+            self.stalled_frames += 1
+        else:
+            self.stalled_frames = 0
+
         if all(game_over):
             print("Game Over!")
             return 'game_over'
-        if all(deadlock):
+        if self.stalled_frames >= DEADLOCK_FRAMES:
             print("Deadlock!")
             return 'deadlock'
 

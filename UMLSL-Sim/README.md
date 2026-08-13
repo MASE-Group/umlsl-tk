@@ -55,8 +55,23 @@ main(
 `predefined_cars` keys `main()` expects, which is why `**` works.
 
 There are also two small standalone launchers:
-`python -m umlsl_sim.run_scenario` (one scenario, no RL) and
-`python -m umlsl_sim.run_manual_drive` (drive a car with the arrow keys).
+`python -m umlsl_sim.run_manual_drive` (drive a car with the arrow keys) and
+`python -m umlsl_sim.run_scenario`, a command-line front end for everything
+`main()` can do:
+
+```bash
+python -m umlsl_sim.run_scenario --scenario two_crossings --players 21
+
+# train with reward-based safety
+python -m umlsl_sim.run_scenario --no-gui --rl-mode TRAIN \
+    --algorithm PPO --reward SAFETY_AWARE_REWARD
+
+# train with the safety shield instead
+python -m umlsl_sim.run_scenario --no-gui --rl-mode TRAIN \
+    --algorithm MASKABLE_PPO --reward INITIAL_REWARD
+
+python -m umlsl_sim.run_scenario --help    # all options
+```
 
 ## Function Parameters
 
@@ -171,7 +186,12 @@ main(
 )
 ```
 
-**Output:** Saves best hyperparameters to `rl_results/hyperparameters/`
+Trials run in parallel worker processes (see `OPTUNA_PARALLEL_JOBS` below) and
+are pruned as soon as they fall behind the trials already finished, so a search
+costs considerably less than `OPTUNA_TRIALS x HYPERPARAMS_TRAINING_TIMESTEPS`.
+
+**Output:** Saves best hyperparameters to `rl_results/hyperparameters/`, along
+with `study.log`, the shared study the workers wrote into.
 
 ### `RLMode.OPTIMIZE_AND_TRAIN`
 
@@ -254,15 +274,48 @@ render_mode=RenderMode.NO_GUI
 
 ## RL Algorithms
 
-Currently supported (expand with more algorithms):
+The algorithm also decides **how safety is enforced**. Both mechanisms read the
+same oracle — the `SafetyController` that drives the NPC cars — but they use its
+verdict at different points, and either can be combined with any reward profile.
 
 ### `RLAlgorithmType.PPO`
 
-Proximal Policy Optimization.
+Proximal Policy Optimization. The agent may take any action; safety is left to
+the reward, so pair it with `RewardType.SAFETY_AWARE_REWARD` to penalise unsafe
+accelerations and lane changes after the fact.
 
 ```python
 rl_algorithm_type=RLAlgorithmType.PPO
 ```
+
+### `RLAlgorithmType.MASKABLE_PPO` — safety shield
+
+PPO with invalid-action masking ([sb3-contrib](https://sb3-contrib.readthedocs.io/en/master/modules/ppo_mask.html)).
+Selecting it attaches an
+[`ActionShield`](src/umlsl_sim/car_control/action_shield.py) to the environment:
+before each decision the safety controller is asked which accelerations and lane
+changes are safe, and everything else is removed from the agent's choice set.
+Unsafe actions are therefore never taken, rather than taken and then penalised,
+which frees the reward to speak only about the objective:
+
+```python
+rl_algorithm_type=RLAlgorithmType.MASKABLE_PPO
+reward_type=RewardType.INITIAL_REWARD          # no safety term needed
+```
+
+Two properties worth knowing:
+
+- **The mask is conservative, never permissive.** Gymnasium masks each action
+  dimension separately, and the controller's lane-change verdict depends
+  slightly on the acceleration; the shield evaluates it at the largest
+  acceleration it admits, so the verdict holds for every acceleration left open.
+- **It is not a hard guarantee.** In states where the controller rejects
+  everything it tried, it falls back to maximal braking and the shield admits
+  that. Those steps are counted (`forced_brake_steps`), and a summary is printed
+  after training and evaluation. `empty_mask_steps` should always be 0.
+
+The results directory already separates the two mechanisms, since it is keyed by
+algorithm name: `rl_results/models/<scenario>/<algorithm>/<observation>/<reward>/`.
 
 ---
 
@@ -451,11 +504,27 @@ test — lower them substantially if you just want to see the pipeline work:
 
 ```python
 TRAINING_TIMESTEPS = 1_000_000            # Training length
+TRAINING_EVAL_FREQ = 10_000               # Steps between best-model checkpoints
+TRAINING_EVAL_EPISODES = 5                # Episodes per checkpoint evaluation
 HYPERPARAMS_TRAINING_TIMESTEPS = 100_000  # Optuna trial length
 OPTUNA_TRIALS = 50                        # Number of optimization trials
-OPTUNA_PARALLEL_JOBS = 1                  # Parallel trials (only 1 works today)
+OPTUNA_TRIAL_EVALS = 10                   # Evaluations (and pruning decisions) per trial
+OPTUNA_PARALLEL_JOBS = ...                # Concurrent trials; defaults to cores - 2
 MAX_EPISODE_STEPS = 500                   # Hard cap on env steps per episode
 ```
+
+**Watch the evaluation budget.** Evaluations do not count towards
+`TRAINING_TIMESTEPS`, but they cost the same simulation steps as training does:
+each one runs `TRAINING_EVAL_EPISODES` episodes of up to `MAX_EPISODE_STEPS`.
+Lowering `TRAINING_EVAL_FREQ` buys finer-grained best-model checkpoints at a
+steep price — at `500` it made evaluation 84% of a training run's wall clock on
+`two_crossings`.
+
+**Parallel trials.** The hyperparameter search runs `OPTUNA_PARALLEL_JOBS`
+worker processes against one shared study, each with its own simulation, so the
+search scales with cores. Set it to `1` to run everything in-process (useful
+when debugging a trial). The budget is the study's: workers keep taking trials
+until `OPTUNA_TRIALS` of them are done, so an unlucky worker holds nobody up.
 
 ---
 
@@ -490,6 +559,23 @@ algorithm, the observation model and the reward type, which is why the LOAD_\*
 modes need those enums passed even though they train nothing.
 
 ---
+
+## Benchmarks
+
+[`benchmarks/`](benchmarks/) holds the measurements behind the simulation table
+in the UMLSL-TK paper — throughput and episode outcomes across traffic
+densities — together with the recorded results, so the published numbers can be
+checked without re-running anything. None of it needs the `[rl]` extra.
+
+```bash
+cd benchmarks
+python episode_outcomes.py    # collisions, gridlocks, episode lengths
+python throughput.py          # frames per second
+python summarise.py           # the table rows
+```
+
+See [`benchmarks/README.md`](benchmarks/README.md) for why throughput is
+measured in a separate pass, and for comparing crossing-claim protocols.
 
 ## Tests
 
