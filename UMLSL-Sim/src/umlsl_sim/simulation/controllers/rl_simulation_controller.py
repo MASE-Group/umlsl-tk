@@ -15,6 +15,8 @@ from umlsl_sim.reinforcement_learning.algorithms.rl_algorithm_registry import ge
 from umlsl_sim.reinforcement_learning.algorithms.sample_ppo_params import constrain_ppo_params
 from umlsl_sim.reinforcement_learning.env_factory import EnvSpec
 from umlsl_sim.reinforcement_learning.rl_constants import (
+    DEMO_EPISODE_STEPS,
+    MAX_EPISODE_STEPS,
     TRAINING_TIMESTEPS,
     TRAINING_EVAL_FREQ,
     TRAINING_EVAL_EPISODES,
@@ -91,6 +93,16 @@ class RLGameController(AbstractGameController):
                 rl_mode=self.rl_mode,
                 render_mode=self.render_mode,
                 show_reservation=self.show_reservation,
+                # Watching a trained agent is a single episode that nothing is
+                # learned from, so it gets a longer leash than training, whose
+                # timestep budget is sized against MAX_EPISODE_STEPS. Every
+                # other mode -- including the evaluation environments and
+                # Optuna trials built from this spec -- keeps the training cap.
+                max_episode_steps=(
+                    DEMO_EPISODE_STEPS
+                    if self.rl_mode is RLMode.LOAD_TRAINED_MODEL
+                    else MAX_EPISODE_STEPS
+                ),
             )
 
             # Monitor-wrapped, so episode reward, length and time are recorded.
@@ -103,16 +115,22 @@ class RLGameController(AbstractGameController):
 
 
     def run(self) -> None:
-        handler = self.mode_handlers.get(self.rl_mode)
-        if handler:
-            handler(self)
-        elif self.render_mode.value:
-            self.frame_count = 0
-            self._run_gui()    
-        else:
-            self._run_no_gui()
+        try:
+            handler = self.mode_handlers.get(self.rl_mode)
+            if handler:
+                handler(self)
+            elif self.render_mode.value:
+                self.frame_count = 0
+                self._run_gui()
+            else:
+                self._run_no_gui()
 
-        self.game_model.current_state()
+            self._log_episode_end()
+        finally:
+            # Closes the render window while the interpreter is still up; left
+            # to shutdown, pyglet's macOS teardown order raises inside a ctypes
+            # callback. Monitor.close() forwards to MlslEnv.close().
+            self.env.close()
 
 
     def register_mode(mode_handlers, mode) -> Callable[[Callable], Callable]:
@@ -147,6 +165,29 @@ class RLGameController(AbstractGameController):
         from stable_baselines3.common.evaluation import evaluate_policy
 
         return EvalCallback, evaluate_policy
+
+    def _log_episode_end(self) -> None:
+        """Report how the last episode ended, and the scores it ended with.
+
+        Read from the snapshot the environment took at the final step, not from
+        the live simulation: `evaluate_policy` runs the environment inside a
+        `DummyVecEnv`, which resets as soon as an episode ends, and
+        `TrafficEnv.reset()` builds a whole new set of cars. Reporting the live
+        state here described that fresh world instead -- every car alive with a
+        score of 0, however the episode had actually gone.
+
+        Modes that never run an episode on this environment (OPTIMIZE, which
+        gives each trial its own; LOAD_HISTORY, which replays a recording) have
+        no snapshot, and fall back to the live state as before.
+        """
+        episode_end = self.env.unwrapped.episode_end
+
+        if episode_end is None:
+            self.game_model.current_state()
+            return
+
+        print(f"Episode ended after {episode_end.steps} steps: {episode_end.reason}")
+        self.game_model.current_state(episode_end.car_states)
 
     def _log_shield_stats(self) -> None:
         """Print what the shield did, when there is one."""

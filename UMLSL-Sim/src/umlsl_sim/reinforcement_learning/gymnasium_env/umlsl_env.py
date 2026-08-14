@@ -4,11 +4,12 @@ import time
 import numpy as np
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from gymnasium import Env
 from gymnasium import spaces
-from typing import TYPE_CHECKING, Tuple, Dict
-from umlsl_sim.simulation.traffic_environment import TrafficEnv
-from umlsl_sim.constants import MAX_ACC, MAX_DEC, TIME_PER_FRAME
+from typing import TYPE_CHECKING, List, Tuple, Dict
+from umlsl_sim.simulation.traffic_environment import CarState, TrafficEnv
+from umlsl_sim.constants import DEADLOCK_FRAMES, MAX_ACC, MAX_DEC, TIME_PER_FRAME
 from umlsl_sim.gui.render_mode import RenderMode
 from umlsl_sim.reinforcement_learning.gymnasium_env.observation_spaces.abstract_observation import Observation
 from umlsl_sim.reinforcement_learning.rl_constants import MAX_EPISODE_STEPS
@@ -17,6 +18,30 @@ from umlsl_sim.reinforcement_learning.rl_constants import MAX_EPISODE_STEPS
 # tests can import this module without pulling in the GUI stack.
 if TYPE_CHECKING:
     from umlsl_sim.car_control.action_shield import ActionShield
+
+
+@dataclass(frozen=True)
+class EpisodeEnd:
+    """How an episode finished, captured before anything could reset it.
+
+    Evaluation runs the environment inside SB3's `DummyVecEnv`, which resets as
+    soon as an episode ends, and `TrafficEnv.reset()` replaces every car. Code
+    that reports on the run afterwards -- `RLGameController.run()` -- would
+    therefore describe the fresh world the reset built, with every score back
+    at 0 and every car alive, rather than the episode that was just watched.
+    This is that episode, as plain data.
+
+    Attributes:
+        steps (int): How many steps the episode lasted.
+        reason (str): Why it ended, in words, for reporting.
+        car_states (List[CarState]): Every car's score and death status on the
+            final step.
+    """
+
+    steps: int
+    reason: str
+    car_states: List[CarState]
+
 
 class MlslEnv(Env, ABC):
     """Abstract Gymnasium environment for MLSL traffic simulation.
@@ -63,8 +88,11 @@ class MlslEnv(Env, ABC):
     ## Episode Termination
 
     Episodes end when:
-    - `done=True`: Agent reached goal or collision (terminal state)
-    - `truncated=True`: Deadlock detected (time limit equivalent)
+    - `done=True`: every car is out of play, or the agent car crashed
+    - `truncated=True`: deadlock detected, or `max_episode_steps` reached
+
+    Whichever it was is recorded in `episode_end`, together with the final
+    scores, so a run can be reported on after the environment has been reset.
 
     ## Safety Shield (optional)
 
@@ -84,24 +112,32 @@ class MlslEnv(Env, ABC):
         render_mode (str | None): Rendering mode ('human' or None)
         action_shield (ActionShield | None): Safety shield, or None when the
             agent's action set is unrestricted
+        max_episode_steps (int): Step cap after which an episode is truncated
+        episode_end (EpisodeEnd | None): How the last completed episode ended,
+            or None before the first one finishes
     """
 
-    def __init__(self, 
+    def __init__(self,
                  game_model: TrafficEnv,
                  observation_model: Observation,
                  render_mode: None | RenderMode = None,
                  show_reservation: bool = True,
+                 max_episode_steps: int = MAX_EPISODE_STEPS,
                  ):
         """Initialize the Gymnasium environment.
-        
+
         Args:
             game_model (TrafficEnv): The traffic simulation to control.
             observation_model (Observation): Model for generating observations from game state.
             render_mode (None | str): Rendering mode. 'human' for visual display, None for headless.
+            max_episode_steps (int): Steps after which an episode is truncated.
+                Defaults to the training cap; a run that is watched rather than
+                learned from can afford a longer one (see DEMO_EPISODE_STEPS).
         """
-        
+
         self.render_mode = render_mode
         self.show_reservation = show_reservation
+        self.max_episode_steps = max_episode_steps
 
         self.game_model: TrafficEnv = game_model
 
@@ -132,6 +168,10 @@ class MlslEnv(Env, ABC):
         self.done: bool = False
         self.truncated: bool = False
         self.episode_step: int = 0
+
+        # Deliberately not cleared by reset(): outliving the reset is the whole
+        # point of it (see EpisodeEnd).
+        self.episode_end: None | EpisodeEnd = None
 
         self.map_history = self.game_model.game_history.map.copy()
         self.car_history = self.game_model.game_history.list_of_cars.copy()
@@ -202,17 +242,26 @@ class MlslEnv(Env, ABC):
 
         self.done = False
         self.truncated = False
+        # Recorded alongside the flags so every way an episode can end names
+        # itself. Only the game_over and deadlock cases announce themselves in
+        # the simulation log; the step cap in particular used to end a run in
+        # silence, leaving nothing to explain why the window had closed.
+        end_reason: None | str = None
 
         if self.result == "game_over":
             self.done = True
+            end_reason = "every car is out of play"
         elif self.result == "deadlock":
             self.truncated = True
+            end_reason = f"gridlock (no living car moved for {DEADLOCK_FRAMES} frames)"
         elif self.game_model.agent_car is not None and self.game_model.agent_car.get_death_status():
             # Agent crashed; the RL episode is functionally over even if NPCs
             # keep running. Without this, evaluate_policy can hang forever.
             self.done = True
-        elif self.episode_step >= MAX_EPISODE_STEPS:
+            end_reason = "the agent car crashed"
+        elif self.episode_step >= self.max_episode_steps:
             self.truncated = True
+            end_reason = f"step limit reached ({self.max_episode_steps} steps)"
 
         info = self._get_info() # for debugging
 
@@ -221,6 +270,9 @@ class MlslEnv(Env, ABC):
             self.car_history = self.game_model.game_history.list_of_cars.copy()
             self.action_history = self.game_model.game_history.action_history_dict.copy()
             self.action_length_history = self.game_model.game_history.action_length
+            self.episode_end = EpisodeEnd(
+                self.episode_step, end_reason, self.game_model.car_states()
+            )
 
         return observation, reward, self.done, self.truncated, info
     
@@ -245,6 +297,21 @@ class MlslEnv(Env, ABC):
         self.game_window.on_draw()
         pyglet.clock.tick()
         self.game_window.flip()
+
+    def close(self) -> None:
+        """Close the render window, if this environment opened one.
+
+        Gymnasium's default `close()` is a no-op, which left the pyglet window
+        alive until interpreter shutdown. On macOS that is too late: the window
+        is torn down after its Cocoa delegate has been released, so the
+        resign-key notification fires against a delegate whose `_window` is
+        gone and prints an "Exception ignored ... has no attribute _window"
+        traceback. Closing here happens while the delegate is still attached,
+        so the notification is handled normally.
+        """
+        if self.game_window is not None:
+            self.game_window.close()
+            self.game_window = None
 
     def enable_action_shield(self) -> "ActionShield":
         """Attach a safety shield, switching this env to masked actions.

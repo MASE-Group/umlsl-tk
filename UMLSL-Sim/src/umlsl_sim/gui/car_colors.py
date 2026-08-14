@@ -1,3 +1,4 @@
+White = (255, 255, 255)
 Maroon = (128, 0, 0)
 Brown = (154, 99, 36)
 Olive = (128, 128, 0)
@@ -19,7 +20,6 @@ Apricot = (255, 216, 177)
 Beige = (255, 250, 200)
 Mint = (170, 255, 195)
 Lavender = (220, 190, 255)
-White = (255, 255, 255)
 
 selected_colors = {} #dict of colors
 

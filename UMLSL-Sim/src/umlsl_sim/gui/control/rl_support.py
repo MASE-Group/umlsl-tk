@@ -120,14 +120,29 @@ def reward_names() -> List[str]:
     return [m.name for m in RewardType] if ENUMS_AVAILABLE else []
 
 
-def _models_base() -> Path:
-    # rl_io.RESULT_MODEL_PATH is 'rl_results/models', resolved against the CWD.
-    return Path.cwd() / "rl_results" / "models"
+def _models_base() -> Optional[Path]:
+    """Root of the saved-model tree, or None if rl_io cannot be imported.
+
+    Reuses rl_io's constant rather than rebuilding the path, so what the GUI
+    lists stays in step with what the controller actually loads. The import is
+    deferred because rl_io pulls in pandas, which is an ``[rl]`` extra — on a
+    plain install the listing helpers degrade to "no models" rather than raising.
+    """
+    try:
+        from umlsl_sim.reinforcement_learning import rl_io
+    except Exception as exc:  # pragma: no cover - defensive
+        log.warning("Model directory unavailable: %s", exc)
+        return None
+
+    return Path(rl_io.RESULT_MODEL_PATH)
 
 
 def list_model_ids(scenario_name: str, algo: str, obs: str, reward: str) -> List[str]:
     """Directory names (timestamps) of saved models for the given config."""
-    base = _models_base() / scenario_name / algo / obs / reward
+    root = _models_base()
+    if root is None:
+        return []
+    base = root / scenario_name / algo / obs / reward
     if not base.is_dir():
         return []
     ids = [p.name for p in base.iterdir() if p.is_dir()]
@@ -136,7 +151,10 @@ def list_model_ids(scenario_name: str, algo: str, obs: str, reward: str) -> List
 
 
 def list_history_files(scenario_name: str, algo: str, obs: str, reward: str, id_model: str) -> List[str]:
-    base = _models_base() / scenario_name / algo / obs / reward / id_model / "history"
+    root = _models_base()
+    if root is None:
+        return []
+    base = root / scenario_name / algo / obs / reward / id_model / "history"
     if not base.is_dir():
         return []
     files = [p.name for p in base.iterdir() if p.suffix == ".pkl"]

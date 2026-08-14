@@ -1,0 +1,904 @@
+{
+  "scenario": "ONE_CROSSING",
+  "arm": "random-shielded",
+  "algorithm": "random",
+  "reward": "INITIAL_REWARD",
+  "shielded": true,
+  "npcs": 15,
+  "seeds": 3,
+  "train_steps": 0,
+  "eval_episodes": 30,
+  "mask_violations": 0,
+  "unsafe_acc_per_1000": {
+    "mean": 0.0,
+    "sd": 0.0
+  },
+  "unsafe_lane_per_1000": {
+    "mean": 0.0,
+    "sd": 0.0
+  },
+  "crash_rate": {
+    "mean": 0.0,
+    "sd": 0.0
+  },
+  "goals": {
+    "mean": 31.0,
+    "sd": 1.0
+  },
+  "mean_episode_steps": {
+    "mean": 493.90000000000003,
+    "sd": 3.4531788897253173
+  },
+  "per_seed": [
+    {
+      "seed": 0,
+      "train_seconds": 0.0,
+      "steps": 14893,
+      "unsafe_acc_per_1000": 0.0,
+      "unsafe_lane_per_1000": 0.0,
+      "crash_rate": 0.0,
+      "goals": 32,
+      "mean_episode_steps": 496.43333333333334,
+      "mask_violations": 0,
+      "shield": {
+        "steps": 14893,
+        "forced_brake_steps": 1,
+        "empty_mask_steps": 0,
+        "mean_allowed_actions": 17.611092459544754,
+        "total_actions": 63
+      },
+      "per_episode": [
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 3,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 487,
+          "reason": "gridlock (no living car moved for 16 frames)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 406,
+          "reason": "gridlock (no living car moved for 16 frames)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 3,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        }
+      ]
+    },
+    {
+      "seed": 1,
+      "train_seconds": 0.0,
+      "steps": 14699,
+      "unsafe_acc_per_1000": 0.0,
+      "unsafe_lane_per_1000": 0.0,
+      "crash_rate": 0.0,
+      "goals": 30,
+      "mean_episode_steps": 489.96666666666664,
+      "mask_violations": 0,
+      "shield": {
+        "steps": 14699,
+        "forced_brake_steps": 0,
+        "empty_mask_steps": 0,
+        "mean_allowed_actions": 17.779508810123136,
+        "total_actions": 63
+      },
+      "per_episode": [
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 489,
+          "reason": "gridlock (no living car moved for 16 frames)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 3,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 381,
+          "reason": "gridlock (no living car moved for 16 frames)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 329,
+          "reason": "gridlock (no living car moved for 16 frames)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        }
+      ]
+    },
+    {
+      "seed": 2,
+      "train_seconds": 0.0,
+      "steps": 14859,
+      "unsafe_acc_per_1000": 0.0,
+      "unsafe_lane_per_1000": 0.0,
+      "crash_rate": 0.0,
+      "goals": 31,
+      "mean_episode_steps": 495.3,
+      "mask_violations": 0,
+      "shield": {
+        "steps": 14859,
+        "forced_brake_steps": 1,
+        "empty_mask_steps": 0,
+        "mean_allowed_actions": 17.71909280570698,
+        "total_actions": 63
+      },
+      "per_episode": [
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 463,
+          "reason": "gridlock (no living car moved for 16 frames)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 3,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 396,
+          "reason": "gridlock (no living car moved for 16 frames)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 0,
+          "unsafe_lane": 0,
+          "mask_violations": 0
+        }
+      ]
+    }
+  ]
+}

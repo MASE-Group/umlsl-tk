@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
     # Plain simulation: NPC cars driven by the A* controller, no RL involved.
     # This is the default because it needs no trained model and no [rl] extra.
-    main(**scenario, render_mode=RenderMode.GUI, show_reservation=True)
+    # main(**scenario, render_mode=RenderMode.GUI, show_reservation=True)
 
     # --- Reinforcement-learning variants ------------------------------------
     # Uncomment one of these instead. They need the [rl] extra installed, and
@@ -103,11 +103,21 @@ if __name__ == '__main__':
     #     **scenario,
     #     render_mode=RenderMode.NO_GUI,
     #     show_reservation=False,
-    #     rl_mode=RLMode.TRAIN,
+    #     rl_mode=RLMode.OPTIMIZE_AND_TRAIN,
     #     rl_algorithm_type=RLAlgorithmType.MASKABLE_PPO,
     #     observation_model_type=ObservationModelType.NUMERIC_OBSERVATION,
     #     reward_type=RewardType.INITIAL_REWARD,
     # )
+    main(
+        **scenario,
+        render_mode=RenderMode.GUI,
+        show_reservation=True,
+        rl_mode=RLMode.LOAD_TRAINED_MODEL,
+        rl_algorithm_type=RLAlgorithmType.MASKABLE_PPO,
+        observation_model_type=ObservationModelType.NUMERIC_OBSERVATION,
+        reward_type=RewardType.INITIAL_REWARD,
+        id_model="2026-08-13 12:01:02",
+    )
 
     # Watch a previously trained agent:
     # main(

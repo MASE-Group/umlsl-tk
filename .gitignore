@@ -58,8 +58,9 @@ nosetests.xml
 *.cover
 
 # --- Reinforcement-learning outputs ------------------------------------------
-# rl_io.py writes rl_results/{models,hyperparameters} relative to the CWD,
-# so this is intentionally unanchored.
+# rl_io.py writes rl_results/{models,hyperparameters} under the package
+# (src/umlsl_sim/rl_results). Left unanchored so any stray CWD-relative trees
+# left over from older runs are ignored too.
 rl_results/
 *.optuna.db
 optuna_study*.db

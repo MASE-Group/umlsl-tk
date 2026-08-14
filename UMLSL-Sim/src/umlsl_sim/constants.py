@@ -44,9 +44,17 @@ CROSSING_TRAVERSAL_TICKS = BLOCK_SIZE // CROSSING_MAX_SPEED
 PRIORITY_REORDER_TICKS = CROSSING_TRAVERSAL_TICKS
 PRIORITY_WITHDRAW_TICKS = 3 * CROSSING_TRAVERSAL_TICKS
 
-# Number of consecutive frames on which every car must stand still before the
-# environment reports a deadlock. A single such frame is not evidence of one:
-# dense traffic brings every car to a halt for a tick or two while a crossing
-# claim is reordered or withdrawn, and then moves on again. Only a stall that
-# outlasts this window is reported.
-DEADLOCK_FRAMES = 10
+# Number of consecutive frames on which every living car must stand still
+# before the environment reports a deadlock. A single such frame is not
+# evidence of one: dense traffic brings every car to a halt for a tick or two
+# while a crossing claim is reordered or withdrawn, and then moves on again.
+# Only a stall that outlasts this window is reported.
+#
+# The window therefore has to outlast the recovery it exists to allow. A
+# stalled claim is not withdrawn until PRIORITY_WITHDRAW_TICKS ticks without
+# progress, and the car it was holding up then needs a tick to claim the
+# intersection and another to get going, so a window shorter than that would
+# always cut the stall off before the lease had a chance to break it. Derive it
+# from the lease bound rather than fixing a number that has to be kept in step
+# with it by hand.
+DEADLOCK_FRAMES = PRIORITY_WITHDRAW_TICKS + CROSSING_TRAVERSAL_TICKS

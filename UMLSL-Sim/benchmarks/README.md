@@ -72,10 +72,14 @@ beside each other.
 
 ## What counts as a gridlock
 
-An episode ends in gridlock once every car has stood still for
-`DEADLOCK_FRAMES` consecutive frames (10, in `constants.py`). A single frame in
-which nothing moves is not evidence of one: with claims held on a lease, the
-withdrawal of a stalled claim can set the traffic going again.
+An episode ends in gridlock once every living car has stood still for
+`DEADLOCK_FRAMES` consecutive frames (16, derived in `constants.py` from the
+claim-lease bounds). A single frame in which nothing moves is not evidence of
+one: with claims held on a lease, the withdrawal of a stalled claim can set the
+traffic going again. The window is sized to outlast that withdrawal —
+`PRIORITY_WITHDRAW_TICKS` ticks without progress, plus a tick to re-claim the
+intersection and one to get moving — so the episode is not cut off before the
+lease has had its chance.
 
 Each episode also records `first_all_stopped`, the frame on which traffic first
 stopped completely. Up to that frame the trajectory does not depend on

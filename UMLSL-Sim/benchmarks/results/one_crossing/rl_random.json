@@ -1,0 +1,886 @@
+{
+  "scenario": "ONE_CROSSING",
+  "arm": "random",
+  "algorithm": "random",
+  "reward": "INITIAL_REWARD",
+  "shielded": false,
+  "npcs": 15,
+  "seeds": 3,
+  "train_steps": 0,
+  "eval_episodes": 30,
+  "mask_violations": 0,
+  "unsafe_acc_per_1000": {
+    "mean": 246.99119604542102,
+    "sd": 11.812331887610371
+  },
+  "unsafe_lane_per_1000": {
+    "mean": 666.4587808631751,
+    "sd": 1.3303566457244902
+  },
+  "crash_rate": {
+    "mean": 0.7444444444444445,
+    "sd": 0.019245008972987584
+  },
+  "goals": {
+    "mean": 28.333333333333332,
+    "sd": 2.516611478423583
+  },
+  "mean_episode_steps": {
+    "mean": 304.72222222222223,
+    "sd": 8.171109902396177
+  },
+  "per_seed": [
+    {
+      "seed": 0,
+      "train_seconds": 0.0,
+      "steps": 9424,
+      "unsafe_acc_per_1000": 233.65874363327674,
+      "unsafe_lane_per_1000": 667.23259762309,
+      "crash_rate": 0.7333333333333333,
+      "goals": 28,
+      "mean_episode_steps": 314.1333333333333,
+      "mask_violations": 0,
+      "shield": null,
+      "per_episode": [
+        {
+          "steps": 196,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 46,
+          "unsafe_lane": 142,
+          "mask_violations": 0
+        },
+        {
+          "steps": 281,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 48,
+          "unsafe_lane": 187,
+          "mask_violations": 0
+        },
+        {
+          "steps": 428,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 2,
+          "unsafe_acc": 110,
+          "unsafe_lane": 280,
+          "mask_violations": 0
+        },
+        {
+          "steps": 466,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 3,
+          "unsafe_acc": 119,
+          "unsafe_lane": 311,
+          "mask_violations": 0
+        },
+        {
+          "steps": 113,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 9,
+          "unsafe_lane": 78,
+          "mask_violations": 0
+        },
+        {
+          "steps": 278,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 63,
+          "unsafe_lane": 202,
+          "mask_violations": 0
+        },
+        {
+          "steps": 148,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 47,
+          "unsafe_lane": 91,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 102,
+          "unsafe_lane": 335,
+          "mask_violations": 0
+        },
+        {
+          "steps": 335,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 74,
+          "unsafe_lane": 222,
+          "mask_violations": 0
+        },
+        {
+          "steps": 169,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 2,
+          "unsafe_acc": 40,
+          "unsafe_lane": 113,
+          "mask_violations": 0
+        },
+        {
+          "steps": 86,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 15,
+          "unsafe_lane": 61,
+          "mask_violations": 0
+        },
+        {
+          "steps": 368,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 67,
+          "unsafe_lane": 241,
+          "mask_violations": 0
+        },
+        {
+          "steps": 68,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 22,
+          "unsafe_lane": 40,
+          "mask_violations": 0
+        },
+        {
+          "steps": 94,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 44,
+          "unsafe_lane": 66,
+          "mask_violations": 0
+        },
+        {
+          "steps": 479,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 97,
+          "unsafe_lane": 309,
+          "mask_violations": 0
+        },
+        {
+          "steps": 109,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 13,
+          "unsafe_lane": 68,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 101,
+          "unsafe_lane": 308,
+          "mask_violations": 0
+        },
+        {
+          "steps": 153,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 52,
+          "unsafe_lane": 95,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 123,
+          "unsafe_lane": 343,
+          "mask_violations": 0
+        },
+        {
+          "steps": 224,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 38,
+          "unsafe_lane": 146,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 119,
+          "unsafe_lane": 351,
+          "mask_violations": 0
+        },
+        {
+          "steps": 239,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 59,
+          "unsafe_lane": 154,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 115,
+          "unsafe_lane": 328,
+          "mask_violations": 0
+        },
+        {
+          "steps": 325,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 71,
+          "unsafe_lane": 221,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 147,
+          "unsafe_lane": 330,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 123,
+          "unsafe_lane": 337,
+          "mask_violations": 0
+        },
+        {
+          "steps": 299,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 71,
+          "unsafe_lane": 202,
+          "mask_violations": 0
+        },
+        {
+          "steps": 86,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 28,
+          "unsafe_lane": 62,
+          "mask_violations": 0
+        },
+        {
+          "steps": 480,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 108,
+          "unsafe_lane": 320,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 131,
+          "unsafe_lane": 345,
+          "mask_violations": 0
+        }
+      ]
+    },
+    {
+      "seed": 1,
+      "train_seconds": 0.0,
+      "steps": 9018,
+      "unsafe_acc_per_1000": 251.16433799068528,
+      "unsafe_lane_per_1000": 667.2211133288978,
+      "crash_rate": 0.7666666666666667,
+      "goals": 31,
+      "mean_episode_steps": 300.6,
+      "mask_violations": 0,
+      "shield": null,
+      "per_episode": [
+        {
+          "steps": 128,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 32,
+          "unsafe_lane": 81,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 3,
+          "unsafe_acc": 106,
+          "unsafe_lane": 327,
+          "mask_violations": 0
+        },
+        {
+          "steps": 278,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 81,
+          "unsafe_lane": 188,
+          "mask_violations": 0
+        },
+        {
+          "steps": 381,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 3,
+          "unsafe_acc": 102,
+          "unsafe_lane": 257,
+          "mask_violations": 0
+        },
+        {
+          "steps": 355,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 3,
+          "unsafe_acc": 103,
+          "unsafe_lane": 240,
+          "mask_violations": 0
+        },
+        {
+          "steps": 312,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 71,
+          "unsafe_lane": 202,
+          "mask_violations": 0
+        },
+        {
+          "steps": 198,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 51,
+          "unsafe_lane": 132,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 3,
+          "unsafe_acc": 97,
+          "unsafe_lane": 326,
+          "mask_violations": 0
+        },
+        {
+          "steps": 304,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 81,
+          "unsafe_lane": 190,
+          "mask_violations": 0
+        },
+        {
+          "steps": 238,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 2,
+          "unsafe_acc": 64,
+          "unsafe_lane": 150,
+          "mask_violations": 0
+        },
+        {
+          "steps": 253,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 71,
+          "unsafe_lane": 174,
+          "mask_violations": 0
+        },
+        {
+          "steps": 319,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 83,
+          "unsafe_lane": 216,
+          "mask_violations": 0
+        },
+        {
+          "steps": 134,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 47,
+          "unsafe_lane": 85,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 113,
+          "unsafe_lane": 348,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 106,
+          "unsafe_lane": 342,
+          "mask_violations": 0
+        },
+        {
+          "steps": 81,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 21,
+          "unsafe_lane": 55,
+          "mask_violations": 0
+        },
+        {
+          "steps": 209,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 54,
+          "unsafe_lane": 149,
+          "mask_violations": 0
+        },
+        {
+          "steps": 191,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 62,
+          "unsafe_lane": 124,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 119,
+          "unsafe_lane": 330,
+          "mask_violations": 0
+        },
+        {
+          "steps": 96,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 17,
+          "unsafe_lane": 52,
+          "mask_violations": 0
+        },
+        {
+          "steps": 242,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 50,
+          "unsafe_lane": 162,
+          "mask_violations": 0
+        },
+        {
+          "steps": 200,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 51,
+          "unsafe_lane": 144,
+          "mask_violations": 0
+        },
+        {
+          "steps": 332,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 72,
+          "unsafe_lane": 213,
+          "mask_violations": 0
+        },
+        {
+          "steps": 317,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 84,
+          "unsafe_lane": 205,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 133,
+          "unsafe_lane": 325,
+          "mask_violations": 0
+        },
+        {
+          "steps": 84,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 25,
+          "unsafe_lane": 58,
+          "mask_violations": 0
+        },
+        {
+          "steps": 399,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 101,
+          "unsafe_lane": 280,
+          "mask_violations": 0
+        },
+        {
+          "steps": 313,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 89,
+          "unsafe_lane": 208,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 107,
+          "unsafe_lane": 356,
+          "mask_violations": 0
+        },
+        {
+          "steps": 154,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 72,
+          "unsafe_lane": 98,
+          "mask_violations": 0
+        }
+      ]
+    },
+    {
+      "seed": 2,
+      "train_seconds": 0.0,
+      "steps": 8983,
+      "unsafe_acc_per_1000": 256.15050651230104,
+      "unsafe_lane_per_1000": 664.9226316375376,
+      "crash_rate": 0.7333333333333333,
+      "goals": 26,
+      "mean_episode_steps": 299.43333333333334,
+      "mask_violations": 0,
+      "shield": null,
+      "per_episode": [
+        {
+          "steps": 132,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 48,
+          "unsafe_lane": 84,
+          "mask_violations": 0
+        },
+        {
+          "steps": 108,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 20,
+          "unsafe_lane": 73,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 3,
+          "unsafe_acc": 131,
+          "unsafe_lane": 342,
+          "mask_violations": 0
+        },
+        {
+          "steps": 168,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 27,
+          "unsafe_lane": 124,
+          "mask_violations": 0
+        },
+        {
+          "steps": 107,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 10,
+          "unsafe_lane": 73,
+          "mask_violations": 0
+        },
+        {
+          "steps": 300,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 75,
+          "unsafe_lane": 203,
+          "mask_violations": 0
+        },
+        {
+          "steps": 151,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 65,
+          "unsafe_lane": 96,
+          "mask_violations": 0
+        },
+        {
+          "steps": 440,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 3,
+          "unsafe_acc": 105,
+          "unsafe_lane": 288,
+          "mask_violations": 0
+        },
+        {
+          "steps": 296,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 81,
+          "unsafe_lane": 199,
+          "mask_violations": 0
+        },
+        {
+          "steps": 65,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 12,
+          "unsafe_lane": 38,
+          "mask_violations": 0
+        },
+        {
+          "steps": 103,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 21,
+          "unsafe_lane": 66,
+          "mask_violations": 0
+        },
+        {
+          "steps": 402,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 69,
+          "unsafe_lane": 263,
+          "mask_violations": 0
+        },
+        {
+          "steps": 106,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 47,
+          "unsafe_lane": 67,
+          "mask_violations": 0
+        },
+        {
+          "steps": 120,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 29,
+          "unsafe_lane": 71,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 157,
+          "unsafe_lane": 349,
+          "mask_violations": 0
+        },
+        {
+          "steps": 258,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 44,
+          "unsafe_lane": 171,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 0,
+          "unsafe_acc": 125,
+          "unsafe_lane": 334,
+          "mask_violations": 0
+        },
+        {
+          "steps": 171,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 67,
+          "unsafe_lane": 104,
+          "mask_violations": 0
+        },
+        {
+          "steps": 487,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 104,
+          "unsafe_lane": 302,
+          "mask_violations": 0
+        },
+        {
+          "steps": 225,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 47,
+          "unsafe_lane": 151,
+          "mask_violations": 0
+        },
+        {
+          "steps": 464,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 94,
+          "unsafe_lane": 301,
+          "mask_violations": 0
+        },
+        {
+          "steps": 258,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 2,
+          "unsafe_acc": 70,
+          "unsafe_lane": 171,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 125,
+          "unsafe_lane": 344,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 1,
+          "unsafe_acc": 133,
+          "unsafe_lane": 323,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 121,
+          "unsafe_lane": 338,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 164,
+          "unsafe_lane": 320,
+          "mask_violations": 0
+        },
+        {
+          "steps": 45,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 15,
+          "unsafe_lane": 25,
+          "mask_violations": 0
+        },
+        {
+          "steps": 110,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 0,
+          "unsafe_acc": 40,
+          "unsafe_lane": 76,
+          "mask_violations": 0
+        },
+        {
+          "steps": 467,
+          "reason": "the agent car crashed",
+          "crashed": true,
+          "goals": 1,
+          "unsafe_acc": 126,
+          "unsafe_lane": 332,
+          "mask_violations": 0
+        },
+        {
+          "steps": 500,
+          "reason": "step limit reached (500 steps)",
+          "crashed": false,
+          "goals": 2,
+          "unsafe_acc": 129,
+          "unsafe_lane": 345,
+          "mask_violations": 0
+        }
+      ]
+    }
+  ]
+}

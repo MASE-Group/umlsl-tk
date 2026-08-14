@@ -3,6 +3,8 @@ import datetime
 import pandas as pd
 import pickle
 
+from pathlib import Path
+
 from typing import TYPE_CHECKING, Dict, Any, Tuple, List
 from umlsl_sim.reinforcement_learning.algorithms.rl_algorithm import RLAlgorithm
 from umlsl_sim.reinforcement_learning.gymnasium_env.umlsl_env import MlslEnv
@@ -14,8 +16,15 @@ if TYPE_CHECKING:
     from stable_baselines3.common.base_class import BaseAlgorithm
     from optuna.study import Study
 
-RESULT_MODEL_PATH = os.path.join('rl_results', 'models')
-RESULT_PARAM_PATH = os.path.join('rl_results', 'hyperparameters')
+# Anchored to the package, not the CWD: these paths are used for both saving and
+# loading, so a CWD-relative value silently files results under whichever
+# directory training happened to run from, and later reads look somewhere else.
+# Mirrors scenario_io.loader._DATA_DIR, which anchors the scenario JSONs the
+# same way.
+_RESULTS_ROOT = Path(__file__).resolve().parent.parent / "rl_results"
+
+RESULT_MODEL_PATH = str(_RESULTS_ROOT / "models")
+RESULT_PARAM_PATH = str(_RESULTS_ROOT / "hyperparameters")
 
 BEST_MODEL_FILE = "best_model"
 BEST_PARAMS_FILE = "best_params.parquet"

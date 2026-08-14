@@ -46,7 +46,20 @@ OPTUNA_PARALLEL_JOBS = max(1, min(8, (os.cpu_count() or 2) - 2))
 
 # Hard cap on env steps per RL episode. Without this, evaluate_policy can
 # hang when the agent dies but background NPCs keep running indefinitely.
+# Training is sized against this number (see TRAINING_TIMESTEPS), so a run that
+# wants longer episodes overrides it per environment rather than raising it
+# here — DEMO_EPISODE_STEPS below is that override.
 MAX_EPISODE_STEPS = 500
+
+# Step cap for a LOAD_TRAINED_MODEL run. Watching a trained agent is not
+# training: it is a single episode, nothing is learned from it, and once the
+# shield keeps the agent out of collisions the cap is usually the only thing
+# that ends it. At roughly 12 ms of simulation plus a 1/TIME_PER_FRAME render
+# pause per step, MAX_EPISODE_STEPS is well under a minute of viewing, which is
+# shorter than it takes traffic to show much. This is demo-only: training and
+# hyperparameter search keep MAX_EPISODE_STEPS, so the timestep budget above
+# still buys the same number of episodes.
+DEMO_EPISODE_STEPS = 5_000
 
 # Reward magnitudes used by SafetyAwareReward.
 REWARD_GOAL_REACHED = 50.0

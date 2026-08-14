@@ -30,6 +30,7 @@ from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, List, Tuple
 
 from umlsl_sim.gui.render_mode import RenderMode
+from umlsl_sim.reinforcement_learning.rl_constants import MAX_EPISODE_STEPS
 from umlsl_sim.reinforcement_learning.rl_modes import RLMode
 from umlsl_sim.reinforcement_learning.gymnasium_env.observation_spaces.observation_model_types import ObservationModelType
 from umlsl_sim.reinforcement_learning.gymnasium_env.reward_types import RewardType
@@ -63,6 +64,10 @@ class EnvSpec:
             built for background evaluation or a worker process must stay
             headless.
         show_reservation (bool): GUI-only; draws segment reservations.
+        max_episode_steps (int): Steps after which an episode is truncated.
+            Defaults to the training cap; only a run that is watched rather
+            than learned from raises it, so that the environments built for
+            training, evaluation and hyperparameter trials all stay comparable.
     """
 
     roads: List[Road]
@@ -74,6 +79,7 @@ class EnvSpec:
     rl_mode: RLMode = RLMode.TRAIN
     render_mode: RenderMode = RenderMode.NO_GUI
     show_reservation: bool = False
+    max_episode_steps: int = MAX_EPISODE_STEPS
 
     def build(self) -> Tuple["Monitor", "ActionShield | None"]:
         """Build one environment from this spec.
@@ -105,6 +111,7 @@ class EnvSpec:
             observation_model=observation_model,
             render_mode=self.render_mode,
             show_reservation=self.show_reservation,
+            max_episode_steps=self.max_episode_steps,
         )
 
         # Before any wrapper: the shield belongs to the environment itself.

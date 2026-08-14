@@ -1,5 +1,6 @@
 import random
 
+from dataclasses import dataclass
 from typing import Tuple, List
 from umlsl_sim.car_control.astar_car_controller import AstarCarController
 from umlsl_sim.simulation.factories.create_cars import (
@@ -19,6 +20,28 @@ from umlsl_sim.simulation.episode_history import GameHistory
 from umlsl_sim.reinforcement_learning.rl_modes import RLMode
 from umlsl_sim.scenario_io.car_spec import CarSpec
 
+
+@dataclass(frozen=True)
+class CarState:
+    """One car's identity and outcome, as plain data.
+
+    Kept separate from `Car` so it survives a `TrafficEnv.reset()`: the reset
+    replaces every car object, so anything still holding the cars themselves
+    would report the world the reset built rather than the one that just ran.
+
+    Attributes:
+        type (CarType): NPC or AGENT.
+        name (str): The car's display name.
+        score (int): Goals reached.
+        dead (bool): Whether the car had crashed.
+    """
+
+    type: CarType
+    name: str
+    score: int
+    dead: bool
+
+
 class TrafficEnv:
     """
     A class to represent the traffic environment.
@@ -31,7 +54,8 @@ class TrafficEnv:
         cars_controllers (Dict[Car, Optional[AstarCarController]]): Dictionary of cars and corresponding controllers.
         moved (bool): Flag to indicate if a car has moved.
         time (int): Current time in the environment.
-        stalled_frames (int): Consecutive frames on which every car stood still.
+        stalled_frames (int): Consecutive frames on which every living car stood
+            still.
     """
 
     def __init__(self,
@@ -194,7 +218,17 @@ class TrafficEnv:
         # standing traffic is not enough to declare one: count the consecutive
         # frames on which no car moves and report only once they reach
         # DEADLOCK_FRAMES. Any car moving resets the count.
-        if all(car.speed == 0 for car in self.cars):
+        #
+        # Only living cars have a say. A wreck is normally frozen at speed 0 and
+        # would vote "stalled" either way, but not always: a car killed by an
+        # earlier car's collision check this tick is already in `actions`, so
+        # _execute_action still runs change_speed on it. move() then refuses
+        # because it is dead, leaving a wreck parked at a non-zero speed for the
+        # rest of the run -- which, counted, would suppress gridlock detection
+        # from that point on. The list is also guarded against being empty,
+        # where all() would vacuously report a stall.
+        living_cars = [car for car in self.cars if not car.get_death_status()]
+        if living_cars and all(car.speed == 0 for car in living_cars):
             self.stalled_frames += 1
         else:
             self.stalled_frames = 0
@@ -271,14 +305,35 @@ class TrafficEnv:
 
         return action_worked
 
-    def current_state(self):
+    def car_states(self) -> List[CarState]:
+        """Snapshot every car's identity, score and death status.
+
+        Take one before an episode can be reset away if the state has to be
+        reported afterwards -- see `CarState`.
+        """
+        return [
+            CarState(car.type, car.name, car.score, car.get_death_status())
+            for car in self.cars
+        ]
+
+    def current_state(self, states: None | List[CarState] = None) -> None:
+        """Print the game state.
+
+        Args:
+            states (None | List[CarState]): What to print. Defaults to the live
+                simulation; pass a `car_states()` snapshot to report an episode
+                that has already been reset away.
+        """
+        if states is None:
+            states = self.car_states()
+
         print("---------------------")
         print("Game State:\n")
         game_over = True
 
-        for car in self.cars:
-            print(f"{car.type}: {car.name} | Score: {car.score} | Dead: {car.get_death_status()}")
-            game_over = car.get_death_status() and game_over
+        for state in states:
+            print(f"{state.type}: {state.name} | Score: {state.score} | Dead: {state.dead}")
+            game_over = state.dead and game_over
 
         print(f"Game Over -> {game_over}")
         print("---------------------\n")

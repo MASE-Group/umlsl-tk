@@ -2,10 +2,11 @@
 
     python summarise.py                 # LaTeX rows for the simulation table
     python summarise.py --compare       # bounded vs unbounded claim
+    python summarise.py --rl            # LaTeX rows for the RL table
 
-Reads whatever `episode_outcomes.py`, `throughput.py` and `unbounded_claim.py`
-have left in results/<scenario>/, and says which densities are missing rather
-than quietly printing a short table.
+Reads whatever `episode_outcomes.py`, `throughput.py`, `unbounded_claim.py` and
+`rl_policies.py` have left in results/<scenario>/, and says which
+configurations are missing rather than quietly printing a short table.
 """
 
 import argparse
@@ -90,6 +91,41 @@ def comparison(bounded: dict, unbounded: dict, cars_list: list) -> str:
     return "\n".join(lines)
 
 
+# Order and labels of the RL table's rows.
+RL_ROWS = [
+    ("random", "Random"),
+    ("random-shielded", "Random, shielded"),
+    ("ppo-initial", "PPO, initial reward"),
+    ("ppo-safety-aware", "PPO, safety-aware reward"),
+    ("maskable-ppo", "MaskablePPO, shielded"),
+]
+
+
+def rl_latex_rows(base: Path) -> str:
+    """LaTeX rows for the trained-policy table, one per arm that has data."""
+    lines = []
+    for arm, label in RL_ROWS:
+        result = load(base / f"rl_{arm}.json")
+        if result is None:
+            lines.append(f"% no data for {arm} -- run rl_policies.py --arms {arm}")
+            continue
+
+        def cell(column: str, digits: int = 1, with_sd: bool = True) -> str:
+            stat = result[column]
+            if not with_sd:
+                return f"${stat['mean']:.{digits}f}$"
+            return f"${stat['mean']:.{digits}f} \\pm {stat['sd']:.{digits}f}$"
+
+        lines.append(
+            f"{label:<26}& {cell('unsafe_acc_per_1000')} & {cell('unsafe_lane_per_1000')} "
+            f"& {cell('crash_rate', 2, with_sd=False)} & {cell('goals', 1, with_sd=False)} "
+            f"& {cell('mean_episode_steps', 0, with_sd=False)}\\\\"
+        )
+        if result["mask_violations"]:
+            lines.append(f"% WARNING: {arm} took {result['mask_violations']} masked-out actions")
+    return "\n".join(lines)
+
+
 def main(argv: None | list = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -99,7 +135,15 @@ def main(argv: None | list = None) -> None:
                         default=Path(__file__).parent / "results")
     parser.add_argument("--compare", action="store_true",
                         help="print the bounded/unbounded comparison instead")
+    parser.add_argument("--rl", action="store_true",
+                        help="print the trained-policy table instead")
+    parser.add_argument("--rl-scenario", default="ONE_CROSSING",
+                        help="scenario the RL arms were measured on")
     args = parser.parse_args(argv)
+
+    if args.rl:
+        print(rl_latex_rows(args.results / args.rl_scenario.lower()))
+        return
 
     base = args.results / args.scenario.lower()
     bounded = {c: r for c in args.cars

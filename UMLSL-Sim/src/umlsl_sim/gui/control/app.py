@@ -33,6 +33,11 @@ log = logging.getLogger(__name__)
 WIN_W = 1300
 WIN_H = 880
 
+# Height of the strip reserved at the top of the viewport card for the banner
+# that names the car the RL agent drives. The scene is letterboxed into the
+# space below it, so the banner never overlaps the simulation.
+BANNER_H = 26
+
 
 def list_scenarios() -> List[str]:
     d = scenarios_dir()
@@ -108,6 +113,12 @@ class ControlWindow(pyglet.window.Window):
         vy = 16
         return (vx, vy, self.width - vx - 16, self.height - 32)
 
+    @property
+    def scene_viewport(self):
+        """The viewport card minus the banner strip: where the scene is drawn."""
+        vx, vy, vw, vh = self.viewport
+        return (vx, vy, vw, vh - BANNER_H)
+
     def _build_chrome(self) -> None:
         self._panel = pyglet.shapes.Rectangle(
             0, 0, theme.PANEL_WIDTH, self.height, color=theme.PANEL,
@@ -117,12 +128,23 @@ class ControlWindow(pyglet.window.Window):
         self._viewport_card = pyglet.shapes.Rectangle(
             vx, vy, vw, vh, color=theme.LAYER, batch=self.chrome_batch, group=self.g_base,
         )
+        sx, sy, sw, sh = self.scene_viewport
         self._hint = Label(
             "Choose a scenario and press Run",
             font_name=theme.FONT, font_size=16, color=(*theme.LAYER_ACTIVE, 255),
-            x=vx + vw / 2, y=vy + vh / 2, anchor_x="center", anchor_y="center",
+            x=sx + sw / 2, y=sy + sh / 2, anchor_x="center", anchor_y="center",
             batch=self.ui_batch, group=self.g_base,
         )
+        # Sits in the reserved strip above the scene; only shown while a trained
+        # model is driving (RLMode.LOAD_TRAINED_MODEL).
+        self._agent_banner = Label(
+            "", font_name=theme.FONT, font_size=theme.FONT_SIZE, weight="bold",
+            color=(*theme.TEXT, 255),
+            x=vx + vw / 2, y=vy + vh - BANNER_H / 2,
+            anchor_x="center", anchor_y="center",
+            batch=self.ui_batch, group=self.g_base,
+        )
+        self._agent_banner.visible = False
 
     def _add_caption(self, text: str, x: float, y: float, rl: bool = False, model: bool = False) -> Label:
         lbl = Label(
@@ -305,11 +327,22 @@ class ControlWindow(pyglet.window.Window):
         self.save_btn.set_enabled(bool(can_save))
         self.run_btn.set_enabled(not self.rl_worker.running)
         self._hint.visible = not active
+        self._sync_agent_banner()
         # reflect engine status changes in the log
         if self.engine.status != self._last_status:
             self._last_status = self.engine.status
             if active:
                 self.log(self.engine.status)
+
+    def _sync_agent_banner(self) -> None:
+        name = self.engine.agent_car_name
+        if name is None:
+            self._agent_banner.visible = False
+            return
+        text = f"The RL agent controls the {name} car"
+        if self._agent_banner.text != text:
+            self._agent_banner.text = text
+        self._agent_banner.visible = True
 
     # --- clock ------------------------------------------------------------
     def _tick(self, _dt: float) -> None:
@@ -465,7 +498,7 @@ class ControlWindow(pyglet.window.Window):
     def on_draw(self) -> None:
         self.clear()
         self.chrome_batch.draw()
-        self.scene.draw(self.viewport, self.engine.world(), self.engine.flash_count,
+        self.scene.draw(self.scene_viewport, self.engine.world(), self.engine.flash_count,
                         self.show_res_cb.checked)
         self.ui_batch.draw()
 

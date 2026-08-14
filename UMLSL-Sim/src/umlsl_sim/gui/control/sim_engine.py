@@ -60,6 +60,18 @@ class SimulationEngine:
     def can_restart(self) -> bool:
         return self._restart is not None
 
+    @property
+    def agent_car_name(self) -> Optional[str]:
+        """Name of the car the RL agent drives, or ``None`` outside RL eval.
+
+        Cars are named after their colour ("White", "Maroon", ...), so this
+        doubles as the label the GUI shows to point the user at the agent.
+        """
+        if self.mode != "rl_eval" or self.game_model is None:
+            return None
+        car = self.game_model.agent_car
+        return car.name or None if car is not None else None
+
     def set_finish_callback(self, cb: Callable[[str], None]) -> None:
         self._on_finish = cb
 

@@ -511,7 +511,15 @@ OPTUNA_TRIALS = 50                        # Number of optimization trials
 OPTUNA_TRIAL_EVALS = 10                   # Evaluations (and pruning decisions) per trial
 OPTUNA_PARALLEL_JOBS = ...                # Concurrent trials; defaults to cores - 2
 MAX_EPISODE_STEPS = 500                   # Hard cap on env steps per episode
+DEMO_EPISODE_STEPS = 5_000                # The same cap, for LOAD_TRAINED_MODEL only
 ```
+
+**Two episode caps.** Training, evaluation and Optuna trials all cap episodes
+at `MAX_EPISODE_STEPS`, which the timestep budget above is sized against.
+`LOAD_TRAINED_MODEL` is a single episode that nothing is learned from, so it
+uses `DEMO_EPISODE_STEPS` instead: at 500 steps a shielded agent that neither
+crashes nor gridlocks ends the run in well under a minute of viewing. Raise
+`DEMO_EPISODE_STEPS` to watch for longer; it does not affect training.
 
 **Watch the evaluation budget.** Evaluations do not count towards
 `TRAINING_TIMESTEPS`, but they cost the same simulation steps as training does:
@@ -549,10 +557,13 @@ rl_results/
             └── param_importance.html   # Visualization
 ```
 
-`rl_results/` is resolved **relative to the current working directory**, not to
-the package — run your training and your `LOAD_TRAINED_MODEL` / `LOAD_HISTORY`
-replays from the same directory, or the saved runs will not be found. The
-control GUI's "Saved model" dropdown scans the same CWD-relative tree.
+`rl_results/` is resolved **relative to the package**, at
+`src/umlsl_sim/rl_results/` — the same anchoring the scenario JSONs use. Saving
+and loading therefore agree no matter which directory you launch from, so
+training and your `LOAD_TRAINED_MODEL` / `LOAD_HISTORY` replays need not share a
+working directory. The control GUI's "Saved model" dropdown reads the same tree
+through `rl_io.RESULT_MODEL_PATH`, so it lists exactly what the controller can
+load.
 
 The first three path components after `models/` come from `scenario_name`, the
 algorithm, the observation model and the reward type, which is why the LOAD_\*
