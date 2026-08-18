@@ -1,8 +1,9 @@
-from umlsl_sim.constants import *
+from umlsl_sim.config.logic_constants import BLOCK_SIZE
+from umlsl_sim.gui.gui_constants import LANE_DISPLACEMENT
 from umlsl_sim.simulation.road_network.road_network import Direction, Road, LaneSegment, CrossingSegment, true_direction
 from typing import List, Tuple
 
-from umlsl_sim.gui.map_colors import *
+from umlsl_sim.gui.colors.map_colors import *
 
 
 def get_xy_crossingseg(seg: CrossingSegment) -> Tuple[int, int]:

@@ -19,7 +19,7 @@ from pyglet import shapes
 from pyglet.gl import GL_SCISSOR_TEST, glDisable, glEnable, glScissor
 from pyglet.math import Mat4, Vec3
 
-from umlsl_sim.constants import WINDOW_HEIGHT, WINDOW_WIDTH
+from umlsl_sim.gui.gui_constants import WINDOW_HEIGHT, WINDOW_WIDTH
 from umlsl_sim.gui.scene_drawer import GameDrawer
 from umlsl_sim.gui.control import theme
 
@@ -57,6 +57,22 @@ class SceneRenderer:
         for sh in self._map_shapes:
             sh.batch = self._map_batch
 
+    def _scissor_scale(self) -> Tuple[float, float]:
+        """Window units -> framebuffer pixels, the space ``glScissor`` works in.
+
+        Not ``get_pixel_ratio()``: that is the framebuffer/window-frame ratio,
+        which only doubles as this conversion when pyglet reports sizes in
+        window-frame units. Under the default ``dpi_scaling="platform"`` on a
+        HiDPI screen it does not -- ``get_size()`` already returns framebuffer
+        pixels, so the projection and every widget coordinate are in those
+        pixels too, and scaling by the ratio again pushed the scissor box right
+        past the viewport, cutting the left of the scene off. Deriving the
+        factor from the two sizes gives 1.0 there and the true ratio wherever
+        pyglet does report window-frame units.
+        """
+        fb_w, fb_h = self.window.get_framebuffer_size()
+        return fb_w / max(self.window.width, 1), fb_h / max(self.window.height, 1)
+
     def draw(self, viewport: Viewport, world, flash_count: int, show_reservation: bool) -> None:
         if world is None:
             return
@@ -71,10 +87,10 @@ class SceneRenderer:
             sh.batch = dyn_batch
 
         vx, vy, vw, vh = viewport
-        ratio = self.window.get_pixel_ratio()
+        sx, sy = self._scissor_scale()
         old_view = self.window.view
         glEnable(GL_SCISSOR_TEST)
-        glScissor(int(vx * ratio), int(vy * ratio), int(vw * ratio), int(vh * ratio))
+        glScissor(int(vx * sx), int(vy * sy), int(vw * sx), int(vh * sy))
         self.window.view = fit_transform(viewport)
         self._map_batch.draw()
         dyn_batch.draw()

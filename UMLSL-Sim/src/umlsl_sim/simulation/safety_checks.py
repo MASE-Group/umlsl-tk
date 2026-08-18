@@ -14,7 +14,7 @@ inductively collision-free.
 """
 from typing import List
 
-from umlsl_sim.constants import MAX_ACC, MAX_DEC
+from umlsl_sim.config.logic_constants import MAX_ACC, MAX_DEC
 from umlsl_sim.simulation.road_network.road_network import LaneSegment, SegmentInfo
 
 

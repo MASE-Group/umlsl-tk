@@ -132,7 +132,7 @@ live in the top-left menu.
 ### Interactive control GUI (recommended)
 
 ```bash
-python -m umlsl_sim.run_control_gui
+python -m umlsl_sim.app.run_control_gui
 ```
 
 The control panel lets you pick a scenario and the number of NPC cars, start,
@@ -141,23 +141,32 @@ model and reward, and save a paused run as a new scenario.
 
 ### Scripted use
 
-`umlsl_sim.main` exposes the same functionality as a function call, for
+`umlsl_sim.app.main` exposes the same functionality as a function call, for
 batch experiments and headless runs:
 
 ```python
-from umlsl_sim.main import main
-from umlsl_sim.scenario_io.loader import load_scenario
-from umlsl_sim.gui.render_mode import RenderMode
+from umlsl_sim.app.main import main
+from umlsl_sim.scenario.loader import load_scenario
+from umlsl_sim.config.render_mode import RenderMode
 
 scenario = load_scenario("TWO_CROSSINGS")
 main(**scenario, render_mode=RenderMode.GUI, show_reservation=True)
 ```
 
 `load_scenario` takes the scenario key case-insensitively and reads
-`UMLSL-Sim/src/umlsl_sim/scenarios/<key-in-lowercase>.json`. Use
-`render_mode=RenderMode.NO_GUI` for headless runs. The full parameter reference,
-the RL modes, and the layout of the `rl_results/` output tree are documented in
-[UMLSL-Sim/README.md](UMLSL-Sim/README.md).
+`UMLSL-Sim/src/umlsl_sim/scenario/scenarios/<key-in-lowercase>.json`. Use
+`render_mode=RenderMode.NO_GUI` for headless runs.
+
+The same options are available from the command line, which is the quickest way
+to run one scenario or start a training run:
+
+```bash
+python -m umlsl_sim.app.run_scenario --scenario circuit --players 12
+python -m umlsl_sim.app.run_scenario --help
+```
+
+The full parameter reference, the RL modes, and the layout of the `rl_results/`
+output tree are documented in [UMLSL-Sim/README.md](UMLSL-Sim/README.md).
 
 ---
 
@@ -169,7 +178,7 @@ both directions:
 | | Native format | Interchange format |
 | :--- | :--- | :--- |
 | **UMLSL-Edit** | `meta`, `roads`, `cars`, `queries` — includes UMLSL queries; used by `File ▸ Save` | written by `File ▸ Export to UMLSL-Sim`, read by `File ▸ Import from UMLSL-Sim` |
-| **UMLSL-Sim** | — | `name`, `scenario_name`, `players`, `roads`, `cars` — every file in `UMLSL-Sim/src/umlsl_sim/scenarios/` |
+| **UMLSL-Sim** | — | `name`, `scenario_name`, `players`, `roads`, and an optional `cars` — every file in `UMLSL-Sim/src/umlsl_sim/scenario/scenarios/`. A file without `cars` places its `players` cars at random; an export from UMLSL-Edit always writes `cars`, so the scenario is reproduced exactly. |
 
 The interchange format is exactly UMLSL-Sim's scenario format, so no conversion
 step is needed on the simulator side.
@@ -178,7 +187,7 @@ step is needed on the simulator side.
 
 1. Build and check your snapshot in UMLSL-Edit.
 2. Choose **File ▸ Export to UMLSL-Sim**.
-3. In the save dialog, navigate to **`UMLSL-Sim/src/umlsl_sim/scenarios/`** and save the
+3. In the save dialog, navigate to **`UMLSL-Sim/src/umlsl_sim/scenario/scenarios/`** and save the
    file there.
 
    The **file name becomes the scenario key**: exporting as `my_scenario.json`
@@ -192,7 +201,7 @@ step is needed on the simulator side.
    dropdown is only rescanned when the GUI itself saves a scenario.
 
 Saving anywhere else works too; just move or copy the file into
-`UMLSL-Sim/src/umlsl_sim/scenarios/` afterwards, since that directory is the only place
+`UMLSL-Sim/src/umlsl_sim/scenario/scenarios/` afterwards, since that directory is the only place
 UMLSL-Sim looks for scenarios.
 
 **What is carried over.** All roads and cars, with their lanes, positions,
@@ -209,7 +218,7 @@ exporting alone will lose them.
 1. Run a simulation, then pause it at the state you want to analyse
    (**Play / Pause**).
 2. Type a name into **New scenario name** and press **Save paused scenario**.
-   The file is written to `UMLSL-Sim/src/umlsl_sim/scenarios/<name>.json`; the status log
+   The file is written to `UMLSL-Sim/src/umlsl_sim/scenario/scenarios/<name>.json`; the status log
    reports the path, how many cars were written, and whether any mid-crossing
    car had to be snapped back to the entry of its next lane segment.
 3. In UMLSL-Edit choose **File ▸ Import from UMLSL-Sim** and open that file.
@@ -226,7 +235,7 @@ convenient starting point:
 
 ```
 UMLSL-Edit  ▸  File ▸ Import from UMLSL-Sim
-            ▸  UMLSL-Sim/src/umlsl_sim/scenarios/two_crossings_predefined.json
+            ▸  UMLSL-Sim/src/umlsl_sim/scenario/scenarios/two_crossings_predefined.json
 ```
 
 ### Representation differences handled by the conversion
@@ -268,17 +277,24 @@ UMLSL-Edit/                       the editor and model checker
 
 UMLSL-Sim/                        the simulator and RL environment
   src/umlsl_sim/
-    main.py                       scripted entry point
-    run_control_gui.py            interactive control GUI
-    run_scenario.py               run one scenario without RL
-    run_manual_drive.py           drive a car manually
-    simulation/                   traffic environment, controllers, factories
-    car_control/                  per-car A* and safety controllers
-    gui/                          pyglet rendering and control panel
-    reinforcement_learning/       Gymnasium env, algorithms, rewards
-    scenario_io/                  scenario loader and car specifications
-    scenarios/                    scenario files — the export/import target
-  manual_tests/                   long-running RL training checks
+    app/                          entry points; the composition root
+      main.py                     scripted entry point
+      run_control_gui.py          interactive control GUI
+      run_scenario.py             run one scenario, with or without RL
+      run_manual_drive.py         drive a car manually
+      renderer_factory.py         binds the Renderer port to pyglet
+    runners/                      the loop that drives a run to its end
+    gui/                          pyglet rendering, GUI constants, control panel
+    rl/                           algorithms, hyperparameters, observations, rewards
+    control/                      car controllers: A* for NPCs, safety for RL
+    scenario/                     scenario parser, and the scenario files
+    factories/                    model creators: cars, goals, segments, CarSpec
+    simulation/                   traffic logic, and the ports it is driven through
+    palettes/                     named colour tables (plain data)
+    config/                       traffic-model constants and render mode
+  benchmarks/                     throughput and outcome measurements
+  tests/                          unit, functional and integration tests
+  manual_tests/                   integration checks against Stable-Baselines3
 
 install.sh                        dependency installer
 ```

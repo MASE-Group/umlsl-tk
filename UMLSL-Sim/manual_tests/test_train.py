@@ -12,13 +12,13 @@ import numpy as np
 
 from stable_baselines3 import PPO
 
-from umlsl_sim.scenario_io.loader import load_scenario
+from umlsl_sim.scenario.loader import load_scenario
 from umlsl_sim.simulation.traffic_environment import TrafficEnv
-from umlsl_sim.reinforcement_learning.rl_modes import RLMode
-from umlsl_sim.reinforcement_learning.gymnasium_env.observation_spaces.observation_model_types import ObservationModelType
-from umlsl_sim.reinforcement_learning.gymnasium_env.observation_spaces.observation_registry import get_observation_model
-from umlsl_sim.reinforcement_learning.gymnasium_env.reward_types import RewardType
-from umlsl_sim.reinforcement_learning.gymnasium_env.reward_registry import get_reward_model
+from umlsl_sim.rl.modes import RLMode
+from umlsl_sim.rl.observations.observation_model_types import ObservationModelType
+from umlsl_sim.rl.observations.observation_registry import get_observation_model
+from umlsl_sim.rl.rewards.reward_types import RewardType
+from umlsl_sim.rl.rewards.reward_registry import get_reward_model
 
 
 def _build_env(scenario_key: str = "CIRCUIT"):
@@ -30,7 +30,7 @@ def _build_env(scenario_key: str = "CIRCUIT"):
         roads=scenario["roads"],
         players=scenario["players"],
         predefined_cars=scenario["predefined_cars"],
-        rl_mode=RLMode.TRAIN,
+        with_agent=True,
     )
 
     # The registries are populated by decorators that run on module import;

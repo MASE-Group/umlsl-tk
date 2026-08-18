@@ -17,27 +17,27 @@ Usage:
 """
 import numpy as np
 
-from umlsl_sim.car_control.action_shield import (
+from umlsl_sim.control.safety.action_shield import (
     ACC_ACTIONS,
     LANE_ACTIONS,
     MASK_LENGTH,
     ActionShield,
 )
-from umlsl_sim.car_control.safety_controller import SafetyController
-from umlsl_sim.constants import MAX_ACC, MAX_DEC
-from umlsl_sim.scenario_io.loader import load_scenario
+from umlsl_sim.control.safety.safety_controller import SafetyController
+from umlsl_sim.config.logic_constants import MAX_ACC, MAX_DEC
+from umlsl_sim.scenario.loader import load_scenario
 from umlsl_sim.simulation.traffic_environment import TrafficEnv
-from umlsl_sim.reinforcement_learning.rl_modes import RLMode
-from umlsl_sim.reinforcement_learning.algorithms.rl_algorithm_registry import get_rl_algo
-from umlsl_sim.reinforcement_learning.algorithms.rl_algorithm_types import RLAlgorithmType
-from umlsl_sim.reinforcement_learning.gymnasium_env.observation_spaces.observation_model_types import (
+from umlsl_sim.rl.modes import RLMode
+from umlsl_sim.rl.algorithms.rl_algorithm_registry import get_rl_algo
+from umlsl_sim.rl.algorithms.rl_algorithm_types import RLAlgorithmType
+from umlsl_sim.rl.observations.observation_model_types import (
     ObservationModelType,
 )
-from umlsl_sim.reinforcement_learning.gymnasium_env.observation_spaces.observation_registry import (
+from umlsl_sim.rl.observations.observation_registry import (
     get_observation_model,
 )
-from umlsl_sim.reinforcement_learning.gymnasium_env.reward_types import RewardType
-from umlsl_sim.reinforcement_learning.gymnasium_env.reward_registry import get_reward_model
+from umlsl_sim.rl.rewards.reward_types import RewardType
+from umlsl_sim.rl.rewards.reward_registry import get_reward_model
 
 
 def _build_env(scenario_key: str = "CIRCUIT", reward: RewardType = RewardType.INITIAL_REWARD):
@@ -48,7 +48,7 @@ def _build_env(scenario_key: str = "CIRCUIT", reward: RewardType = RewardType.IN
         roads=scenario["roads"],
         players=scenario["players"],
         predefined_cars=scenario["predefined_cars"],
-        rl_mode=RLMode.TRAIN,
+        with_agent=True,
     )
 
     obs_model = get_observation_model(ObservationModelType.NUMERIC_OBSERVATION)(game_model)

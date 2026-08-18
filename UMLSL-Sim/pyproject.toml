@@ -31,6 +31,12 @@ rl = [
     "scikit-learn>=1.8.0"
 ]
 
+dev = [
+    # Both tests/ and the manual_tests/ integration checks are pytest-style;
+    # UMLSL-Edit pins the same version, so one environment can run every suite.
+    "pytest>=8.0"
+]
+
 [project.urls]
 Repository = "https://github.com/QaisHamarneh/umlsl-toolkit"
 
@@ -42,4 +48,10 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-umlsl_sim = ["scenarios/*.json"]
+umlsl_sim = ["scenario/scenarios/*.json"]
+
+[tool.pytest.ini_options]
+# Bare `pytest` runs the suite that needs only the base install. The checks in
+# manual_tests/ need the [rl] extra and minutes rather than seconds, so they are
+# asked for by name: `pytest manual_tests/`.
+testpaths = ["tests"]

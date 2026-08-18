@@ -2,8 +2,7 @@ import random
 
 from dataclasses import dataclass
 from typing import Tuple, List
-from umlsl_sim.car_control.astar_car_controller import AstarCarController
-from umlsl_sim.simulation.factories.create_cars import (
+from umlsl_sim.factories.create_cars import (
     create_goal,
     create_predefined_car,
     create_random_car,
@@ -13,12 +12,26 @@ from umlsl_sim.simulation.car import Car
 from umlsl_sim.simulation.car_types import CarType
 from umlsl_sim.simulation.event_checks import collision_check, reached_goal
 from umlsl_sim.simulation.road_network.road_network import Direction, Road, Problem
-from umlsl_sim.simulation.factories.create_segments import create_segments
-from umlsl_sim.constants import *
+from umlsl_sim.factories.create_segments import create_segments
+from umlsl_sim.config.simulation_constants import DEADLOCK_FRAMES, WINNING_SCORE
+from umlsl_sim.simulation.ports import CarController, CarControllerFactory
 from umlsl_sim.simulation.reservations.reservation_management import ReservationManagement
 from umlsl_sim.simulation.episode_history import GameHistory
-from umlsl_sim.reinforcement_learning.rl_modes import RLMode
-from umlsl_sim.scenario_io.car_spec import CarSpec
+from umlsl_sim.factories.car_spec import CarSpec
+
+
+def _default_npc_controller_factory() -> CarControllerFactory:
+    """The A* controller, imported only when no other factory was supplied.
+
+    This is the one place the simulation layer names a concrete controller, and
+    it is deliberately a *default* rather than a dependency: the import happens
+    inside the function, so `umlsl_sim.simulation` still imports cleanly without
+    `umlsl_sim.control`, and any caller that passes `npc_controller_factory`
+    never reaches this code at all.
+    """
+    from umlsl_sim.control.astar.astar_car_controller import AstarCarController
+
+    return AstarCarController
 
 
 @dataclass(frozen=True)
@@ -51,7 +64,8 @@ class TrafficEnv:
         segments (List[Segment]): List of segments created from the roads.
         npcs (int): Number of npcs in the environment.
         agents (int): Number of ai controlled agents in the environment.
-        cars_controllers (Dict[Car, Optional[AstarCarController]]): Dictionary of cars and corresponding controllers.
+        controllers (List[CarController]): One controller per NPC, built by
+            `npc_controller_factory`.
         moved (bool): Flag to indicate if a car has moved.
         time (int): Current time in the environment.
         stalled_frames (int): Consecutive frames on which every living car stood
@@ -62,7 +76,8 @@ class TrafficEnv:
                  roads: List[Road],
                  players: int,
                  predefined_cars: None | List[CarSpec] = None,
-                 rl_mode: None | RLMode = None):
+                 with_agent: bool = False,
+                 npc_controller_factory: None | CarControllerFactory = None):
         """
         Initialize the TrafficEnv.
 
@@ -73,14 +88,26 @@ class TrafficEnv:
                 spawned to top up to `players`.
             predefined_cars (Optional[List[CarSpec]]): Optional scenario-supplied
                 car specs. May include at most one car of type AGENT, which
-                replaces the random agent car when `rl_mode` is set.
-            rl_mode (Optional[RLMode]): If set, the env spawns an agent car.
+                replaces the random agent car when `with_agent` is set.
+            with_agent (bool): Whether to spawn an externally driven agent car
+                alongside the NPCs. The environment neither knows nor cares what
+                drives it -- an RL policy, a human, a scripted test -- only that
+                `play_step` will be handed its action.
+            npc_controller_factory (Optional[CarControllerFactory]): Builds the
+                `CarController` for each NPC, as
+                `factory(car, all_cars, reservation_management)`. Defaults to
+                the A* controller; pass another to swap the NPC driving policy
+                without touching the traffic logic.
         """
         super().__init__()
         self.roads = roads
         self.segments, self.intersections = create_segments(roads)
         self.npcs: int = players
-        self.agent: bool = False if rl_mode is None else True
+        self.agent: bool = with_agent
+        self.npc_controller_factory: CarControllerFactory = (
+            npc_controller_factory if npc_controller_factory is not None
+            else _default_npc_controller_factory()
+        )
 
         self.predefined_cars: List[CarSpec] = list(predefined_cars) if predefined_cars else []
         agent_specs = [s for s in self.predefined_cars if s.type == CarType.AGENT]
@@ -89,10 +116,10 @@ class TrafficEnv:
                 f"At most one predefined car of type AGENT is allowed; got {len(agent_specs)}"
             )
         self._predefined_agent: None | CarSpec = agent_specs[0] if agent_specs else None
-        if self._predefined_agent is not None and rl_mode is None:
+        if self._predefined_agent is not None and not self.agent:
             raise ValueError(
-                "Scenario defines a predefined AGENT car but `rl_mode` is None; "
-                "set an rl_mode or change the car type to NPC."
+                "Scenario defines a predefined AGENT car but `with_agent` is False; "
+                "set with_agent=True or change the car type to NPC."
             )
         self._predefined_npcs: List[CarSpec] = [s for s in self.predefined_cars if s.type == CarType.NPC]
         if len(self._predefined_npcs) > self.npcs:
@@ -122,7 +149,7 @@ class TrafficEnv:
         self.cars: List[Car] = []
         self.npc_cars: List[Car] = []
         self.agent_car: None | Car = None
-        self.controllers: List[AstarCarController] = []
+        self.controllers: List[CarController] = []
 
         self.total_crashes: int = 0
         self.crashes: dict = {}
@@ -177,9 +204,11 @@ class TrafficEnv:
             self.npc_cars.append(car)
 
         for car in self.npc_cars:
-            self.controllers.append(AstarCarController(car, self.cars, self.reservation_management))
+            self.controllers.append(
+                self.npc_controller_factory(car, self.cars, self.reservation_management)
+            )
 
-        self.game_history.set_list_of_cars(self.cars)
+        self.game_history.set_list_of_cars(self.cars, self.reservation_management)
         self.game_history.set_map(self.roads)
 
         self.total_crashes = 0
@@ -233,6 +262,13 @@ class TrafficEnv:
         else:
             self.stalled_frames = 0
 
+        # One tick per call, not one per car. `Car.time` -- which the crossing
+        # time-to-leave arithmetic is expressed against -- advances by one for
+        # every car on every step, so an environment clock that counted each
+        # car's action separately ran len(cars) times faster than the cars it
+        # was meant to be timing.
+        self.time += 1
+
         if all(game_over):
             print("Game Over!")
             return 'game_over'
@@ -252,8 +288,6 @@ class TrafficEnv:
         # update the head
         moved = self._move(car, action)
 
-        # increment time
-        self.time += 1
         # Check if the action was possible
         if isinstance(moved, Problem):
             if car is self.agent_car:

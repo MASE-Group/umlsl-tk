@@ -62,18 +62,17 @@ from pathlib import Path
 
 import numpy as np
 
-from umlsl_sim.car_control.action_shield import ACC_ACTIONS
-from umlsl_sim.car_control.safety_controller import SafetyController
-from umlsl_sim.constants import MAX_DEC
-from umlsl_sim.reinforcement_learning.algorithms.rl_algorithm_registry import get_rl_algo
-from umlsl_sim.reinforcement_learning.algorithms.rl_algorithm_types import RLAlgorithmType
-from umlsl_sim.reinforcement_learning.env_factory import EnvSpec
-from umlsl_sim.reinforcement_learning.gymnasium_env.observation_spaces.observation_model_types import (
+from umlsl_sim.control.safety.action_shield import ACC_ACTIONS
+from umlsl_sim.control.safety.safety_controller import SafetyController
+from umlsl_sim.config.logic_constants import MAX_DEC
+from umlsl_sim.rl.algorithms.rl_algorithm_registry import get_rl_algo
+from umlsl_sim.rl.algorithms.rl_algorithm_types import RLAlgorithmType
+from umlsl_sim.rl.env_factory import EnvSpec
+from umlsl_sim.rl.observations.observation_model_types import (
     ObservationModelType,
 )
-from umlsl_sim.reinforcement_learning.gymnasium_env.reward_types import RewardType
-from umlsl_sim.reinforcement_learning.rl_modes import RLMode
-from umlsl_sim.scenario_io.loader import load_scenario
+from umlsl_sim.rl.rewards.reward_types import RewardType
+from umlsl_sim.scenario.loader import load_scenario
 
 DEFAULT_SCENARIO = "ONE_CROSSING"
 DEFAULT_SEEDS = 3
@@ -122,7 +121,6 @@ def build_spec(scenario: dict, arm: Arm) -> EnvSpec:
         observation_model_type=ObservationModelType.NUMERIC_OBSERVATION,
         reward_type=arm.reward,
         uses_action_masks=arm.shield,
-        rl_mode=RLMode.TRAIN,
     )
 
 

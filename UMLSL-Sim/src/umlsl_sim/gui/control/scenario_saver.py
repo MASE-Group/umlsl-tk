@@ -28,13 +28,13 @@ from umlsl_sim.simulation.road_network.road_network import (
     Road,
     right_direction,
 )
-from umlsl_sim.scenario_io import loader as _loader
+from umlsl_sim.scenario import loader as _loader
 
 
 def scenarios_dir() -> Path:
     """Directory that holds the scenario JSON files (mirrors the loader's
     ``_DATA_DIR``)."""
-    return Path(_loader.__file__).resolve().parent.parent / "scenarios"
+    return Path(_loader.__file__).resolve().parent / "scenarios"
 
 
 # backwards-compatible private alias used within this module

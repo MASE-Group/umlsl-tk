@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, Dict, List, Tuple
 
-from umlsl_sim.constants import *
+from umlsl_sim.config.logic_constants import BLOCK_SIZE, CROSSING_MAX_SPEED, LANE_MAX_SPEED
 from umlsl_sim.simulation.reservations.intersection_state import IntersectionState
 from umlsl_sim.simulation.reservations.crossing_segment_state import CrossingSegmentState
 

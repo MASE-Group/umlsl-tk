@@ -18,9 +18,14 @@ class SegmentOccupancyTracker:
 
 
     def get_cars_on_segment(self, segment: Segment) -> List[str]:
-        if segment not in self.__segment_occupancy_dict:
-            self.__segment_occupancy_dict[segment] = []
-        return list(self.__segment_occupancy_dict[segment])
+        """Ids of the cars occupying `segment`, in the order they claimed it.
+
+        A read only reads: an unoccupied segment gives back an empty list
+        without being recorded as a key, so the safety checks (which query
+        every segment of a projected route, most of them empty) cannot grow the
+        occupancy table by asking about it.
+        """
+        return list(self.__segment_occupancy_dict.get(segment, ()))
     
 
     def reset(self) -> None:

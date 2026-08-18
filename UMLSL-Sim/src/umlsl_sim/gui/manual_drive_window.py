@@ -1,12 +1,18 @@
 import pyglet
 from pyglet import shapes
 
-from umlsl_sim.constants import *
-from umlsl_sim.simulation.factories.create_segments import create_segments
+from umlsl_sim.config.logic_constants import BLOCK_SIZE
+from umlsl_sim.gui.gui_constants import (
+    LANE_DISPLACEMENT,
+    TIME_PER_FRAME,
+    WINDOW_HEIGHT,
+    WINDOW_WIDTH,
+)
+from umlsl_sim.factories.create_segments import create_segments
 from umlsl_sim.simulation.road_network.road_network import Direction, Point, LaneSegment, CrossingSegment, true_direction, horiz_direction, right_direction
-from umlsl_sim.gui.color_names import colors
+from umlsl_sim.palettes.color_names import colors
 from umlsl_sim.gui.scene_drawer import GameDrawer
-from umlsl_sim.gui.map_colors import *
+from umlsl_sim.gui.colors.map_colors import *
 
 
 class CarsWindowManual(pyglet.window.Window):

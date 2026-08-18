@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Tuple
 
-from umlsl_sim.constants import PRIORITY_REORDER_TICKS, PRIORITY_WITHDRAW_TICKS
+from umlsl_sim.config.simulation_constants import PRIORITY_REORDER_TICKS, PRIORITY_WITHDRAW_TICKS
 
 
 class ClaimUpdate(Enum):

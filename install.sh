@@ -14,6 +14,7 @@
 # Options:
 #   --venv PATH   Virtual environment to create/use (default: .env)
 #   --no-venv     Install into the currently active Python environment
+#   --no-dev      Skip the [dev] extra (pytest), installed by default
 #   -h, --help    Show this help
 #
 set -euo pipefail
@@ -24,6 +25,10 @@ SIM_DIR="$ROOT/UMLSL-Sim"
 
 VENV_DIR="$ROOT/.env"
 USE_VENV=1
+# The [dev] extra is just pytest, and both pyproject.toml files pin the same
+# version so one environment can run every suite. Installed by default so that
+# `pytest` works straight after an install, as both READMEs tell the user.
+INSTALL_DEV=1
 TARGET=""
 
 MIN_PY_MAJOR=3
@@ -77,6 +82,8 @@ while [ $# -gt 0 ]; do
             VENV_DIR="${1#*=}"; USE_VENV=1; shift ;;
         --no-venv)
             USE_VENV=0; shift ;;
+        --no-dev)
+            INSTALL_DEV=0; shift ;;
         -h|--help)
             usage 0 ;;
         *)
@@ -112,14 +119,25 @@ fi
 # Decompose the target into the two things we may install.
 INSTALL_EDIT=0
 INSTALL_SIM=0
-SIM_EXTRA=""
+SIM_EXTRAS=""
+EDIT_EXTRAS=""
 
 case "$TARGET" in
-    all)    INSTALL_EDIT=1; INSTALL_SIM=1; SIM_EXTRA="[rl]" ;;
+    all)    INSTALL_EDIT=1; INSTALL_SIM=1; SIM_EXTRAS="rl" ;;
     edit)   INSTALL_EDIT=1 ;;
     sim)    INSTALL_SIM=1 ;;
-    sim-rl) INSTALL_SIM=1; SIM_EXTRA="[rl]" ;;
+    sim-rl) INSTALL_SIM=1; SIM_EXTRAS="rl" ;;
 esac
+
+if [ "$INSTALL_DEV" -eq 1 ]; then
+    SIM_EXTRAS="${SIM_EXTRAS:+$SIM_EXTRAS,}dev"
+    EDIT_EXTRAS="dev"
+fi
+
+# pip wants the extras as `path[a,b]`, and an empty `[]` is a syntax error,
+# so the brackets only appear when there is something to put inside them.
+SIM_EXTRA="${SIM_EXTRAS:+[$SIM_EXTRAS]}"
+EDIT_EXTRA="${EDIT_EXTRAS:+[$EDIT_EXTRAS]}"
 
 if [ "$INSTALL_EDIT" -eq 1 ] && [ ! -d "$EDIT_DIR" ]; then
     die "UMLSL-Edit not found at $EDIT_DIR"
@@ -155,19 +173,20 @@ if [ "$INSTALL_EDIT" -eq 1 ]; then
     info "Installing UMLSL-Edit"
     # Editable, like UMLSL-Sim: both tools use a src/ layout, so the package
     # must be installed to be importable.
-    "$PY" -m pip install -e "$EDIT_DIR"
+    "$PY" -m pip install -e "$EDIT_DIR$EDIT_EXTRA"
     ok "UMLSL-Edit ready"
 fi
 
 if [ "$INSTALL_SIM" -eq 1 ]; then
-    if [ -n "$SIM_EXTRA" ]; then
-        info "Installing UMLSL-Sim with reinforcement-learning support (this may take a while)"
-    else
-        info "Installing UMLSL-Sim"
-    fi
+    # Keyed on the rl extra alone: [dev] is one small package, so it is the
+    # RL stack that makes this slow and that the warning is about.
+    case ",$SIM_EXTRAS," in
+        *,rl,*) info "Installing UMLSL-Sim with reinforcement-learning support (this may take a while)" ;;
+        *)      info "Installing UMLSL-Sim" ;;
+    esac
     # Installed in editable mode on purpose: UMLSL-Sim resolves its scenario
     # directory relative to the package source, so scenarios exported from
-    # UMLSL-Edit into UMLSL-Sim/src/umlsl_sim/scenarios/ are only picked up
+    # UMLSL-Edit into UMLSL-Sim/src/umlsl_sim/scenario/scenarios/ are only picked up
     # when the package still points at this working tree.
     "$PY" -m pip install -e "$SIM_DIR$SIM_EXTRA"
     ok "UMLSL-Sim ready"
@@ -188,7 +207,7 @@ if [ "$INSTALL_EDIT" -eq 1 ]; then
 fi
 
 if [ "$INSTALL_SIM" -eq 1 ]; then
-    printf 'Run %sUMLSL-Sim%s:\n\n    python -m umlsl_sim.run_control_gui\n\n' "$BOLD" "$RESET"
+    printf 'Run %sUMLSL-Sim%s:\n\n    python -m umlsl_sim.app.run_control_gui\n\n' "$BOLD" "$RESET"
 fi
 
 printf 'See README.md for the export/import workflow between the two tools.\n'

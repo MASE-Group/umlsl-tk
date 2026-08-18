@@ -5,7 +5,15 @@ import itertools
 from itertools import count
 
 from umlsl_sim.simulation.car_types import CarType
-from umlsl_sim.constants import *
+from umlsl_sim.config.logic_constants import (
+    ASTAR_CONGESTION_ALPHA,
+    BLOCK_SIZE,
+    BUFFER,
+    CROSSING_MAX_SPEED,
+    LANECHANGE_TIME_STEPS,
+    LANE_MAX_SPEED,
+    MAX_DEC,
+)
 from umlsl_sim.simulation.road_network.road_network import Goal, Intersection, Segment, LaneSegment, CrossingSegment, SegmentInfo, Point, Problem, direction_sign, true_direction, right_direction, horiz_direction, Color
 from umlsl_sim.simulation.reservations.reservation_management import ReservationManagement
 from umlsl_sim.simulation.safety_checks import lane_change_blocked
@@ -316,7 +324,7 @@ class Car:
         """
         if not self.changing_lane:
             return False
-        
+
         reserved_lane_change_segment = reservations_management.get_reserved_lane_change_segment(self.id)
         reservations = reservations_management.get_car_reservations(self.id)
 
@@ -337,6 +345,9 @@ class Car:
             self.update_position(reservations_management)
 
             return True
+
+        # Mid-change but not yet due: the reservation stays where it is.
+        return False
 
     def get_braking_distance(self, speed: int = None) -> int:
         """
@@ -407,7 +418,12 @@ class Car:
                 astar's congestion-aware cost. If omitted, astar falls back to
                 a length-only plan (no live-traffic info).
         Returns:
-             List[Segment]: The next segments for the car to move to, up to the next Lanesegment
+             List[Segment]: The planned segments up to and including the next
+                LaneSegment, starting with `last_seg` itself. Empty when no
+                such plan exists -- A* found no route, or the route it found
+                stops on `last_seg`. Callers treat "no plan" and "a plan too
+                short to extend into" alike, so both are the empty list rather
+                than one being None and the other [].
         """
         reservations = reservation_management.get_car_reservations(self.id)
 
@@ -426,13 +442,10 @@ class Car:
         
 
 
-        if len(segs) == 0:
-            # print("Astar Error: No segments found by the astar function!")
-            return None
-
-        if len(segs) == 1:
-            # print("Astar Error: One segment found by the astar function!")
-            return None
+        if len(segs) < 2:
+            # Either A* found nothing at all, or the only segment it found is
+            # the one we are already on -- neither is something to extend into.
+            return []
 
         for i in range(1, len(segs)):
             if isinstance(segs[i], LaneSegment):

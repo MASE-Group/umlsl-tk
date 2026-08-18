@@ -2,7 +2,7 @@
 
 The control window owns the pyglet event loop, so this engine does **not** call
 ``pyglet.app.run()`` or open its own window (unlike the standalone
-``GameController``). Instead it exposes :meth:`step` to advance the simulation
+``ScenarioRunner``). Instead it exposes :meth:`step` to advance the simulation
 one action and :meth:`world` to hand the current roads / cars / reservations to
 the scene renderer.
 
@@ -21,10 +21,10 @@ from __future__ import annotations
 import logging
 from typing import Callable, List, Optional
 
-from umlsl_sim.constants import FLASH_CYCLE, TIME_PER_FRAME
+from umlsl_sim.gui.gui_constants import FLASH_CYCLE, TIME_PER_FRAME
 from umlsl_sim.simulation.traffic_environment import TrafficEnv
-from umlsl_sim.gui.render_mode import RenderMode
-from umlsl_sim.scenario_io.car_spec import CarSpec
+from umlsl_sim.config.render_mode import RenderMode
+from umlsl_sim.factories.car_spec import CarSpec
 
 log = logging.getLogger(__name__)
 
@@ -112,20 +112,19 @@ class SimulationEngine:
         id_model: str,
     ) -> None:
         # Imported lazily; RL extras may not be installed.
-        from umlsl_sim.reinforcement_learning.rl_modes import RLMode
-        from umlsl_sim.reinforcement_learning.gymnasium_env.reward_registry import get_reward_model
-        from umlsl_sim.reinforcement_learning.gymnasium_env.observation_spaces.observation_registry import (
+        from umlsl_sim.rl.rewards.reward_registry import get_reward_model
+        from umlsl_sim.rl.observations.observation_registry import (
             get_observation_model,
         )
-        from umlsl_sim.reinforcement_learning.algorithms.rl_algorithm_registry import get_rl_algo
-        from umlsl_sim.reinforcement_learning.rl_io import get_path_center, load_best_model
+        from umlsl_sim.rl.algorithms.rl_algorithm_registry import get_rl_algo
+        from umlsl_sim.rl.rl_io import get_path_center, load_best_model
 
         def _build() -> None:
             game_model = TrafficEnv(
                 roads=roads,
                 players=players,
                 predefined_cars=predefined_cars,
-                rl_mode=RLMode.LOAD_TRAINED_MODEL,
+                with_agent=True,
             )
             observation_model = get_observation_model(observation_model_type)(game_model)
             env_class = get_reward_model(reward_type)

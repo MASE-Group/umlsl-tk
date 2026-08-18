@@ -24,34 +24,42 @@ def reached_goal(car: Car, reservation_management: ReservationManagement) -> boo
 
 
     
-def collision_check(car1: Car, car2:Car, reservation_managemnent: ReservationManagement) -> bool:
+def collision_check(car1: Car, car2: Car, reservation_management: ReservationManagement) -> bool:
     """
-    Check if a car is in collision with any other car.
+    Check whether two cars' bodies overlap on a shared segment.
+
+    Each car's body is the half-open interval [lo, hi) its size occupies on
+    every segment it straddles, in that segment's own coordinates. Two bodies
+    collide iff those intervals overlap on some shared segment; bumper to
+    bumper (hi1 == lo2) is not a collision.
 
     Args:
-        car (Car): The car to check.
+        car1 (Car): One car.
+        car2 (Car): The other car.
+        reservation_management (ReservationManagement): The reservation book
+            both cars' footprints are read from.
 
     Returns:
         bool: True if there is a collision, False otherwise.
     """
-    car1_segments = car1.get_size_segments(reservation_managemnent)
-    car2_segments = car2.get_size_segments(reservation_managemnent)
+    car1_segments = car1.get_size_segments(reservation_management)
+    car2_segments = car2.get_size_segments(reservation_management)
     for segment_car1 in car1_segments:
         segment_car2 = next((seg for seg in car2_segments if segment_car1.segment == seg.segment), None)
-        if segment_car2 is not None:
-            begin1 = abs(segment_car1.begin)
-            end1 = abs(segment_car1.end)
-            begin2 = abs(segment_car2.begin)
-            end2 = abs(segment_car2.end)
+        if segment_car2 is None:
+            continue
 
-            if begin2 < begin1 < end2:
-                return True
-            elif begin2 < end1 < end2:
-                return True
-            
-            elif begin1 < begin2 < end1:
-                return True
-            elif begin1 < end2 < end1:
-                return True
+        # A footprint runs from `begin` towards `end` along the lane's
+        # direction of travel, so on a reverse lane both are negative and
+        # |end| > |begin|. Ordering the pair rather than assuming which is
+        # which keeps the test direction-agnostic.
+        lo1, hi1 = sorted((abs(segment_car1.begin), abs(segment_car1.end)))
+        lo2, hi2 = sorted((abs(segment_car2.begin), abs(segment_car2.end)))
+
+        # Plain interval overlap. The four strict three-way comparisons this
+        # replaces missed the case of two exactly coincident footprints --
+        # total overlap, the worst collision there is, reported as none.
+        if lo1 < hi2 and lo2 < hi1:
+            return True
 
     return False

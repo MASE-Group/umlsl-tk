@@ -1,12 +1,17 @@
 import pyglet
 from pyglet import shapes
-from typing import List, Union
+from typing import List, Tuple, Union
 from umlsl_sim.simulation.car import Car
 from umlsl_sim.simulation.road_network.road_network import Point, Road
 from umlsl_sim.simulation.reservations.reservation_management import ReservationManagement
-from umlsl_sim.gui.renderer import Renderer
+from umlsl_sim.gui.shape_batch import ShapeBatchRenderer
 from umlsl_sim.gui.scene_drawer import GameDrawer
-from umlsl_sim.gui.geometry import *
+from umlsl_sim.gui.gui_constants import (
+    FLASH_CYCLE,
+    TIME_PER_FRAME,
+    WINDOW_HEIGHT,
+    WINDOW_WIDTH,
+)
 
 
 class GameWindow(pyglet.window.Window):
@@ -37,7 +42,7 @@ class GameWindow(pyglet.window.Window):
         x = (screen.width - scaled_width) // 2
         y = (screen.height - scaled_height) // 2
         self.set_location(x, y)
-        self.renderer = Renderer(self)
+        self.renderer = ShapeBatchRenderer(self)
         
         self.cars = cars
         self.roads = roads

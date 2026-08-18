@@ -4,13 +4,15 @@ background worker for the long-running headless RL modes (train / optimize).
 Two independent capability flags, because they fail for different reasons:
 
 * ``ENUMS_AVAILABLE`` — whether the RL option enums could be imported at all.
-  Each enum lives in its own light module, but its package ``__init__`` eagerly
-  imports every sibling module so the registry decorators run, and those pull in
-  gymnasium / stable-baselines3. So without the ``[rl]`` extra this is False and
-  the dropdowns collapse to "Off (plain NPCs)".
-* ``RUNTIME_AVAILABLE`` — whether the ML stack itself imports. Checked
-  separately so a partially installed environment refuses to *run* an RL job
-  with a clear message rather than crashing mid-training.
+  Each enum lives in its own light module, and its package populates the
+  registry on first lookup rather than on import, so naming the dropdown
+  options costs nothing.
+* ``RUNTIME_AVAILABLE`` — whether the ML stack is installed, so an RL job that
+  needs it is refused with a clear message rather than crashing mid-training.
+
+Neither flag imports gymnasium, stable-baselines3 or torch. This module is
+imported to open the window, and a plain NPC run must not pay seconds of import
+for an ML stack it never calls; the real import happens when an RL job starts.
 """
 from __future__ import annotations
 
@@ -18,6 +20,7 @@ import logging
 import os
 import queue
 import threading
+from importlib import util
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -25,12 +28,12 @@ log = logging.getLogger(__name__)
 
 # --- enum discovery (always available) -----------------------------------
 try:
-    from umlsl_sim.reinforcement_learning.rl_modes import RLMode
-    from umlsl_sim.reinforcement_learning.algorithms.rl_algorithm_types import RLAlgorithmType
-    from umlsl_sim.reinforcement_learning.gymnasium_env.observation_spaces.observation_model_types import (
+    from umlsl_sim.rl.modes import RLMode
+    from umlsl_sim.rl.algorithms.rl_algorithm_types import RLAlgorithmType
+    from umlsl_sim.rl.observations.observation_model_types import (
         ObservationModelType,
     )
-    from umlsl_sim.reinforcement_learning.gymnasium_env.reward_types import RewardType
+    from umlsl_sim.rl.rewards.reward_types import RewardType
 
     ENUMS_AVAILABLE = True
 except Exception as exc:  # pragma: no cover - defensive
@@ -40,18 +43,26 @@ except Exception as exc:  # pragma: no cover - defensive
 
 
 # --- runtime availability -------------------------------------------------
-def runtime_availability() -> Tuple[bool, str]:
-    """(available, reason). ``available`` is True only if the ML stack imports."""
-    try:
-        import gymnasium  # noqa: F401
-        import stable_baselines3  # noqa: F401
+#: What an RL job needs on top of the base install (the ``[rl]`` extra).
+_RUNTIME_PACKAGES = ("gymnasium", "stable_baselines3")
 
+
+def runtime_availability() -> Tuple[bool, str]:
+    """(available, reason). ``available`` is True if the ML stack is installed.
+
+    Located with `find_spec` rather than imported: importing stable_baselines3
+    drags torch in behind it, seconds of work charged to opening a window that
+    may never run an RL job. A package that is absent — the case this gates — is
+    found either way. One that is installed but broken raises when the job
+    imports it for real, and `RLWorker` reports that where it happens.
+    """
+    missing = [name for name in _RUNTIME_PACKAGES if util.find_spec(name) is None]
+    if not missing:
         return True, ""
-    except Exception as exc:
-        return False, (
-            "RL extras not installed. Install them with:  pip install -e \".[rl]\"  "
-            f"({exc})"
-        )
+    return False, (
+        "RL extras not installed. Install them with:  pip install -e \".[rl]\"  "
+        f"(missing: {', '.join(missing)})"
+    )
 
 
 RUNTIME_AVAILABLE, RUNTIME_REASON = runtime_availability()
@@ -121,20 +132,21 @@ def reward_names() -> List[str]:
 
 
 def _models_base() -> Optional[Path]:
-    """Root of the saved-model tree, or None if rl_io cannot be imported.
+    """Root of the saved-model tree, or None if the path cannot be resolved.
 
-    Reuses rl_io's constant rather than rebuilding the path, so what the GUI
-    lists stays in step with what the controller actually loads. The import is
-    deferred because rl_io pulls in pandas, which is an ``[rl]`` extra — on a
-    plain install the listing helpers degrade to "no models" rather than raising.
+    Reuses the constant `rl.rl_io` itself loads from rather than rebuilding the
+    path, so what the GUI lists stays in step with what the controller actually
+    loads. It is read from `rl.paths`, which carries it without rl_io's pandas
+    and ML imports — those are an ``[rl]`` extra, and on a plain install the
+    listing helpers should degrade to "no models" rather than raising.
     """
     try:
-        from umlsl_sim.reinforcement_learning import rl_io
+        from umlsl_sim.rl import paths
     except Exception as exc:  # pragma: no cover - defensive
         log.warning("Model directory unavailable: %s", exc)
         return None
 
-    return Path(rl_io.RESULT_MODEL_PATH)
+    return Path(paths.RESULT_MODEL_PATH)
 
 
 def list_model_ids(scenario_name: str, algo: str, obs: str, reward: str) -> List[str]:
@@ -164,7 +176,7 @@ def list_history_files(scenario_name: str, algo: str, obs: str, reward: str, id_
 
 # --- background worker for train / optimize -------------------------------
 class RLWorker:
-    """Runs a headless RLGameController mode on a daemon thread and reports
+    """Runs a headless RLRunner mode on a daemon thread and reports
     lifecycle messages through a thread-safe queue polled by the GUI."""
 
     def __init__(self) -> None:
@@ -200,10 +212,10 @@ class RLWorker:
             self.queue.put(("info", f"Starting RL job: {rl_mode.name} on '{scenario_name}'."))
             self.queue.put(("info", "Detailed progress is printed to the terminal."))
             try:
-                from umlsl_sim.simulation.controllers.rl_simulation_controller import RLGameController
-                from umlsl_sim.gui.render_mode import RenderMode
+                from umlsl_sim.rl.training.rl_runner import RLRunner
+                from umlsl_sim.config.render_mode import RenderMode
 
-                controller = RLGameController(
+                controller = RLRunner(
                     roads=roads,
                     players=players,
                     render_mode=RenderMode.NO_GUI,

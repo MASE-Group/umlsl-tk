@@ -3,11 +3,17 @@ from pyglet import text
 from typing import List, Tuple, Union
 from umlsl_sim.simulation.road_network.road_network import Color, Road, Point, Direction, LaneSegment, CrossingSegment, horiz_direction, true_direction
 from umlsl_sim.simulation.car import Car
-from umlsl_sim.constants import *
+from umlsl_sim.config.logic_constants import BLOCK_SIZE
+from umlsl_sim.gui.gui_constants import (
+    FLASH_CYCLE,
+    LANE_DISPLACEMENT,
+    WINDOW_HEIGHT,
+    WINDOW_WIDTH,
+)
 from umlsl_sim.simulation.reservations.reservation_management import ReservationManagement
-from umlsl_sim.gui.map_colors import *
+from umlsl_sim.gui.colors.map_colors import *
 from umlsl_sim.gui.geometry import get_xy_crossingseg
-import umlsl_sim.gui.map_colors
+import umlsl_sim.gui.colors.map_colors
 
 class GameDrawer():
 

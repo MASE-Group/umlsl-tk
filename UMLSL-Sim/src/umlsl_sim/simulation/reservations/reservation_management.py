@@ -33,7 +33,14 @@ class ReservationManagement:
         return self.__segment_occupancy_tracker.get_cars_on_segment(segment)
 
     def get_reserved_lane_change_segment(self, car_id: str) -> Tuple[int, LaneSegment] | None:
-        return self.__reserved_lane_change_segments[car_id]
+        """The (tick, target segment) a lane change was registered for, or None.
+
+        None covers both "this car registered a change and it has since been
+        cleared" and "this car never registered one" -- every caller already
+        treats the absent case that way, and a car that has never changed lane
+        is the ordinary case rather than a lookup error.
+        """
+        return self.__reserved_lane_change_segments.get(car_id)
 
     def get_cars_changing_into_segment(self, segment: Segment) -> List[str]:
         return [car_id for car_id, info in self.__reserved_lane_change_segments.items()

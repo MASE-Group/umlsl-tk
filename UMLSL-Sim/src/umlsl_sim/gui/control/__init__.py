@@ -6,7 +6,7 @@ and RL options from dropdowns, start / pause / rerun simulations, launch RL
 optimization / training / model-based simulation, and save a paused scenario
 as a new predefined-car scenario JSON.
 
-Entry point: ``python -m umlsl_sim.run_control_gui`` (or, equivalently,
+Entry point: ``python -m umlsl_sim.app.run_control_gui`` (or, equivalently,
 ``python -m umlsl_sim.gui.control``).
 """
 

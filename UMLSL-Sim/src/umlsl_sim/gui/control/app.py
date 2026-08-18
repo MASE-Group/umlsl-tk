@@ -21,7 +21,7 @@ import pyglet
 from pyglet.text import Label
 from pyglet.window import key
 
-from umlsl_sim.scenario_io.loader import load_scenario
+from umlsl_sim.scenario.loader import load_scenario
 from umlsl_sim.gui.control import rl_support, theme
 from umlsl_sim.gui.control.scene_renderer import SceneRenderer
 from umlsl_sim.gui.control.scenario_saver import save_current_scenario, scenarios_dir

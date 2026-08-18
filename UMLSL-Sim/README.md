@@ -24,12 +24,64 @@ Install in editable mode (`-e`): UMLSL-Sim resolves its scenario
 directory relative to the package source, so a non-editable install reads
 scenarios from `site-packages` instead of from this working tree.
 
+## Module Layout
+
+UMLSL-Sim is a stack of modules, each with one job and a stated input/output
+interface, so any of them can be replaced without touching the rest. A module
+only ever imports the ones below it.
+
+| Module | Input → Output |
+| --- | --- |
+| `app/` | The entry points, and the composition root: the only place that knows every module at once. `main()` takes a scenario plus run options and picks a runner. Importing `umlsl_sim.app` is what binds the renderer and the default car controller. |
+| `runners/` | A world → a completed run. `SimulationRunner` is the shared shape; `ScenarioRunner` runs NPC traffic, and `rl.training.RLRunner` is its RL sibling. |
+| `gui/` | Drawing state → pixels. Pyglet windows, the scene drawer, GUI-only constants, and the interactive control panel. `PygletRenderer` implements the `Renderer` port; nothing below this module imports it. |
+| `rl/` | A simulation → a trained policy. Four independently swappable parts, each behind a registry: `algorithms`, `hyperparameters`, `observations`, `rewards`. |
+| `control/` | A car and its surroundings → an action. Two implementations: `astar` (the NPC driver) and `safety` (what is *safe* rather than what is best, feeding RL through the action shield or the safety-aware reward). |
+| `scenario/` | A scenario key → `roads`, `players`, `scenario_name`, `predefined_cars` — exactly the keywords `main()` takes. |
+| `factories/` | A road network (and optionally a `CarSpec`) → placed `Car` objects, goals, and the segment graph. |
+| `simulation/` | Actions → the next world state. Roads, cars, reservations, crash/goal/deadlock detection, and the ports the layer is driven through. Depends on no GUI and no RL. |
+| `palettes/`, `config/` | Plain data with no dependencies: named colour tables, the traffic model's constants (`logic_constants`, `simulation_constants`) and `RenderMode`. |
+
+### The two seams
+
+Both are declared in [`simulation/ports.py`](src/umlsl_sim/simulation/ports.py)
+as `typing.Protocol`s, so an alternative implementation only has to match the
+shape — it need not inherit from anything or live in a particular package.
+
+**`CarController`** — what drives an NPC. `get_action()` returns
+`(acceleration, lane_change)`:
+
+```python
+from umlsl_sim.config.logic_constants import NO_LANE_CHANGE
+from umlsl_sim.simulation.traffic_environment import TrafficEnv
+
+class AlwaysBrake:
+    def __init__(self, car, cars, reservation_management): ...
+    def get_action(self): return (-1, NO_LANE_CHANGE)
+
+TrafficEnv(roads=roads, players=8, npc_controller_factory=AlwaysBrake)
+```
+
+Passing nothing keeps the A* controller, which is the only place the simulation
+layer names a concrete controller — and it does so as a default, inside a
+function, so `umlsl_sim.simulation` still imports without `umlsl_sim.control`.
+
+**`Renderer`** — where frames go: `bind`, `draw_frame`, `run_loop`, `stop_loop`,
+`close`, and a `paused` flag. A headless run gets `NullRenderer`, which draws
+nothing and still runs the loop, so the runners contain no `if gui:` branches
+and a training run never imports pyglet. Substituting a front end is one call:
+
+```python
+from umlsl_sim.simulation.ports import set_renderer_factory
+set_renderer_factory(lambda render_mode, show_reservations: MyRenderer())
+```
+
 ## Quick Start
 
 ### Interactive control GUI
 
 ```bash
-python -m umlsl_sim.run_control_gui
+python -m umlsl_sim.app.run_control_gui
 ```
 
 Pick a scenario and the number of NPC cars, start / pause / rerun the run,
@@ -40,9 +92,9 @@ configure the RL options, and save a paused run as a new scenario.
 To run a simple traffic simulation without AI:
 
 ```python
-from umlsl_sim.main import main
-from umlsl_sim.gui.render_mode import RenderMode
-from umlsl_sim.scenario_io.loader import load_scenario
+from umlsl_sim.app.main import main
+from umlsl_sim.config.render_mode import RenderMode
+from umlsl_sim.scenario.loader import load_scenario
 
 main(
     **load_scenario("TWO_CROSSINGS"),   # Use predefined scenario
@@ -55,22 +107,22 @@ main(
 `predefined_cars` keys `main()` expects, which is why `**` works.
 
 There are also two small standalone launchers:
-`python -m umlsl_sim.run_manual_drive` (drive a car with the arrow keys) and
-`python -m umlsl_sim.run_scenario`, a command-line front end for everything
+`python -m umlsl_sim.app.run_manual_drive` (drive a car with the arrow keys) and
+`python -m umlsl_sim.app.run_scenario`, a command-line front end for everything
 `main()` can do:
 
 ```bash
-python -m umlsl_sim.run_scenario --scenario two_crossings --players 21
+python -m umlsl_sim.app.run_scenario --scenario two_crossings --players 21
 
 # train with reward-based safety
-python -m umlsl_sim.run_scenario --no-gui --rl-mode TRAIN \
+python -m umlsl_sim.app.run_scenario --no-gui --rl-mode TRAIN \
     --algorithm PPO --reward SAFETY_AWARE_REWARD
 
 # train with the safety shield instead
-python -m umlsl_sim.run_scenario --no-gui --rl-mode TRAIN \
+python -m umlsl_sim.app.run_scenario --no-gui --rl-mode TRAIN \
     --algorithm MASKABLE_PPO --reward INITIAL_REWARD
 
-python -m umlsl_sim.run_scenario --help    # all options
+python -m umlsl_sim.app.run_scenario --help    # all options
 ```
 
 ## Function Parameters
@@ -95,9 +147,10 @@ def main(
 )
 ```
 
-Every parameter except the first five is RL-only and requires the optional
-`[rl]` extra; passing `rl_mode` without it raises a `RuntimeError` naming the
-missing dependency.
+`predefined_cars` comes straight from `load_scenario` and applies to plain runs
+too. The seven parameters between it and `show_reservation` are RL-only and need
+the optional `[rl]` extra; passing `rl_mode` without it raises a `RuntimeError`
+naming the missing dependency.
 
 ### Core Parameters
 
@@ -132,9 +185,9 @@ segment for the RL agent car when `rl_mode` is set). Exceeding it raises a
 ### Example: Run Different Scenarios
 
 ```python
-from umlsl_sim.main import main
-from umlsl_sim.gui.render_mode import RenderMode
-from umlsl_sim.scenario_io.loader import load_scenario
+from umlsl_sim.app.main import main
+from umlsl_sim.config.render_mode import RenderMode
+from umlsl_sim.scenario.loader import load_scenario
 
 # Simple circuit
 main(**load_scenario("CIRCUIT"), render_mode=RenderMode.GUI, show_reservation=True)
@@ -250,6 +303,13 @@ main(
 here too, even though nothing is trained: they are what locates the recording
 under `rl_results/` (see [Output Structure](#output-structure)).
 
+> **Known issue.** This mode does not currently work. `GameHistory.replay` calls
+> `Car.reset()`, which no longer exists, and `Car.move()` / `Car.change_lane()`
+> without the `ReservationManagement` they now take, so the replay raises an
+> `AttributeError` before drawing anything. Recording is unaffected: episodes are
+> still written to `history/` during training, and the `.pkl` files remain
+> readable through `rl_io.load_game_history`.
+
 ---
 
 ## Rendering Modes
@@ -292,7 +352,7 @@ rl_algorithm_type=RLAlgorithmType.PPO
 
 PPO with invalid-action masking ([sb3-contrib](https://sb3-contrib.readthedocs.io/en/master/modules/ppo_mask.html)).
 Selecting it attaches an
-[`ActionShield`](src/umlsl_sim/car_control/action_shield.py) to the environment:
+[`ActionShield`](src/umlsl_sim/control/safety/action_shield.py) to the environment:
 before each decision the safety controller is asked which accelerations and lane
 changes are safe, and everything else is removed from the agent's choice set.
 Unsafe actions are therefore never taken, rather than taken and then penalised,
@@ -355,7 +415,7 @@ Consults a `SafetyController` and adds potential-based distance shaping:
 penalties for accelerating beyond the safe maximum and for unsafe lane changes,
 a large bonus per goal, a large penalty for crashing, plus a small per-step term
 proportional to the progress made toward the current goal. The magnitudes live in
-[`rl_constants.py`](src/umlsl_sim/reinforcement_learning/rl_constants.py) as the
+[`rl/constants.py`](src/umlsl_sim/rl/constants.py) as the
 `REWARD_*` constants.
 
 ```python
@@ -369,13 +429,13 @@ reward_type=RewardType.SAFETY_AWARE_REWARD
 Every snippet below assumes this preamble:
 
 ```python
-from umlsl_sim.main import main
-from umlsl_sim.gui.render_mode import RenderMode
-from umlsl_sim.scenario_io.loader import load_scenario
-from umlsl_sim.reinforcement_learning.rl_modes import RLMode
-from umlsl_sim.reinforcement_learning.algorithms.rl_algorithm_types import RLAlgorithmType
-from umlsl_sim.reinforcement_learning.gymnasium_env.observation_spaces.observation_model_types import ObservationModelType
-from umlsl_sim.reinforcement_learning.gymnasium_env.reward_types import RewardType
+from umlsl_sim.app.main import main
+from umlsl_sim.config.render_mode import RenderMode
+from umlsl_sim.scenario.loader import load_scenario
+from umlsl_sim.rl.modes import RLMode
+from umlsl_sim.rl.algorithms.rl_algorithm_types import RLAlgorithmType
+from umlsl_sim.rl.observations.observation_model_types import ObservationModelType
+from umlsl_sim.rl.rewards.reward_types import RewardType
 
 scenario = load_scenario("TWO_CROSSINGS")
 ```
@@ -498,7 +558,7 @@ Use the exact timestamp format: `"YYYY-MM-DD HH:MM:SS"`
 
 ### Hyperparameter Configuration
 
-Edit [`src/umlsl_sim/reinforcement_learning/rl_constants.py`](src/umlsl_sim/reinforcement_learning/rl_constants.py).
+Edit [`src/umlsl_sim/rl/constants.py`](src/umlsl_sim/rl/constants.py).
 The shipped values are tuned for a real training run, not for a quick smoke
 test — lower them substantially if you just want to see the pipeline work:
 
@@ -509,7 +569,7 @@ TRAINING_EVAL_EPISODES = 5                # Episodes per checkpoint evaluation
 HYPERPARAMS_TRAINING_TIMESTEPS = 100_000  # Optuna trial length
 OPTUNA_TRIALS = 50                        # Number of optimization trials
 OPTUNA_TRIAL_EVALS = 10                   # Evaluations (and pruning decisions) per trial
-OPTUNA_PARALLEL_JOBS = ...                # Concurrent trials; defaults to cores - 2
+OPTUNA_PARALLEL_JOBS = ...                # Concurrent trials; cores - 2, capped at 8
 MAX_EPISODE_STEPS = 500                   # Hard cap on env steps per episode
 DEMO_EPISODE_STEPS = 5_000                # The same cap, for LOAD_TRAINED_MODEL only
 ```
@@ -565,7 +625,7 @@ working directory. The control GUI's "Saved model" dropdown reads the same tree
 through `rl_io.RESULT_MODEL_PATH`, so it lists exactly what the controller can
 load.
 
-The first three path components after `models/` come from `scenario_name`, the
+The four path components after `models/` come from `scenario_name`, the
 algorithm, the observation model and the reward type, which is why the LOAD_\*
 modes need those enums passed even though they train nothing.
 
@@ -590,12 +650,48 @@ measured in a separate pass, and for comparing crossing-claim protocols.
 
 ## Tests
 
-UMLSL-Sim has no unit-test suite. [`manual_tests/`](manual_tests/) holds
-integration checks that exercise the Gymnasium environment against the real
-Stable-Baselines3 stack; they need the `[rl]` extra:
+[`tests/`](tests/) covers the three layers the simulator is built out of --
+[`factories/`](src/umlsl_sim/factories/), [`simulation/`](src/umlsl_sim/simulation/)
+and [`control/`](src/umlsl_sim/control/) -- with unit, functional and integration
+tests. It needs only the base install plus pytest:
 
 ```bash
-pytest manual_tests/ -v          # or: python manual_tests/test_train.py
+pip install -e '.[dev]'
+pytest tests -q
+```
+
+The unit files test one module each against the small hand-built road networks
+in [`tests/helpers.py`](tests/helpers.py), which are small enough that every
+offset in an assertion can be worked out by hand.
+[`tests/integration/`](tests/integration/) runs whole episodes on every bundled
+scenario, driven by the real A* controller, and asserts the properties the
+simulator exists to provide: no collisions, no deadlock, traffic that keeps
+moving, and a reservation book that stays consistent with the cars it describes.
+
+```bash
+pytest tests/integration -q       # episodes on every bundled scenario
+pytest tests/test_control_astar.py -v
+```
+
+[`tests/FINDINGS.md`](tests/FINDINGS.md) records what building the suite turned
+up: the side effects and behavioural bugs that were fixed, and the unused or
+questionable code that was left alone and why.
+
+[`manual_tests/`](manual_tests/) is separate, and stays that way: those checks
+exercise the Gymnasium environment against the real Stable-Baselines3 stack, so
+they need the `[rl]` extra and take far longer than the suite above.
+
+```bash
+pip install -e '.[rl,dev]'
+pytest manual_tests/ -v
+```
+
+Both manual files also run standalone without pytest, which is useful for
+reading the output of a single check:
+
+```bash
+python manual_tests/test_action_shield.py
+python manual_tests/test_train.py
 ```
 
 The editor's suite lives in [`../UMLSL-Edit/tests/`](../UMLSL-Edit/tests/).

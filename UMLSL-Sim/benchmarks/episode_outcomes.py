@@ -26,8 +26,8 @@ import sys
 import time
 from pathlib import Path
 
-from umlsl_sim.constants import DEADLOCK_FRAMES
-from umlsl_sim.scenario_io.loader import load_scenario
+from umlsl_sim.config.simulation_constants import DEADLOCK_FRAMES
+from umlsl_sim.scenario.loader import load_scenario
 from umlsl_sim.simulation.traffic_environment import TrafficEnv
 
 DEFAULT_SCENARIO = "TWO_CROSSINGS"

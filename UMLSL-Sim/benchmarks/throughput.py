@@ -31,7 +31,7 @@ import sys
 import time
 from pathlib import Path
 
-from umlsl_sim.scenario_io.loader import load_scenario
+from umlsl_sim.scenario.loader import load_scenario
 from umlsl_sim.simulation.traffic_environment import TrafficEnv
 
 from episode_outcomes import BASE_SEED, DEFAULT_CARS, DEFAULT_SCENARIO
