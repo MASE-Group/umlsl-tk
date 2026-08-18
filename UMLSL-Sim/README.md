@@ -686,12 +686,32 @@ pip install -e '.[rl,dev]'
 pytest manual_tests/ -v
 ```
 
-Both manual files also run standalone without pytest, which is useful for
+Two of them check the environment itself — `test_train.py` that SB3 accepts it,
+`test_action_shield.py` that the masks say what the SafetyController says. The
+four `test_rl_*.py` files are smoke tests of a whole run: `RLMode.TRAIN`,
+`OPTIMIZE`, `OPTIMIZE_AND_TRAIN` and `LOAD_TRAINED_MODEL`, one file per
+algorithm and each covering both reward profiles.
+
+```bash
+pytest manual_tests/test_rl_train_ppo.py -v
+pytest manual_tests/test_rl_optimize_maskable_ppo.py -v
+```
+
+They shrink every budget in [`rl/constants.py`](src/umlsl_sim/rl/constants.py)
+to a few dozen timesteps and file their results in a temporary directory, so the
+whole set runs in well under a minute and leaves nothing behind. What they
+assert is that a run *completes and produces its artefacts* — not that the agent
+learned anything, which on that budget it cannot. The shrinking itself lives in
+[`manual_tests/rl_smoke.py`](manual_tests/rl_smoke.py), and
+[`manual_tests/FINDINGS.md`](manual_tests/FINDINGS.md) records what writing them
+turned up.
+
+Every manual file also runs standalone without pytest, which is useful for
 reading the output of a single check:
 
 ```bash
 python manual_tests/test_action_shield.py
-python manual_tests/test_train.py
+python manual_tests/test_rl_train_ppo.py
 ```
 
 The editor's suite lives in [`../UMLSL-Edit/tests/`](../UMLSL-Edit/tests/).

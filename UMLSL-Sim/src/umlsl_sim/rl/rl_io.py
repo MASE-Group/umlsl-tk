@@ -98,6 +98,7 @@ def save_study_materials(study: "Study", path: str) -> None:
     Saves:
     - trials.csv: All trial results in tabular format
     - param_importance.html: Interactive visualization of hyperparameter importance
+      (skipped when the trials give fANOVA nothing to explain -- see below)
     
     Args:
         study (optuna.Study): The completed Optuna study
@@ -110,8 +111,18 @@ def save_study_materials(study: "Study", path: str) -> None:
     trials_path = os.path.join(path, TRIALS_FILE)
     study.trials_dataframe().to_csv(trials_path, index=False)
 
+    # Importances are an analysis of the search, not a result of it: fANOVA
+    # raises when every completed trial scored the same ("zero total variance"),
+    # which a short search on a sparse reward really can produce. The trials and
+    # the best parameters are already on disk by then, and OPTIMIZE_AND_TRAIN
+    # still has the training run ahead of it, so a missing plot must not end the
+    # run.
     param_importance_path = os.path.join(path, PARAM_IMPORTANCE_FILE)
-    fig = plot_param_importances(study)
+    try:
+        fig = plot_param_importances(study)
+    except (RuntimeError, ValueError) as error:
+        print(f"Skipping {PARAM_IMPORTANCE_FILE}: {error}")
+        return
     fig.write_html(param_importance_path)
 
 
@@ -126,8 +137,20 @@ def load_best_params(path_center: str, id: str) -> Dict[str, Any]:
         Dict[str, Any]: Dictionary of hyperparameters ready to use with algorithm
     """
     path = os.path.join(RESULT_PARAM_PATH, path_center, id, BEST_PARAMS_FILE)
-    best_params = pd.read_parquet(path).iloc[0].to_dict()
-    return best_params
+    best_params = pd.read_parquet(path)
+
+    # Column by column, not `.iloc[0].to_dict()`. A row of an all-numeric frame
+    # is one Series with one dtype, so the integer parameters (n_steps,
+    # batch_size, n_epochs) come back as floats -- and SB3 raises "'float'
+    # object cannot be interpreted as an integer" when it sizes the rollout
+    # buffer. Each column keeps its own dtype, and `.item()` turns the numpy
+    # scalar into the plain Python one the algorithms expect.
+    return {name: _scalar(column.iloc[0]) for name, column in best_params.items()}
+
+
+def _scalar(value: Any) -> Any:
+    """A numpy scalar as its plain Python equivalent; anything else unchanged."""
+    return value.item() if hasattr(value, "item") else value
 
 
 def create_game_history(path: str, map_history, car_history, action_history, action_length_history) -> None:
