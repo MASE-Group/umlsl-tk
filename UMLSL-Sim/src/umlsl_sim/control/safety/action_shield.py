@@ -15,19 +15,20 @@ SafetyController instances, which is harmless -- see *Side effects* below).
 
 ## Mask layout
 
-``MlslEnv`` uses ``spaces.MultiDiscrete([MAX_ACC + MAX_DEC + 1, 3])`` and
+``MlslEnv`` uses ``spaces.MultiDiscrete([MAX_ACC + MAX_DEC + 1, 4])`` and
 sb3-contrib expects the per-dimension masks concatenated, so the returned array
-has ``MAX_ACC + MAX_DEC + 1 + 3`` entries:
+has ``MAX_ACC + MAX_DEC + 1 + 4`` entries:
 
 * indices ``0 .. MAX_ACC + MAX_DEC`` -- acceleration ``index - MAX_DEC``
-* the last three -- lane change ``[-1 (right), 0 (stay), +1 (left)]``
+* the last four -- lane command ``[-1 (right), 0 (stay), +1 (left),
+  +2 (withdraw a pending claim)]``
 
 ## Soundness of per-dimension masking
 
 Per-dimension masks cannot express a joint constraint, and
 ``get_safe_lane_change`` does depend on the acceleration -- but only through the
-feasibility test ``remaining_space < (speed + acc) * LANECHANGE_TIME_STEPS``,
-which is monotone: the larger the acceleration, the harder it is to satisfy.
+feasibility test ``remaining_space < (speed + acc) * (CLAIM_TIME +
+LANECHANGE_TIME_STEPS)``, which is monotone: the larger the acceleration, the harder it is to satisfy.
 The masks are therefore built by evaluating the lane-change verdict at the
 *largest* acceleration the acceleration mask admits. Every acceleration the mask
 allows is then at most that one, so any (acceleration, lane change) pair the
@@ -61,7 +62,7 @@ if TYPE_CHECKING:
 
 # Sizes of the two MultiDiscrete components, and of the concatenated mask.
 ACC_ACTIONS: int = MAX_ACC + MAX_DEC + 1
-LANE_ACTIONS: int = 3
+LANE_ACTIONS: int = 4
 MASK_LENGTH: int = ACC_ACTIONS + LANE_ACTIONS
 
 # Index of maximal braking in the acceleration block, and of "stay in lane" in
@@ -184,7 +185,9 @@ class ActionShield:
         """Guarantee both blocks offer at least one action.
 
         Neither branch is expected to fire: ``get_accelerate`` falls back to
-        maximal braking and ``get_safe_lane_change`` always marks "stay" safe.
+        maximal braking, and ``get_safe_lane_change`` marks either "stay" or
+        "withdraw" safe in every situation -- a claim that has become unsafe
+        rules out staying, but withdrawing it is then the very thing to do.
         They are kept because a masked policy has no defined behaviour on an
         empty mask, and a silent NaN would be a much worse failure than a
         counted fallback.

@@ -39,7 +39,10 @@ class CarController(Protocol):
             construction time and read live thereafter.
     Output: `get_action()` -> (acceleration, lane_change), where acceleration is
             in [-MAX_DEC, MAX_ACC] and lane_change is one of NO_LANE_CHANGE /
-            LEFT_LANE_CHANGE / RIGHT_LANE_CHANGE.
+            LEFT_LANE_CHANGE / RIGHT_LANE_CHANGE / WITHDRAW_CLAIM. A lane
+            change is claimed first and only becomes binding CLAIM_TIME ticks
+            later, so a controller is expected to keep watching its claim and
+            answer WITHDRAW_CLAIM if the target lane turns out to be taken.
     """
 
     def get_action(self) -> Tuple[int, int]:

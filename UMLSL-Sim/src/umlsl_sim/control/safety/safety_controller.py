@@ -6,12 +6,15 @@ from umlsl_sim.simulation.road_network.road_network import Intersection, LaneSeg
     right_direction, direction_sign
 from umlsl_sim.config.logic_constants import (
     BUFFER,
+    CLAIM_TIME,
     CROSSING_MAX_SPEED,
     LANECHANGE_TIME_STEPS,
     LEFT_LANE_CHANGE,
     MAX_ACC,
     MAX_DEC,
+    NO_LANE_CHANGE,
     RIGHT_LANE_CHANGE,
+    WITHDRAW_CLAIM,
 )
 from umlsl_sim.simulation.reservations.reservation_management import ReservationManagement
 from umlsl_sim.simulation.safety_checks import rear_end_violation, lane_change_blocked
@@ -55,14 +58,14 @@ class SafetyController:
         priority_blocked = self._last_call_priority_blocked
 
         if self.car.changing_lane:
-            lane_change_segment = self.reservation_management.get_reserved_lane_change_segment(self.car.id)
-            if lane_change_segment is None:
+            claim = self.reservation_management.get_lane_change_claim(self.car.id)
+            if claim is None:
                 raise RuntimeError(
-                    f"Car {self.car.id!r} is marked as changing_lane but has no reserved "
-                    f"lane-change segment in ReservationManagement."
+                    f"Car {self.car.id!r} is marked as changing_lane but has no lane-change "
+                    f"claim in ReservationManagement."
                 )
             lane_change_segment_info = SegmentInfo(
-                    lane_change_segment[1],
+                    claim.segment,
                     reservations[0].begin,
                     reservations[0].end,
                     self.car.direction
@@ -81,21 +84,46 @@ class SafetyController:
 
     def get_safe_lane_change(self, reservations: list[SegmentInfo], current_acc: int) -> list[bool]:
         """
-        Decide a single-step lane change action by comparing the safe acceleration
-        of every lane on the current road. The car moves toward the lane with the
-        highest acceleration, breaking ties in favor of lanes to the right.
+        Report which of the four lane commands are safe right now, in action
+        order: ``[right, stay, left, withdraw]`` (index ``1 + command``).
+
+        Three situations, and the car is in exactly one of them:
+
+        * *A claim is pending.* The car took the target lane blind and is now
+          living with the consequences. Withdrawing is always safe; holding the
+          claim is safe only while nobody else has that space. Starting a
+          second change is not an option -- the car has only one body.
+        * *A change is committed.* Nothing left to decide: the manoeuvre must
+          be seen through, so only "stay" is offered.
+        * *Nothing is running.* Withdrawing is meaningless, and a lane may be
+          claimed when the manoeuvre fits in the segment ahead and the target
+          is not already spoken for. The claim phase exists to catch what
+          cannot be foreseen, not to excuse driving into a car that is plainly
+          there.
         """
         current_seg_info = reservations[0]
         current_lane_seg = current_seg_info.segment
 
-        results = [False, True, False]
+        results = [False, True, False, False]
+
+        claim = self.reservation_management.get_lane_change_claim(self.car.id)
+        if claim is not None:
+            if claim.committed:
+                return results
+            results[1 + WITHDRAW_CLAIM] = True
+            results[1 + NO_LANE_CHANGE] = not lane_change_blocked(
+                self.car, claim.segment,
+                abs(current_seg_info.begin), abs(current_seg_info.end),
+                self.reservation_management, self.cars)
+            return results
 
         if len(reservations) != 1 or not isinstance(current_lane_seg, LaneSegment): 
             return results
         
-        # Reject if the lane change cannot complete before the segment ends.
+        # Reject if the manoeuvre -- claim phase included -- cannot complete
+        # before the segment ends.
         remaining_space = current_lane_seg.length - abs(current_seg_info.end)
-        if remaining_space < (self.car.speed + current_acc) * LANECHANGE_TIME_STEPS:
+        if remaining_space < (self.car.speed + current_acc) * (CLAIM_TIME + LANECHANGE_TIME_STEPS):
             return results
 
         for i in [RIGHT_LANE_CHANGE, LEFT_LANE_CHANGE]:
@@ -159,12 +187,12 @@ class SafetyController:
 
     def _lane_change_will_complete(self, segments: list[SegmentInfo], new_speed: int) -> bool:
         """During a lane change the car must remain inside the current lane segment
-        for the remaining LANECHANGE_TIME_STEPS. Reject any acceleration that would
-        push it past the segment end too early."""
-        info = self.reservation_management.get_reserved_lane_change_segment(self.car.id)
-        if info is None:
+        for the rest of the manoeuvre, claim phase included. Reject any acceleration
+        that would push it past the segment end too early."""
+        claim = self.reservation_management.get_lane_change_claim(self.car.id)
+        if claim is None:
             return False
-        remaining_time = LANECHANGE_TIME_STEPS - (self.car.time - info[0])
+        remaining_time = CLAIM_TIME + LANECHANGE_TIME_STEPS - (self.car.time - claim.claimed_at)
         if remaining_time <= 0:
             return True
         required_space = new_speed * remaining_time

@@ -15,7 +15,16 @@ import unittest
 
 import numpy as np
 
-from umlsl_sim.config.logic_constants import MAX_ACC, MAX_DEC
+from umlsl_sim.config.logic_constants import (
+    CLAIM_TIME,
+    LANECHANGE_TIME_STEPS,
+    LEFT_LANE_CHANGE,
+    MAX_ACC,
+    MAX_DEC,
+    NO_LANE_CHANGE,
+    RIGHT_LANE_CHANGE,
+    WITHDRAW_CLAIM,
+)
 from umlsl_sim.control.astar.astar_car_controller import AstarCarController
 from umlsl_sim.control.safety.action_shield import ACC_ACTIONS, ActionShield
 from umlsl_sim.control.safety.safety_controller import SafetyController
@@ -55,8 +64,9 @@ class TestAstarControllerDrivesTheEnvironment(unittest.TestCase):
 
     def test_simultaneous_decisions_never_produce_a_collision(self):
         """Every controller decides against the same pre-tick state, so two
-        cars can pick the same gap; the execution-time re-check in
-        `Car.change_lane` is what stops the second one taking it."""
+        cars can pick the same gap. Neither is stopped from claiming it; what
+        keeps them apart is that each sees the other's claim on the ticks
+        that follow, and the first one asked gives its claim back."""
         for _ in range(150):
             self.env.play_step()
             for i, first in enumerate(self.env.cars):
@@ -70,7 +80,8 @@ class TestAstarControllerDrivesTheEnvironment(unittest.TestCase):
                 acceleration, lane_change = controller.get_action()
                 self.assertGreaterEqual(acceleration, -MAX_DEC)
                 self.assertLessEqual(acceleration, MAX_ACC)
-                self.assertIn(lane_change, (-1, 0, 1))
+                self.assertIn(lane_change, (RIGHT_LANE_CHANGE, NO_LANE_CHANGE,
+                                            LEFT_LANE_CHANGE, WITHDRAW_CLAIM))
             self.env.play_step()
 
     def test_a_replacement_controller_is_used_instead(self):
@@ -148,10 +159,15 @@ class TestShieldedAgentEpisode(unittest.TestCase):
         self.shield = ActionShield(self.env)
 
     def _greedy_action(self):
+        """Fastest acceleration, and the boldest lane command on offer:
+        change if a change is allowed, otherwise hold, and withdraw a claim
+        only when the mask leaves nothing else -- which is exactly when the
+        claimed space has turned out to belong to somebody else."""
         mask = self.shield.action_masks()
         acceleration = int(np.flatnonzero(mask[:ACC_ACTIONS])[-1]) - MAX_DEC
         lane_choices = np.flatnonzero(mask[ACC_ACTIONS:])
-        lane_change = int(lane_choices[-1]) - 1
+        without_withdraw = [c for c in lane_choices if int(c) - 1 != WITHDRAW_CLAIM]
+        lane_change = int((without_withdraw or lane_choices)[-1]) - 1
         return acceleration, lane_change
 
     def test_a_shielded_agent_never_crashes(self):
@@ -188,6 +204,67 @@ class TestShieldedAgentEpisode(unittest.TestCase):
         stats = self.shield.stats()
         self.assertEqual(stats["steps"], steps)
         self.assertLessEqual(stats["forced_brake_steps"], stats["steps"])
+
+
+class TestLaneChangeLifecycle(unittest.TestCase):
+    """The claim -> reservation -> landing sequence, driven through the env."""
+
+    def setUp(self):
+        # A multi-lane scenario, so the agent has somewhere to move to.
+        self.env = build("two_crossings", players=5, seed=17, with_agent=True)
+        self.rm = self.env.reservation_management
+        self.agent = self.env.agent_car
+
+    def _adjacent(self):
+        """A lane command the agent can actually claim from where it stands."""
+        for command in (LEFT_LANE_CHANGE, RIGHT_LANE_CHANGE):
+            if self.agent.get_adjacent_lane_segment(self.rm, command) is not None:
+                return command
+        self.skipTest("the agent has no neighbouring lane to move into")
+
+    def test_a_claim_becomes_a_reservation_and_then_a_lane(self):
+        command = self._adjacent()
+        target = self.agent.get_adjacent_lane_segment(self.rm, command)
+        self.env.play_step(action=(0, command))
+        self.assertFalse(self.rm.get_lane_change_claim(self.agent.id).committed)
+
+        for _ in range(CLAIM_TIME):
+            self.env.play_step(action=(0, NO_LANE_CHANGE))
+        claim = self.rm.get_lane_change_claim(self.agent.id)
+        if claim is None:
+            self.skipTest("the agent left the segment before the claim committed")
+        self.assertTrue(claim.committed)
+
+        for _ in range(LANECHANGE_TIME_STEPS):
+            self.env.play_step(action=(0, NO_LANE_CHANGE))
+        self.assertIsNone(self.rm.get_lane_change_claim(self.agent.id))
+        self.assertIs(self.rm.get_car_reservation(self.agent.id, 0).segment, target)
+
+    def test_a_withdrawn_claim_leaves_the_agent_where_it_was(self):
+        command = self._adjacent()
+        source = self.rm.get_car_reservation(self.agent.id, 0).segment
+        target = self.agent.get_adjacent_lane_segment(self.rm, command)
+        self.env.play_step(action=(0, command))
+        self.env.play_step(action=(0, WITHDRAW_CLAIM))
+
+        self.assertIsNone(self.rm.get_lane_change_claim(self.agent.id))
+        self.assertEqual(self.rm.get_cars_changing_into_segment(target), [])
+        for _ in range(CLAIM_TIME + LANECHANGE_TIME_STEPS):
+            self.env.play_step(action=(0, NO_LANE_CHANGE))
+        self.assertIs(self.rm.get_car_reservation(self.agent.id, 0).segment, source)
+
+    def test_a_committed_change_ignores_a_withdrawal(self):
+        command = self._adjacent()
+        self.env.play_step(action=(0, command))
+        for _ in range(CLAIM_TIME):
+            self.env.play_step(action=(0, NO_LANE_CHANGE))
+        if self.rm.get_lane_change_claim(self.agent.id) is None:
+            self.skipTest("the agent left the segment before the claim committed")
+
+        self.env.play_step(action=(0, WITHDRAW_CLAIM))
+        claim = self.rm.get_lane_change_claim(self.agent.id)
+        self.assertIsNotNone(claim, "a committed change cannot be given back")
+        self.assertTrue(claim.committed)
 
 
 class TestSafetyControllerAgainstLiveTraffic(unittest.TestCase):

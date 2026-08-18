@@ -44,7 +44,7 @@ class TestMaskLayout(unittest.TestCase):
 
     def test_the_blocks_are_sized_from_the_action_space(self):
         self.assertEqual(ACC_ACTIONS, MAX_ACC + MAX_DEC + 1)
-        self.assertEqual(LANE_ACTIONS, 3)
+        self.assertEqual(LANE_ACTIONS, 4)
         self.assertEqual(MASK_LENGTH, ACC_ACTIONS + LANE_ACTIONS)
 
     def test_full_braking_is_the_first_acceleration(self):

@@ -11,6 +11,7 @@ import unittest
 
 from umlsl_sim.config.logic_constants import (
     BUFFER,
+    CLAIM_TIME,
     CROSSING_MAX_SPEED,
     LANECHANGE_TIME_STEPS,
     LANE_MAX_SPEED,
@@ -19,10 +20,13 @@ from umlsl_sim.config.logic_constants import (
     MAX_DEC,
     NO_LANE_CHANGE,
     RIGHT_LANE_CHANGE,
+    WITHDRAW_CLAIM,
 )
 from umlsl_sim.control.astar.astar_car_controller import AstarCarController
 from umlsl_sim.simulation.car import Car
 from umlsl_sim.simulation.ports import CarController
+from umlsl_sim.simulation.reservations.lane_change_claim import LaneChangeClaim
+from umlsl_sim.simulation.safety_checks import lane_change_blocked
 from umlsl_sim.simulation.road_network.road_network import (
     CrossingSegment,
     LaneSegment,
@@ -338,7 +342,9 @@ class TestChooseLaneChangeWithTraffic(unittest.TestCase):
         self.assertEqual(lane_change, LEFT_LANE_CHANGE,
                          "lane 1 is the only step available from lane 0")
 
-    def test_a_blocked_neighbour_is_not_moved_into(self):
+    def test_a_neighbour_with_a_car_in_the_way_is_not_worth_claiming(self):
+        """Not a veto any more -- a claim is taken blind. The lane simply
+        ranks no better than the one the car is in, so it is not chosen."""
         own = place_car(self.world, self.inner, loc=90, speed=0, size=40,
                         max_speed=LANE_MAX_SPEED, name="Block")
         beside = place_car(self.world, self.outer, loc=0, speed=0, size=40,
@@ -347,10 +353,27 @@ class TestChooseLaneChangeWithTraffic(unittest.TestCase):
         _, lane_change = controller.get_action()
         self.assertEqual(lane_change, NO_LANE_CHANGE)
 
-    def test_no_lane_change_is_offered_while_one_is_in_progress(self):
+    def test_a_lane_that_cannot_be_entered_is_still_claimed(self):
+        """The target lane is free ahead but has a car coming up behind, which
+        `lane_change_blocked` rejects. Nothing looks ahead at that, so the
+        claim is taken anyway -- and given back on the next tick."""
+        own = place_car(self.world, self.inner, loc=90, speed=0, size=40,
+                        max_speed=LANE_MAX_SPEED, name="Block")
+        behind = place_car(self.world, self.outer, loc=0, speed=0, size=40,
+                           max_speed=LANE_MAX_SPEED, name="Behind")
+        self.car.loc = 60
+        self.rm.update_car_reservation_begin(self.car.id, 0, self.car.loc)
+        controller = self._controller(own, behind)
+        self.assertTrue(lane_change_blocked(self.car, self.outer, 60,
+                                            abs(self.rm.get_car_reservation(self.car.id, 0).end),
+                                            self.rm, [self.car, behind]))
+        _, lane_change = controller.get_action()
+        self.assertEqual(lane_change, LEFT_LANE_CHANGE)
+
+
+    def test_no_new_lane_change_is_offered_while_one_is_in_progress(self):
         controller = self._controller()
         self.car.change_lane(self.rm, LEFT_LANE_CHANGE)
-        self.rm.set_reserved_lane_change_segment(self.car.id, (self.car.time, self.outer))
         _, lane_change = controller.get_action()
         self.assertEqual(lane_change, NO_LANE_CHANGE)
 
@@ -361,6 +384,52 @@ class TestChooseLaneChangeWithTraffic(unittest.TestCase):
         controller = AstarCarController(car, [car], self.rm)
         controller.get_action()
         _, lane_change = controller.get_action()
+        self.assertEqual(lane_change, NO_LANE_CHANGE)
+
+
+class TestClaimWatch(unittest.TestCase):
+    """What the controller does with a claim it has already taken."""
+
+    def setUp(self):
+        Car.reset_id_counter()
+        self.world = two_lane_world()
+        self.rm = self.world.reservation_management
+        self.inner = self.world.lane_segment("h1", "right", num=0)
+        self.outer = self.world.lane_segment("h1", "right", num=1)
+        self.car = place_car(self.world, self.inner, loc=0, speed=10, size=40,
+                             max_speed=LANE_MAX_SPEED,
+                             goal_segment=self.world.lane_segment("v1", "right"))
+        self.cars = [self.car]
+        self.controller = AstarCarController(self.car, self.cars, self.rm)
+        self.controller.get_action()
+        self.car.change_lane(self.rm, LEFT_LANE_CHANGE)
+
+    def test_a_claim_nobody_contests_is_kept(self):
+        _, lane_change = self.controller.get_action()
+        self.assertEqual(lane_change, NO_LANE_CHANGE)
+
+    def test_a_claim_that_has_become_unsafe_is_withdrawn(self):
+        self.cars.append(place_car(self.world, self.outer, loc=0, speed=0, size=40,
+                                   max_speed=LANE_MAX_SPEED, name="Beside"))
+        _, lane_change = self.controller.get_action()
+        self.assertEqual(lane_change, WITHDRAW_CLAIM)
+
+    def test_a_rival_claim_on_the_same_gap_is_seen(self):
+        """Two cars claiming the same space see each other's claims, so the
+        first one asked for an action is the one that backs out."""
+        third = self.world.lane_segment("h1", "left", num=0)
+        rival = place_car(self.world, third, loc=0, speed=0, size=40, name="Rival")
+        self.cars.append(rival)
+        self.rm.set_lane_change_claim(
+            rival.id, LaneChangeClaim(self.outer, rival.time))
+        _, lane_change = self.controller.get_action()
+        self.assertEqual(lane_change, WITHDRAW_CLAIM)
+
+    def test_a_committed_change_is_never_withdrawn(self):
+        self.cars.append(place_car(self.world, self.outer, loc=0, speed=0, size=40,
+                                   max_speed=LANE_MAX_SPEED, name="Beside"))
+        self.rm.commit_lane_change_claim(self.car.id)
+        _, lane_change = self.controller.get_action()
         self.assertEqual(lane_change, NO_LANE_CHANGE)
 
 
@@ -381,12 +450,12 @@ class TestLaneChangeWillComplete(unittest.TestCase):
             self.rm.get_car_reservations(self.car.id), 10))
 
     def test_plenty_of_room_lets_the_change_complete(self):
-        self.rm.set_reserved_lane_change_segment(self.car.id, (self.car.time, self.outer))
+        self.rm.set_lane_change_claim(self.car.id, LaneChangeClaim(self.outer, self.car.time))
         self.assertTrue(self.controller._lane_change_will_complete(
             self.rm.get_car_reservations(self.car.id), 5))
 
     def test_too_little_room_rejects_the_speed(self):
-        self.rm.set_reserved_lane_change_segment(self.car.id, (self.car.time, self.outer))
+        self.rm.set_lane_change_claim(self.car.id, LaneChangeClaim(self.outer, self.car.time))
         self.car.loc = self.inner.length - 10
         self.rm.update_car_reservation_begin(self.car.id, 0, self.car.loc)
         self.rm.update_car_reservation_end(self.car.id, 0, self.inner.length)
@@ -394,8 +463,9 @@ class TestLaneChangeWillComplete(unittest.TestCase):
             self.rm.get_car_reservations(self.car.id), LANE_MAX_SPEED))
 
     def test_a_change_already_due_always_completes(self):
-        self.rm.set_reserved_lane_change_segment(
-            self.car.id, (self.car.time - LANECHANGE_TIME_STEPS, self.outer))
+        self.rm.set_lane_change_claim(
+            self.car.id,
+            LaneChangeClaim(self.outer, self.car.time - CLAIM_TIME - LANECHANGE_TIME_STEPS))
         self.assertTrue(self.controller._lane_change_will_complete(
             self.rm.get_car_reservations(self.car.id), LANE_MAX_SPEED))
 

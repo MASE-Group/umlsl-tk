@@ -6,6 +6,7 @@ from umlsl_sim.simulation.road_network.road_network import Intersection, LaneSeg
     right_direction, direction_sign
 from umlsl_sim.config.logic_constants import (
     BUFFER,
+    CLAIM_TIME,
     CROSSING_MAX_SPEED,
     LANECHANGE_TIME_STEPS,
     LEFT_LANE_CHANGE,
@@ -13,7 +14,9 @@ from umlsl_sim.config.logic_constants import (
     MAX_DEC,
     NO_LANE_CHANGE,
     RIGHT_LANE_CHANGE,
+    WITHDRAW_CLAIM,
 )
+from umlsl_sim.simulation.reservations.lane_change_claim import LaneChangeClaim
 from umlsl_sim.simulation.reservations.reservation_management import ReservationManagement
 from umlsl_sim.simulation.safety_checks import rear_end_violation, lane_change_blocked
 
@@ -57,20 +60,23 @@ class AstarCarController:
         priority_blocked = self._last_call_priority_blocked
 
         if self.car.changing_lane:
-            lane_change_segment = self.reservation_management.get_reserved_lane_change_segment(self.car.id)
-            if lane_change_segment is None:
+            claim = self.reservation_management.get_lane_change_claim(self.car.id)
+            if claim is None:
                 raise RuntimeError(
-                    f"Car {self.car.id!r} is marked as changing_lane but has no reserved "
-                    f"lane-change segment in ReservationManagement."
+                    f"Car {self.car.id!r} is marked as changing_lane but has no lane-change "
+                    f"claim in ReservationManagement."
                 )
             lane_change_segment_info = SegmentInfo(
-                    lane_change_segment[1],
+                    claim.segment,
                     reservations[0].begin,
                     reservations[0].end,
                     self.car.direction
                 )
             max_possible_acc = min(max_possible_acc,
                                     self.get_accelerate([lane_change_segment_info], False))
+
+            if not claim.committed and self._claim_unsafe(claim, reservations):
+                lane_change = WITHDRAW_CLAIM
 
         elif len(reservations) == 1  \
                 and isinstance(reservations[0].segment, LaneSegment) \
@@ -86,11 +92,31 @@ class AstarCarController:
 
         return max_possible_acc, lane_change
 
+    def _claim_unsafe(self, claim: LaneChangeClaim, reservations: list[SegmentInfo]) -> bool:
+        """True if the claim overlaps anything and should be given back.
+
+        A claim is taken blind, so this is the check that was skipped when it
+        was registered, run afresh against the state of the tick. "Anything"
+        means every car already on the target segment and every car whose own
+        claim points at it -- two cars that claimed the same gap on the same
+        tick can both see the other's claim, and the first of them to be asked
+        for an action is the one that yields.
+        """
+        return lane_change_blocked(self.car, claim.segment,
+                                   abs(reservations[0].begin), abs(reservations[0].end),
+                                   self.reservation_management, self.cars)
+
     def _choose_lane_change(self, reservations: list[SegmentInfo], current_acc: int) -> int:
         """
         Decide a single-step lane change action by comparing the safe acceleration
         of every lane on the current road. The car moves toward the lane with the
         highest acceleration, breaking ties in favor of lanes to the right.
+
+        The chosen lane is only *claimed*, so no candidate is rejected for being
+        occupied: the ranking still prefers a lane with room (a car ahead in it
+        drives its acceleration down), but a lane that cannot actually be
+        entered stays on the list. `_claim_unsafe` catches that case over the
+        next CLAIM_TIME ticks, which is the point of claiming first.
         """
         current_seg_info = reservations[0]
         current_lane_seg = current_seg_info.segment
@@ -109,14 +135,15 @@ class AstarCarController:
         current_lane_num = current_lane_seg.lane.num
         is_right_dir = right_direction[current_lane_seg.lane.direction]
 
-        # Reject if the lane change cannot complete before the segment ends.
+        # Reject if the manoeuvre -- claim phase included -- cannot complete
+        # before the segment ends.
         remaining_space = current_lane_seg.length - abs(current_seg_info.end)
-        if remaining_space < (self.car.speed + current_acc) * LANECHANGE_TIME_STEPS:
+        if remaining_space < (self.car.speed + current_acc) * (CLAIM_TIME + LANECHANGE_TIME_STEPS):
             return NO_LANE_CHANGE
 
         adjacent_segments = self.car.get_adjacent_lane_segments(self.reservation_management) or []
 
-        # Map signed lane_diff -> safe acceleration for each collision-free candidate.
+        # Map signed lane_diff -> safe acceleration for each candidate.
         # Sign convention matches the action: negative = right step, positive = left step.
         lane_options: dict[int, int] = {}
         for target_seg in adjacent_segments:
@@ -124,10 +151,6 @@ class AstarCarController:
                 continue
             num_diff = target_seg.lane.num - current_lane_num
             lane_diff = num_diff if is_right_dir else -num_diff
-            if lane_change_blocked(self.car, target_seg,
-                                   abs(current_seg_info.begin), abs(current_seg_info.end),
-                                   self.reservation_management, self.cars):
-                continue
             target_seg_info = SegmentInfo(
                 target_seg,
                 current_seg_info.begin,
@@ -136,8 +159,8 @@ class AstarCarController:
             )
             lane_options[lane_diff] = self.get_accelerate([target_seg_info], False)
 
-        # Best reachable acceleration on each side (only counts if the immediate
-        # adjacent lane in that direction is collision-free, since we can only step one).
+        # Best reachable acceleration on each side (only counts if there is an
+        # immediate adjacent lane in that direction, since we can only step one).
         right_reachable = RIGHT_LANE_CHANGE in lane_options
         left_reachable = LEFT_LANE_CHANGE in lane_options
         best_right_acc = max((acc for diff, acc in lane_options.items() if diff < 0), default=MAX_DEC) \
@@ -201,12 +224,12 @@ class AstarCarController:
 
     def _lane_change_will_complete(self, segments: list[SegmentInfo], new_speed: int) -> bool:
         """During a lane change the car must remain inside the current lane segment
-        for the remaining LANECHANGE_TIME_STEPS. Reject any acceleration that would
-        push it past the segment end too early."""
-        info = self.reservation_management.get_reserved_lane_change_segment(self.car.id)
-        if info is None:
+        for the rest of the manoeuvre, claim phase included. Reject any acceleration
+        that would push it past the segment end too early."""
+        claim = self.reservation_management.get_lane_change_claim(self.car.id)
+        if claim is None:
             return False
-        remaining_time = LANECHANGE_TIME_STEPS - (self.car.time - info[0])
+        remaining_time = CLAIM_TIME + LANECHANGE_TIME_STEPS - (self.car.time - claim.claimed_at)
         if remaining_time <= 0:
             return True
         required_space = new_speed * remaining_time

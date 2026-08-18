@@ -379,6 +379,46 @@ algorithm name: `rl_results/models/<scenario>/<algorithm>/<observation>/<reward>
 
 ---
 
+## Lane Changes: Claim, Withdraw, Commit
+
+A lane change is not decided in one step. The car first **claims** the target
+lane segment without checking whether it is free, and only later does the claim
+become binding:
+
+| Tick (from the claim) | State | Who may do what |
+| --- | --- | --- |
+| `0` | claim registered, blind | the claimant may withdraw |
+| `1 .. CLAIM_TIME - 1` | claim held | the claimant may withdraw |
+| `CLAIM_TIME` | claim becomes a reservation | nobody: the car is committed |
+| `CLAIM_TIME + LANECHANGE_TIME_STEPS` | the car lands on the target lane | — |
+
+`CLAIM_TIME` and `LANECHANGE_TIME_STEPS` live in
+[`config/logic_constants.py`](src/umlsl_sim/config/logic_constants.py).
+
+Other cars treat a claim exactly as they treat a reservation — the space is
+taken — but *overlapping a claim is never a collision*, because nothing of the
+claimant is on the target lane yet. That asymmetry is the whole point: a claim
+can be taken without looking, and given back once the car sees what it ran
+into. Two cars that claim the same gap on the same tick each see the other's
+claim on the next one, and the first of them asked for an action is the one
+that yields.
+
+What this means per driver:
+
+- **NPC controllers** (`AstarCarController`) rank the lanes as before and claim
+  the best one without vetoing an occupied target. On each following tick they
+  re-check the claim and answer `WITHDRAW_CLAIM` when it overlaps anybody.
+- **The RL agent** gets `WITHDRAW_CLAIM` as a fourth lane command, so its action
+  space is `MultiDiscrete([MAX_ACC + MAX_DEC + 1, 4])`, decoding to
+  `[-1 right, 0 stay, +1 left, +2 withdraw]`. The observation header carries the
+  agent's own claim (which way, and how far through the manoeuvre) so a policy
+  can tell whether it has anything to withdraw.
+- **`ActionShield`** masks the lane block accordingly: with a claim pending it
+  offers "hold" only while the claim is still safe, always offers "withdraw",
+  and offers neither while a change is committed.
+
+---
+
 ## Observation Models
 
 How the agent perceives the world. Currently supported (expand with other observation models):
@@ -389,6 +429,8 @@ Flattened vector of normalized numeric values:
 - Lane positions and directions
 - Car speeds and positions
 - Segment reservations
+- The agent's own lane-change claim: which way it is going, and how far through
+  the manoeuvre it is
 
 ```python
 observation_model_type=ObservationModelType.NUMERIC_OBSERVATION

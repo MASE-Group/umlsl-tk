@@ -12,6 +12,7 @@ import unittest
 from umlsl_sim.config.logic_constants import (
     BLOCK_SIZE,
     BUFFER,
+    CLAIM_TIME,
     CROSSING_MAX_SPEED,
     LANECHANGE_TIME_STEPS,
     LANE_MAX_SPEED,
@@ -456,9 +457,13 @@ class TestChangeLane(unittest.TestCase):
     def test_a_valid_change_is_accepted_and_registered(self):
         self.assertTrue(self.car.change_lane(self.rm, 1))
         self.assertTrue(self.car.changing_lane)
-        pending = self.rm.get_reserved_lane_change_segment(self.car.id)
-        self.assertEqual(pending[0], self.car.time)
-        self.assertIs(pending[1], self.world.lane_segment("h1", "right", num=1))
+        claim = self.rm.get_lane_change_claim(self.car.id)
+        self.assertEqual(claim.claimed_at, self.car.time)
+        self.assertIs(claim.segment, self.world.lane_segment("h1", "right", num=1))
+
+    def test_a_new_change_is_registered_as_an_uncommitted_claim(self):
+        self.car.change_lane(self.rm, 1)
+        self.assertFalse(self.rm.get_lane_change_claim(self.car.id).committed)
 
     def test_a_zero_step_is_refused_without_being_a_problem(self):
         self.assertIs(self.car.change_lane(self.rm, 0), False)
@@ -484,20 +489,77 @@ class TestChangeLane(unittest.TestCase):
         self.assertGreater(len(rm.get_car_reservations(car.id)), 1)
         self.assertIs(car.change_lane(rm, 1), Problem.CHANGE_LANE_WHILE_CROSSING)
 
-    def test_a_blocked_target_lane_is_declined_when_cars_are_supplied(self):
-        blocker = place_car(self.world, self.world.lane_segment("h1", "right", num=1),
-                            loc=0, speed=0, size=40, name="Block")
-        self.assertIs(self.car.change_lane(self.rm, 1, [self.car, blocker]), False)
-        self.assertIsNone(self.car.changing_lane)
-
-    def test_without_the_car_list_the_occupancy_re_check_is_skipped(self):
+    def test_an_occupied_target_lane_is_claimed_all_the_same(self):
+        """A claim is deliberately blind: seeing the blocker is the
+        controller's job over the next CLAIM_TIME ticks, not the car's now."""
         place_car(self.world, self.world.lane_segment("h1", "right", num=1),
                   loc=0, speed=0, size=40, name="Block")
         self.assertTrue(self.car.change_lane(self.rm, 1))
+        self.assertTrue(self.car.changing_lane)
+
+    def test_a_second_claim_is_refused_while_one_is_running(self):
+        self.assertTrue(self.car.change_lane(self.rm, 1))
+        self.assertIs(self.car.change_lane(self.rm, 1), False)
+        self.assertIs(self.rm.get_lane_change_claim(self.car.id).segment,
+                      self.world.lane_segment("h1", "right", num=1))
+
+
+class TestWithdrawClaim(unittest.TestCase):
+    """A claim may be given back until it commits, and not afterwards."""
+
+    def setUp(self):
+        Car.reset_id_counter()
+        self.world = two_lane_world()
+        self.rm = self.world.reservation_management
+        self.source = self.world.lane_segment("h1", "right", num=0)
+        self.target = self.world.lane_segment("h1", "right", num=1)
+        self.car = place_car(self.world, self.source, speed=5, size=40)
+
+    def test_withdrawing_with_no_claim_pending_does_nothing(self):
+        self.assertIs(self.car.withdraw_claim(self.rm), False)
+
+    def test_a_pending_claim_is_given_back(self):
+        self.car.change_lane(self.rm, 1)
+        self.assertIs(self.car.withdraw_claim(self.rm), True)
+        self.assertFalse(self.car.changing_lane)
+        self.assertIsNone(self.rm.get_lane_change_claim(self.car.id))
+
+    def test_the_target_segment_is_free_again(self):
+        self.car.change_lane(self.rm, 1)
+        self.car.withdraw_claim(self.rm)
+        self.assertEqual(self.rm.get_cars_changing_into_segment(self.target), [])
+
+    def test_the_car_keeps_driving_on_its_own_lane(self):
+        self.car.change_lane(self.rm, 1)
+        self.car.withdraw_claim(self.rm)
+        for _ in range(CLAIM_TIME + LANECHANGE_TIME_STEPS + 1):
+            self.car.move(self.rm)
+        self.assertEqual(reservation_segments(self.world, self.car), [self.source])
+
+    def test_withdrawing_is_still_possible_on_the_last_claim_tick(self):
+        self.car.change_lane(self.rm, 1)
+        for _ in range(CLAIM_TIME - 1):
+            self.car.move(self.rm)
+        self.assertIs(self.car.withdraw_claim(self.rm), True)
+
+    def test_a_committed_change_can_no_longer_be_withdrawn(self):
+        self.car.change_lane(self.rm, 1)
+        for _ in range(CLAIM_TIME + 1):
+            self.car.move(self.rm)
+        self.assertTrue(self.rm.get_lane_change_claim(self.car.id).committed)
+        self.assertIs(self.car.withdraw_claim(self.rm), False)
+        self.assertTrue(self.car.changing_lane)
+
+    def test_a_car_that_dies_holding_a_claim_releases_the_lane(self):
+        self.car.change_lane(self.rm, 1)
+        self.car.handle_car_death(self.rm)
+        self.assertEqual(self.rm.get_cars_changing_into_segment(self.target), [])
+        self.assertFalse(self.car.changing_lane)
 
 
 class TestCheckReservation(unittest.TestCase):
-    """The lane change lands `LANECHANGE_TIME_STEPS` after it was registered."""
+    """The claim commits after `CLAIM_TIME` and the car lands
+    `LANECHANGE_TIME_STEPS` after that."""
 
     def setUp(self):
         Car.reset_id_counter()
@@ -509,7 +571,7 @@ class TestCheckReservation(unittest.TestCase):
 
     def _complete_change(self):
         """Drive until the registered lane change has been applied."""
-        for _ in range(LANECHANGE_TIME_STEPS + 1):
+        for _ in range(CLAIM_TIME + LANECHANGE_TIME_STEPS + 1):
             self.car.move(self.rm)
 
     def test_a_car_not_changing_lane_reports_false(self):
@@ -522,17 +584,37 @@ class TestCheckReservation(unittest.TestCase):
 
     def test_the_change_is_still_pending_until_the_clock_reaches_the_deadline(self):
         self.car.change_lane(self.rm, 1)
-        for _ in range(LANECHANGE_TIME_STEPS):
+        for _ in range(CLAIM_TIME + LANECHANGE_TIME_STEPS):
             self.assertTrue(self.car.changing_lane)
             self.car.move(self.rm)
-        self.assertEqual(self.car.time, LANECHANGE_TIME_STEPS)
+        self.assertEqual(self.car.time, CLAIM_TIME + LANECHANGE_TIME_STEPS)
         self.assertTrue(self.car.changing_lane,
                         "the change is applied by the move that starts on the deadline")
 
-    def test_the_change_lands_on_the_move_that_starts_at_the_deadline(self):
+    def test_the_claim_stays_uncommitted_for_the_whole_claim_phase(self):
+        self.car.change_lane(self.rm, 1)
+        for _ in range(CLAIM_TIME):
+            self.assertFalse(self.rm.get_lane_change_claim(self.car.id).committed)
+            self.car.move(self.rm)
+
+    def test_the_claim_commits_on_the_move_that_starts_at_claim_time(self):
         # `check_reservation` runs at the top of `move`, before the clock is
-        # advanced, so the change lands during the (LANECHANGE_TIME_STEPS + 1)th
-        # move -- the first one to begin with `car.time == LANECHANGE_TIME_STEPS`.
+        # advanced, so the claim commits during the (CLAIM_TIME + 1)th move --
+        # the first one to begin with `car.time == CLAIM_TIME`.
+        self.car.change_lane(self.rm, 1)
+        for _ in range(CLAIM_TIME + 1):
+            self.car.move(self.rm)
+        self.assertTrue(self.rm.get_lane_change_claim(self.car.id).committed)
+
+    def test_the_car_is_still_on_the_source_lane_when_the_claim_commits(self):
+        self.car.change_lane(self.rm, 1)
+        for _ in range(CLAIM_TIME + 1):
+            self.car.move(self.rm)
+        self.assertEqual(reservation_segments(self.world, self.car), [self.source])
+
+    def test_the_change_lands_on_the_move_that_starts_at_the_deadline(self):
+        # Claim phase and change phase run back to back, so the car lands
+        # during the (CLAIM_TIME + LANECHANGE_TIME_STEPS + 1)th move.
         self.car.change_lane(self.rm, 1)
         self._complete_change()
         self.assertFalse(self.car.changing_lane)
@@ -550,7 +632,7 @@ class TestCheckReservation(unittest.TestCase):
     def test_the_pending_change_is_cleared_once_it_lands(self):
         self.car.change_lane(self.rm, 1)
         self._complete_change()
-        self.assertIsNone(self.rm.get_reserved_lane_change_segment(self.car.id))
+        self.assertIsNone(self.rm.get_lane_change_claim(self.car.id))
 
     def test_the_offset_carries_across_unchanged(self):
         self.car.change_lane(self.rm, 1)

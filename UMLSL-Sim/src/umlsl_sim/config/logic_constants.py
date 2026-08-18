@@ -31,14 +31,31 @@ MAX_DEC = BLOCK_SIZE // 4
 # --- Manoeuvres --------------------------------------------------------------
 
 # Lane-change encoding, shared by the car, both controllers and the RL action
-# space; the numeric values are the ones the action space is built from.
+# space; the numeric values are the ones the action space is built from. The
+# RL action space maps index i to i - 1, so the four commands are contiguous
+# from RIGHT_LANE_CHANGE upwards.
 NO_LANE_CHANGE = 0
 LEFT_LANE_CHANGE = 1
 RIGHT_LANE_CHANGE = -1
+# Give up a claim registered on an earlier tick and stay in the current lane.
+# Only meaningful while a claim is pending and not yet committed; see
+# `Car.change_lane` for the manoeuvre this belongs to.
+WITHDRAW_CLAIM = 2
 
-# Ticks a lane change occupies, and how far ahead a car claims space for one.
+# A lane change runs in two phases, CLAIM_TIME + LANECHANGE_TIME_STEPS ticks
+# in all:
+#
+# 1. *Claim* -- CLAIM_TIME ticks during which the target segment is only
+#    claimed. The claim is registered without any collision check, and its
+#    holder may withdraw it on any tick of this phase (and is expected to, once
+#    it sees the claim overlap someone else's space). Other cars treat a claim
+#    as taken space, but overlapping one is never a collision: nothing of the
+#    car is on the target lane yet.
+# 2. *Change* -- LANECHANGE_TIME_STEPS ticks after the claim turns itself into
+#    a reservation. The reservation cannot be withdrawn, and the car lands on
+#    the target lane at the end of it.
 LANECHANGE_TIME_STEPS = 3
-CLAIMTIME = 5
+CLAIM_TIME = 2
 
 # Look-ahead, in ticks, used when projecting a reservation forward.
 JUMP_TIME_STEPS = 1

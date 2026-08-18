@@ -26,9 +26,11 @@ class SafetyAwareReward(MlslEnv):
         score increased.
       - REWARD_UNSAFE_ACCELERATION if the chosen acceleration exceeds
         SafetyController.get_max_acceleration().
-      - REWARD_UNSAFE_LANE_CHANGE if the chosen lane change is marked
-        unsafe by SafetyController.get_safe_lane_change(). Staying in
-        the current lane is always considered safe.
+      - REWARD_UNSAFE_LANE_CHANGE if the chosen lane command is marked
+        unsafe by SafetyController.get_safe_lane_change(). Holding a claim
+        that has turned out to overlap another car counts as unsafe, so
+        staying put is not free while a claim is pending: withdrawing it is
+        what the controller asks for there.
       - REWARD_PROGRESS_COEF * (prev_dist - cur_dist): potential-based
         shaping on Euclidean distance from the agent to its current goal.
         Skipped on the step a goal is reached (the goal pointer swaps, so
@@ -42,14 +44,14 @@ class SafetyAwareReward(MlslEnv):
         super().__init__(*args, **kwargs)
         self.safety_controller: SafetyController = self._build_safety_controller()
         self.last_max_acc: int = 0
-        self.last_safe_lane_change: list[bool] = [True, True, True]
+        self.last_safe_lane_change: list[bool] = [True, True, True, True]
         self.prev_goal_dist: float = self._goal_distance()
 
     def reset(self, seed: None | int = None, options: None | Dict = None) -> Tuple[spaces.Space, Dict[str, any]]:
         obs, info = super().reset(seed=seed, options=options)
         self.safety_controller = self._build_safety_controller()
         self.last_max_acc = 0
-        self.last_safe_lane_change = [True, True, True]
+        self.last_safe_lane_change = [True, True, True, True]
         self.prev_goal_dist = self._goal_distance()
         return obs, info
 
@@ -64,7 +66,7 @@ class SafetyAwareReward(MlslEnv):
         agent = self.game_model.agent_car
         if agent is None or agent.get_death_status():
             self.last_max_acc = decoded_action[0]
-            self.last_safe_lane_change = [True, True, True]
+            self.last_safe_lane_change = [True, True, True, True]
             return
 
         self.last_max_acc = self.safety_controller.get_max_acceleration()
@@ -93,7 +95,8 @@ class SafetyAwareReward(MlslEnv):
         if decoded_acc > self.last_max_acc:
             reward += REWARD_UNSAFE_ACCELERATION
 
-        # decoded_lane is in {-1, 0, 1}; safe_lane_change indexed [right, stay, left].
+        # decoded_lane is in {-1, 0, 1, 2}; safe_lane_change is indexed
+        # [right, stay, left, withdraw].
         if not self.last_safe_lane_change[decoded_lane + 1]:
             reward += REWARD_UNSAFE_LANE_CHANGE
 

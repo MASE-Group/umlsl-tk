@@ -13,6 +13,7 @@ from umlsl_sim.simulation.car_types import CarType
 from umlsl_sim.simulation.event_checks import collision_check, reached_goal
 from umlsl_sim.simulation.road_network.road_network import Direction, Road, Problem
 from umlsl_sim.factories.create_segments import create_segments
+from umlsl_sim.config.logic_constants import NO_LANE_CHANGE, WITHDRAW_CLAIM
 from umlsl_sim.config.simulation_constants import DEADLOCK_FRAMES, WINNING_SCORE
 from umlsl_sim.simulation.ports import CarController, CarControllerFactory
 from umlsl_sim.simulation.reservations.reservation_management import ReservationManagement
@@ -332,8 +333,10 @@ class TrafficEnv:
         car.change_speed(acceleration)
 
         action_worked = True
-        if lane_change != 0:
-            action_worked = action_worked and car.change_lane(self.reservation_management, lane_change, self.cars)
+        if lane_change == WITHDRAW_CLAIM:
+            action_worked = car.withdraw_claim(self.reservation_management)
+        elif lane_change != NO_LANE_CHANGE:
+            action_worked = car.change_lane(self.reservation_management, lane_change)
 
         action_worked = car.move(self.reservation_management) and action_worked
 

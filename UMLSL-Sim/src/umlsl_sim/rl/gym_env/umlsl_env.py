@@ -84,7 +84,12 @@ class MlslEnv(Env, ABC):
     
     MultiDiscrete with 2 components:
     - Acceleration: [0, MAX_ACC + MAX_DEC] → maps to [-MAX_DEC, MAX_ACC]
-    - Lane change: [0, 1, 2] → maps to [-1, 0, 1]
+    - Lane command: [0, 1, 2, 3] → maps to [-1, 0, 1, 2], i.e. change right,
+      stay, change left, withdraw a pending claim. A lane change starts as a
+      claim on the target lane that the agent may take back for the next
+      CLAIM_TIME steps; withdrawing is what takes it back (see
+      `Car.change_lane`). Withdrawing with no claim pending is simply a step
+      in which nothing happens.
     
     ## Episode Termination
 
@@ -160,8 +165,8 @@ class MlslEnv(Env, ABC):
 
         self.observation_model: Observation = observation_model
 
-        # accelaration = [0, MAX_DEC + MAX_ACC] and lange changes = [0, 2]
-        self.action_space = spaces.MultiDiscrete([MAX_ACC + MAX_DEC + 1, 3])
+        # accelaration = [0, MAX_DEC + MAX_ACC] and lane commands = [0, 3]
+        self.action_space = spaces.MultiDiscrete([MAX_ACC + MAX_DEC + 1, 4])
         self.observation_space = self.observation_model.space()
 
         # Off by default: an unshielded env allows every action, which is what
@@ -220,7 +225,7 @@ class MlslEnv(Env, ABC):
         Args:
             actions (Tuple[int, int]): Two-element action vector:
                 - actions[0]: Acceleration command [0, MAX_ACC + MAX_DEC]
-                - actions[1]: Lane change command [0, 1, 2]
+                - actions[1]: Lane command [0, 1, 2, 3]
         
         Returns:
             Tuple[observation, reward, done, truncated, info]:
@@ -230,7 +235,7 @@ class MlslEnv(Env, ABC):
                 - truncated (bool): True if episode ended by deadlock
                 - info (dict): Debugging information
         """
-        # accelaration = [-MAX_DEC, MAX_ACC] and lange changes = [-1, 0, 1]
+        # accelaration = [-MAX_DEC, MAX_ACC] and lane commands = [-1, 0, 1, 2]
         decoded_action = (actions[0] - MAX_DEC, actions[1] - 1)
 
         self.last_decoded_action: Tuple[int, int] = decoded_action
@@ -327,7 +332,7 @@ class MlslEnv(Env, ABC):
         Returns:
             np.ndarray: Boolean array with one entry per value of each action
                 dimension, concatenated: `MAX_ACC + MAX_DEC + 1` acceleration
-                flags followed by 3 lane-change flags. All true when no shield
+                flags followed by 4 lane-command flags. All true when no shield
                 is attached.
         """
         if self.action_shield is None:

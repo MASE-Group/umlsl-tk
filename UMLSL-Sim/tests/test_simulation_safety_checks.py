@@ -11,6 +11,7 @@ import unittest
 
 from umlsl_sim.config.logic_constants import MAX_ACC, MAX_DEC
 from umlsl_sim.simulation.car import Car
+from umlsl_sim.simulation.reservations.lane_change_claim import LaneChangeClaim
 from umlsl_sim.simulation.road_network.road_network import Direction, SegmentInfo
 from umlsl_sim.simulation.safety_checks import (
     _other_rear_in_segment,
@@ -217,7 +218,7 @@ class TestRearEndViolation(unittest.TestCase):
         source = world.lane_segment("h1", "right", num=1)
         follower = place_car(world, target, loc=0, speed=10, size=40)
         merger = place_car(world, source, loc=100, speed=0, size=40, name="Merger")
-        rm.set_reserved_lane_change_segment(merger.id, (0, target))
+        rm.set_lane_change_claim(merger.id, LaneChangeClaim(target, 0))
         projected = [SegmentInfo(target, follower.loc, follower.loc + 150,
                                  follower.direction)]
         self.assertTrue(rear_end_violation(follower, projected, rm,
@@ -302,14 +303,14 @@ class TestLaneChangeBlocked(unittest.TestCase):
 
     def test_we_never_block_ourselves(self):
         car = place_car(self.world, self.source, loc=0, speed=10, size=40)
-        self.rm.set_reserved_lane_change_segment(car.id, (0, self.target))
+        self.rm.set_lane_change_claim(car.id, LaneChangeClaim(self.target, 0))
         self.assertFalse(lane_change_blocked(car, self.target, 0, 70, self.rm, [car]))
 
     def test_another_car_already_committed_to_the_same_gap_blocks(self):
         car = place_car(self.world, self.source, loc=0, speed=10, size=40)
         third = self.world.lane_segment("h1", "left", num=0)
         rival = place_car(self.world, third, loc=50, speed=0, size=40, name="Rival")
-        self.rm.set_reserved_lane_change_segment(rival.id, (0, self.target))
+        self.rm.set_lane_change_claim(rival.id, LaneChangeClaim(self.target, 0))
         self.assertTrue(
             lane_change_blocked(car, self.target, 0, 100, self.rm, [car, rival]))
 

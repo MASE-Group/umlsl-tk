@@ -1,8 +1,11 @@
 """Shared reservation-geometry safety rules.
 
-Used by AstarCarController / SafetyController (per-tick acceleration safety and
-lane-change selection) and by Car.change_lane (execution-time re-validation of
-a lane change, which closes same-tick decision races).
+Used by AstarCarController / SafetyController for per-tick acceleration safety,
+for lane-change selection, and for the per-tick re-check of a claim that has
+already been taken -- `lane_change_blocked` is what tells a claimant that the
+space it claimed blind belongs to somebody else and must be given back. Note
+that `Car.change_lane` itself checks nothing: a claim is deliberately taken
+without looking (see `config.logic_constants`).
 
 Core invariant: a car's reservation [rear, end] always covers its full
 worst-case stopping envelope plus BUFFER. A follower is safe iff its projected
@@ -100,7 +103,8 @@ def lane_change_blocked(car, target_seg: LaneSegment, my_begin: int, my_end: int
                         reservation_management, cars: list) -> bool:
     """True if moving `car`'s reservation [my_begin, my_end] (absolute offsets,
     mapped 1:1 onto `target_seg`) could conflict with any car already on the
-    target segment or already committed to changing into it.
+    target segment or already moving into it -- claiming it included, since a
+    claim is space taken as far as everybody but its holder is concerned.
 
     Cars ahead: our end must stay behind their worst-case next rear.
     Cars behind: their worst-case next reservation end must stay behind our

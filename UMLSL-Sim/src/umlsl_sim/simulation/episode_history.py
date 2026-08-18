@@ -11,6 +11,7 @@ what `CarSnapshot` is for: `set_list_of_cars` takes the snapshot at the moment
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
+from umlsl_sim.config.logic_constants import NO_LANE_CHANGE, WITHDRAW_CLAIM
 from umlsl_sim.simulation.car import Car
 from umlsl_sim.simulation.car_types import CarType
 from umlsl_sim.simulation.ports import NullRenderer, Renderer
@@ -193,8 +194,10 @@ class GameHistory():
                 acceleration, lane_change = actions[i]
 
                 car.change_speed(acceleration)
-                if lane_change != 0:
-                    car.change_lane(reservation_management, lane_change, cars)
+                if lane_change == WITHDRAW_CLAIM:
+                    car.withdraw_claim(reservation_management)
+                elif lane_change != NO_LANE_CHANGE:
+                    car.change_lane(reservation_management, lane_change)
                 car.move(reservation_management)
 
             renderer.draw_frame()

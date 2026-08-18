@@ -19,9 +19,11 @@ from umlsl_sim.config.logic_constants import (
     MAX_ACC,
     MAX_DEC,
     RIGHT_LANE_CHANGE,
+    WITHDRAW_CLAIM,
 )
 from umlsl_sim.control.safety.safety_controller import SafetyController
 from umlsl_sim.simulation.car import Car
+from umlsl_sim.simulation.reservations.lane_change_claim import LaneChangeClaim
 from umlsl_sim.simulation.road_network.road_network import (
     CrossingSegment,
     LaneSegment,
@@ -96,7 +98,7 @@ class TestGetMaxAcceleration(_SafetyFixture):
 
         free = controller.get_max_acceleration()
         car.changing_lane = True
-        rm.set_reserved_lane_change_segment(car.id, (car.time, outer))
+        rm.set_lane_change_claim(car.id, LaneChangeClaim(outer, car.time))
         self.assertLessEqual(controller.get_max_acceleration(), free)
 
     def test_a_car_marked_as_changing_lane_with_no_registration_is_an_error(self):
@@ -104,7 +106,7 @@ class TestGetMaxAcceleration(_SafetyFixture):
         self.car.changing_lane = True
         with self.assertRaises(RuntimeError) as ctx:
             self.controller.get_max_acceleration()
-        self.assertIn("no reserved", str(ctx.exception))
+        self.assertIn("no lane-change claim", str(ctx.exception))
 
 
 class TestGetMaxAccelerationWithTraffic(unittest.TestCase):
@@ -164,9 +166,9 @@ class TestGetSafeLaneChange(unittest.TestCase):
         return self.controller.get_safe_lane_change(
             self.rm.get_car_reservations(self.car.id), current_acc)
 
-    def test_the_verdict_is_a_triple_in_right_stay_left_order(self):
+    def test_the_verdict_is_a_quad_in_right_stay_left_withdraw_order(self):
         verdict = self._verdict()
-        self.assertEqual(len(verdict), 3)
+        self.assertEqual(len(verdict), 4)
         self.assertTrue(all(isinstance(v, bool) for v in verdict))
 
     def test_staying_in_lane_is_always_safe(self):
@@ -178,6 +180,9 @@ class TestGetSafeLaneChange(unittest.TestCase):
     def test_a_lane_that_is_not_there_is_not_offered(self):
         self.assertFalse(self._verdict()[1 + RIGHT_LANE_CHANGE])
 
+    def test_withdrawing_is_not_offered_when_no_claim_is_pending(self):
+        self.assertFalse(self._verdict()[1 + WITHDRAW_CLAIM])
+
     def test_an_occupied_neighbouring_lane_is_not_offered(self):
         blocker = place_car(self.world, self.outer, loc=0, speed=0, size=40,
                             max_speed=LANE_MAX_SPEED, name="Beside")
@@ -188,13 +193,13 @@ class TestGetSafeLaneChange(unittest.TestCase):
         blocker = place_car(self.world, self.outer, loc=0, speed=0, size=40,
                             max_speed=LANE_MAX_SPEED, name="Beside")
         self.cars.append(blocker)
-        self.assertEqual(self._verdict(), [False, True, False])
+        self.assertEqual(self._verdict(), [False, True, False, False])
 
     def test_too_little_room_to_complete_the_change_offers_only_staying(self):
         self.car.loc = self.inner.length - 5
         self.rm.update_car_reservation_begin(self.car.id, 0, self.car.loc)
         self.rm.update_car_reservation_end(self.car.id, 0, self.inner.length)
-        self.assertEqual(self._verdict(current_acc=MAX_ACC), [False, True, False])
+        self.assertEqual(self._verdict(current_acc=MAX_ACC), [False, True, False, False])
 
     def test_a_car_straddling_a_crossing_may_only_stay(self):
         world = single_crossing_world()
@@ -208,7 +213,7 @@ class TestGetSafeLaneChange(unittest.TestCase):
         reservations = rm.get_car_reservations(car.id)
         self.assertGreater(len(reservations), 1)
         self.assertEqual(controller.get_safe_lane_change(reservations, 0),
-                         [False, True, False])
+                         [False, True, False, False])
 
     def test_the_feasibility_test_is_monotone_in_acceleration(self):
         """The shield evaluates lane changes at the *largest* admitted
@@ -217,11 +222,48 @@ class TestGetSafeLaneChange(unittest.TestCase):
         self.rm.update_car_reservation_begin(self.car.id, 0, self.car.loc)
         self.rm.update_car_reservation_end(self.car.id, 0, self.car.loc + 70)
         verdicts = [self._verdict(current_acc=a) for a in range(-MAX_DEC, MAX_ACC + 1)]
-        for lane in range(3):
+        for lane in range(4):
             column = [v[lane] for v in verdicts]
             # once False it must stay False as the acceleration grows
             self.assertEqual(column, sorted(column, reverse=True),
                              f"lane index {lane} is not monotone")
+
+
+class TestGetSafeLaneChangeWhileClaiming(unittest.TestCase):
+    """While a claim is pending the verdict is about the claim, not about
+    starting another change: withdrawing is always on the table, and holding
+    on is offered only while the claimed space is still free."""
+
+    def setUp(self):
+        Car.reset_id_counter()
+        self.world = two_lane_world()
+        self.rm = self.world.reservation_management
+        self.inner = self.world.lane_segment("h1", "right", num=0)
+        self.outer = self.world.lane_segment("h1", "right", num=1)
+        self.car = place_car(self.world, self.inner, loc=0, speed=10, size=40,
+                             max_speed=LANE_MAX_SPEED,
+                             goal_segment=self.world.lane_segment("v1", "right"))
+        self.cars = [self.car]
+        self.controller = SafetyController(self.car, self.cars, self.rm)
+        self.controller.get_max_acceleration()
+        self.assertTrue(self.car.change_lane(self.rm, LEFT_LANE_CHANGE))
+
+    def _verdict(self):
+        return self.controller.get_safe_lane_change(
+            self.rm.get_car_reservations(self.car.id), 0)
+
+    def test_a_safe_claim_may_be_held_or_withdrawn(self):
+        self.assertEqual(self._verdict(), [False, True, False, True])
+
+    def test_a_claim_that_has_become_unsafe_may_only_be_withdrawn(self):
+        blocker = place_car(self.world, self.outer, loc=0, speed=0, size=40,
+                            max_speed=LANE_MAX_SPEED, name="Beside")
+        self.cars.append(blocker)
+        self.assertEqual(self._verdict(), [False, False, False, True])
+
+    def test_a_committed_change_leaves_nothing_to_decide(self):
+        self.rm.commit_lane_change_claim(self.car.id)
+        self.assertEqual(self._verdict(), [False, True, False, False])
 
 
 class TestSafetyControllerInternals(unittest.TestCase):

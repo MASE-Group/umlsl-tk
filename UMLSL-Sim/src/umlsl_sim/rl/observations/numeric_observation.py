@@ -5,9 +5,15 @@ from umlsl_sim.rl.observations.observation_model import Observation
 from umlsl_sim.rl.observations.observation_model_types import ObservationModelType
 from umlsl_sim.rl.observations.observation_registry import register_observation_model
 from gymnasium import spaces
-from umlsl_sim.config.logic_constants import BLOCK_SIZE, WORLD_HEIGHT, WORLD_WIDTH
+from umlsl_sim.config.logic_constants import (
+    BLOCK_SIZE,
+    CLAIM_TIME,
+    LANECHANGE_TIME_STEPS,
+    WORLD_HEIGHT,
+    WORLD_WIDTH,
+)
 from umlsl_sim.simulation.traffic_environment import TrafficEnv
-from umlsl_sim.simulation.road_network.road_network import Direction, LaneSegment, CrossingSegment, SegmentInfo
+from umlsl_sim.simulation.road_network.road_network import Direction, LaneSegment, CrossingSegment, SegmentInfo, right_direction
 
 MAX_RES = 16
 
@@ -16,17 +22,26 @@ MAX_RES = 16
 # [lane_num, direction, x1, y1, x2, y2] as before.
 CAR_RES_INFO = 6
 
-# Header: [goal_dx, goal_dy, agent_speed, agent_dir] — agent-relative state.
-HEADER_INFO = 4
+# Header: [goal_dx, goal_dy, agent_speed, agent_dir, claim_side, claim_age]
+# — agent-relative state. The last two describe the agent's own lane change:
+# which way it is going and how far through the manoeuvre it is. Without them
+# the withdraw action is unusable, since a policy cannot tell whether it holds
+# a claim, nor whether the claim is still withdrawable.
+HEADER_INFO = 6
 
 @register_observation_model(ObservationModelType.NUMERIC_OBSERVATION)
 class NumbericObservation(Observation):
     """Numeric observation model for RL environment.
 
     Layout of the flat observation vector:
-    - HEADER_INFO values describing the agent's state relative to its current goal:
-      [goal_dx, goal_dy, agent_speed, agent_dir]. Deltas are signed and normalized
-      by window size; speed by the agent's max_speed; direction by len(Direction).
+    - HEADER_INFO values describing the agent's state relative to its current goal
+      and its own lane change: [goal_dx, goal_dy, agent_speed, agent_dir,
+      claim_side, claim_age]. Deltas are signed and normalized by window size;
+      speed by the agent's max_speed; direction by len(Direction). claim_side is
+      -1 (claiming right), +1 (claiming left) or 0 (no lane change running), and
+      claim_age is the manoeuvre's progress in [0, 1] -- below
+      CLAIM_TIME / (CLAIM_TIME + LANECHANGE_TIME_STEPS) the claim can still be
+      withdrawn.
     - max_cars * (1 + MAX_RES) * CAR_RES_INFO values for per-car data. The first
       row of each car block is the speed row, with column 0 marking is_agent
       (1.0 for the agent's block, 0.0 for NPCs) and column 1 holding speed.
@@ -111,7 +126,7 @@ class NumbericObservation(Observation):
         return np.concatenate([header, cars])
 
     def _build_header(self) -> np.ndarray:
-        """Compute [goal_dx, goal_dy, agent_speed, agent_dir] for the agent."""
+        """Compute the agent-relative header (see the class docstring)."""
         agent = self.game_model.agent_car
         if agent is None:
             return np.zeros(HEADER_INFO, dtype=np.float32)
@@ -126,8 +141,35 @@ class NumbericObservation(Observation):
 
         speed_norm = agent.speed / agent.max_speed if agent.max_speed else 0.0
         dir_norm = agent.direction.value / len(Direction)
+        claim_side, claim_age = self._claim_state(agent)
 
-        return np.array([goal_dx, goal_dy, speed_norm, dir_norm], dtype=np.float32)
+        return np.array([goal_dx, goal_dy, speed_norm, dir_norm, claim_side, claim_age],
+                        dtype=np.float32)
+
+    def _claim_state(self, agent) -> Tuple[float, float]:
+        """The agent's outstanding lane change as (side, progress).
+
+        side is -1 for a change to the right, +1 for one to the left, 0 when
+        no change is running. progress runs from 0 on the tick the claim was
+        registered to 1 on the tick the car lands, so a policy can read off
+        both that it holds a claim and whether the claim is still its to give
+        back.
+        """
+        claim = self.reservation_management.get_lane_change_claim(agent.id)
+        if claim is None:
+            return 0.0, 0.0
+
+        current = self.reservation_management.get_car_reservation(agent.id, 0).segment
+        if isinstance(current, LaneSegment):
+            num_diff = claim.segment.lane.num - current.lane.num
+            side = float(num_diff if right_direction[current.lane.direction] else -num_diff)
+            side = max(-1.0, min(1.0, side))
+        else:
+            side = 0.0
+
+        total = CLAIM_TIME + LANECHANGE_TIME_STEPS
+        age = min(1.0, max(0.0, (agent.time - claim.claimed_at) / total))
+        return side, age
 
     def _get_lane_reservation(self, seg_info: SegmentInfo, seg: LaneSegment) -> Tuple[float, float, float, float]:
         """Normalized bbox of a lane-segment reservation, in window coords."""

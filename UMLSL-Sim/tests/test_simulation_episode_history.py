@@ -8,6 +8,13 @@ the `ReservationManagement` argument to `set_list_of_cars` are for.
 
 import unittest
 
+from umlsl_sim.config.logic_constants import (
+    CLAIM_TIME,
+    LANECHANGE_TIME_STEPS,
+    LEFT_LANE_CHANGE,
+    NO_LANE_CHANGE,
+    WITHDRAW_CLAIM,
+)
 from umlsl_sim.simulation.car import Car
 from umlsl_sim.simulation.car_types import CarType
 from umlsl_sim.simulation.episode_history import (
@@ -296,6 +303,26 @@ class TestReplay(_HistoryFixture):
         self.assertEqual(renderer.frames, 0)
         self.assertTrue(renderer.closed)
 
+    def test_a_recorded_withdrawal_keeps_the_car_in_its_lane(self):
+        Car.reset_id_counter()
+        world = two_lane_world()
+        rm = world.reservation_management
+        car = place_car(world, world.lane_segment("h1", "right", num=0),
+                        speed=5, size=40, name="Changer")
+        history = GameHistory()
+        history.set_map(world.roads)
+        history.set_list_of_cars([car], rm)
+        history.add_taken_action(car, (0, LEFT_LANE_CHANGE))
+        history.add_taken_action(car, (0, WITHDRAW_CLAIM))
+        for _ in range(CLAIM_TIME + LANECHANGE_TIME_STEPS):
+            history.add_taken_action(car, (0, NO_LANE_CHANGE))
+
+        renderer = _CountingRenderer()
+        history.replay(renderer)
+        replayed, _, replay_rm = renderer.bound
+        self.assertIs(replay_rm.get_car_reservation(replayed[0].id, 0).segment,
+                      world.lane_segment("h1", "right", num=0))
+
     def test_a_recorded_lane_change_is_re_driven(self):
         Car.reset_id_counter()
         world = two_lane_world()
@@ -306,7 +333,7 @@ class TestReplay(_HistoryFixture):
         history.set_map(world.roads)
         history.set_list_of_cars([car], rm)
         history.add_taken_action(car, (0, 1))
-        for _ in range(4):
+        for _ in range(CLAIM_TIME + LANECHANGE_TIME_STEPS + 1):
             history.add_taken_action(car, (0, 0))
 
         renderer = _CountingRenderer()

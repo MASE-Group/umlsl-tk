@@ -9,14 +9,15 @@ from umlsl_sim.config.logic_constants import (
     ASTAR_CONGESTION_ALPHA,
     BLOCK_SIZE,
     BUFFER,
+    CLAIM_TIME,
     CROSSING_MAX_SPEED,
     LANECHANGE_TIME_STEPS,
     LANE_MAX_SPEED,
     MAX_DEC,
 )
 from umlsl_sim.simulation.road_network.road_network import Goal, Intersection, Segment, LaneSegment, CrossingSegment, SegmentInfo, Point, Problem, direction_sign, true_direction, right_direction, horiz_direction, Color
+from umlsl_sim.simulation.reservations.lane_change_claim import LaneChangeClaim
 from umlsl_sim.simulation.reservations.reservation_management import ReservationManagement
-from umlsl_sim.simulation.safety_checks import lane_change_blocked
 from typing import Optional, List, Dict
 
 
@@ -267,22 +268,26 @@ class Car:
             return  lanes[lane_num].segments[current_seg_num]
         return None
 
-    def change_lane(self, reservations_management: ReservationManagement, lane_diff: int,
-                    cars: Optional[List["Car"]] = None) -> bool | Problem:
+    def change_lane(self, reservations_management: ReservationManagement,
+                    lane_diff: int) -> bool | Problem:
         """
-        Change the lane of the car.
+        Claim the adjacent lane segment, opening a lane change.
+
+        No collision check is made here: a claim is deliberately taken blind.
+        For the next CLAIM_TIME ticks the car drives on in its own lane while
+        its controller watches the claim, and `withdraw_claim` gives the lane
+        back the moment the claim turns out to overlap somebody. Only what the
+        car cannot discover later is refused up front -- that there is a lane
+        to move into, and that the car is on a plain lane segment rather than
+        astride a crossing.
 
         Args:
             lane_diff (int): The difference in lane number.
-            cars (Optional[List[Car]]): All cars in the simulation. When given,
-                the lane change is re-validated against the current reservation
-                state at execution time. Controllers decide simultaneously
-                against pre-tick state, so two cars can commit to the same gap
-                in one tick; actions execute sequentially, so this re-check
-                lets the second one see the first one's registration and abort.
 
         Returns:
-            bool: True if the lane was changed successfully, False otherwise.
+            bool: True if the claim was registered, False if there was nothing
+                to claim (no lane change asked for, or one already running).
+            Problem: If the car is in no position to change lane at all.
         """
         reservations = reservations_management.get_car_reservations(self.id)
 
@@ -290,11 +295,13 @@ class Car:
         if not (isinstance(reservations[0].segment, LaneSegment) and \
                 len(reservations) == 1):
             return Problem.CHANGE_LANE_WHILE_CROSSING
-        # # case 2: car will not be in lane segment in LANECHANGE time steps -> return problem
-        # if abs(self.loc) + self.get_braking_distance() + LANECHANGE_TIME_STEPS * self.speed > reservations[0].segment.length:
-        #     return False
 
         if lane_diff == 0:
+            return False
+
+        # case 2: a claim or a committed change is already running -> a second
+        # one would have nowhere to put the car; keep the first.
+        if reservations_management.get_lane_change_claim(self.id) is not None:
             return False
 
         adjacent_lane_seg = self.get_adjacent_lane_segment(reservations_management, lane_diff)
@@ -303,51 +310,84 @@ class Car:
         if adjacent_lane_seg is None:
             return Problem.NO_ADJACENT_LANE
 
-        # case 4: another car got to (or reserved) the target gap since the
-        # decision was taken -> silently skip the change, keep driving.
-        if cars is not None and lane_change_blocked(
-                self, adjacent_lane_seg,
-                abs(reservations[0].begin), abs(reservations[0].end),
-                reservations_management, cars):
+        self.changing_lane = True
+        reservations_management.set_lane_change_claim(
+            self.id, LaneChangeClaim(segment=adjacent_lane_seg, claimed_at=self.time))
+        return True
+
+    def withdraw_claim(self, reservations_management: ReservationManagement) -> bool:
+        """
+        Give up a claim taken on an earlier tick and stay in the current lane.
+
+        Available only while the claim is uncommitted, which is the first
+        CLAIM_TIME ticks of the manoeuvre. Once the claim has become a
+        reservation the car is half-way into the target lane and there is
+        nothing left to give back.
+
+        Returns:
+            bool: True if a claim was withdrawn, False if there was no
+                withdrawable claim to withdraw.
+        """
+        claim = reservations_management.get_lane_change_claim(self.id)
+        if claim is None or claim.committed:
             return False
 
-        self.changing_lane = True
-        reservations_management.set_reserved_lane_change_segment(self.id, (self.time, adjacent_lane_seg))
+        reservations_management.remove_lane_change_claim(self.id)
+        self.changing_lane = False
         return True
 
     def check_reservation(self, reservations_management: ReservationManagement) -> bool:
         """
-        Check the reservation for lane change.
+        Advance an outstanding lane change by one tick.
+
+        Two deadlines, both counted from the tick the claim was registered:
+
+        * at CLAIM_TIME the claim becomes a reservation. Nobody is consulted --
+          the controller had CLAIM_TIME ticks to withdraw and did not, so the
+          car takes the lane.
+        * at CLAIM_TIME + LANECHANGE_TIME_STEPS the car lands: its reservation
+          moves over to the target segment and the claim is cleared.
 
         Returns:
-            bool: True if the reservation is valid, False otherwise.
+            bool: True on the tick the car lands on the target lane, False on
+            every other tick.
         """
         if not self.changing_lane:
             return False
 
-        reserved_lane_change_segment = reservations_management.get_reserved_lane_change_segment(self.id)
+        claim = reservations_management.get_lane_change_claim(self.id)
+        if claim is None:
+            return False
+
+        elapsed = self.time - claim.claimed_at
+
+        if not claim.committed:
+            if elapsed >= CLAIM_TIME:
+                reservations_management.commit_lane_change_claim(self.id)
+            # Claiming or just committed: the car is still wholly in its own
+            # lane, and its reservation stays where it is.
+            return False
+
+        if elapsed < CLAIM_TIME + LANECHANGE_TIME_STEPS:
+            # Mid-change but not yet due: the reservation stays where it is.
+            return False
+
+        self.changing_lane = False
+
         reservations = reservations_management.get_car_reservations(self.id)
+        new_reserve = SegmentInfo(claim.segment,
+                                  reservations[0].begin,
+                                  reservations[0].end,
+                                  reservations[0].direction)
+        for _ in reservations:
+            reservations_management.pop_car_reservation(self.id, 0)
 
-        if reserved_lane_change_segment is not None and \
-            self.time - reserved_lane_change_segment[0] == LANECHANGE_TIME_STEPS:
-            self.changing_lane = False
+        reservations_management.add_car_reservation(self.id, new_reserve)
+        reservations_management.remove_lane_change_claim(self.id)
 
-            new_reserve = SegmentInfo(reserved_lane_change_segment[1],
-                                                        reservations[0].begin,
-                                                        reservations[0].end,
-                                                        reservations[0].direction)
-            for _ in reservations:
-                reservations_management.pop_car_reservation(self.id, 0)
+        self.update_position(reservations_management)
 
-            reservations_management.add_car_reservation(self.id, new_reserve)
-            reservations_management.remove_reserved_lane_change_segment(self.id)
-            
-            self.update_position(reservations_management)
-
-            return True
-
-        # Mid-change but not yet due: the reservation stays where it is.
-        return False
+        return True
 
     def get_braking_distance(self, speed: int = None) -> int:
         """
@@ -718,6 +758,11 @@ class Car:
         for seg_info in reservation_management.get_car_reservations(self.id):
             if isinstance(seg_info.segment, CrossingSegment):
                 seg_info.segment.crossing_segment_state.add_time_to_leave(self.id, float('inf'))
+
+        # The wreck will never complete the manoeuvre, so the lane it was
+        # moving into must not stay taken on its behalf.
+        reservation_management.remove_lane_change_claim(self.id)
+        self.changing_lane = False
 
         self.speed = 0
         self.__dead = True

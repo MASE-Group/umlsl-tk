@@ -18,6 +18,7 @@ from umlsl_sim.config.simulation_constants import (
 from umlsl_sim.simulation.reservations.car_reservation_store import CarReservationStore
 from umlsl_sim.simulation.reservations.crossing_segment_state import CrossingSegmentState
 from umlsl_sim.simulation.reservations.intersection_state import ClaimUpdate, IntersectionState
+from umlsl_sim.simulation.reservations.lane_change_claim import LaneChangeClaim
 from umlsl_sim.simulation.reservations.reservation_management import ReservationManagement
 from umlsl_sim.simulation.reservations.segment_occupancy_tracker import SegmentOccupancyTracker
 from umlsl_sim.simulation.road_network.road_network import Direction, SegmentInfo
@@ -398,10 +399,10 @@ class TestReservationManagement(unittest.TestCase):
 
     def test_reset_clears_reservations_occupancy_and_lane_changes(self):
         self.rm.add_car_reservation("c", _info(self.lane_seg))
-        self.rm.set_reserved_lane_change_segment("c", (0, self.lane_seg))
+        self.rm.set_lane_change_claim("c", LaneChangeClaim(self.lane_seg, 0))
         self.rm.reset()
         self.assertEqual(self.rm.get_cars_on_segment(self.lane_seg), [])
-        self.assertIsNone(self.rm.get_reserved_lane_change_segment("c"))
+        self.assertIsNone(self.rm.get_lane_change_claim("c"))
 
 
 class TestReservationManagementLaneChanges(unittest.TestCase):
@@ -419,27 +420,50 @@ class TestReservationManagementLaneChanges(unittest.TestCase):
         car that has simply never changed lane is the ordinary case, not a
         lookup error.
         """
-        self.assertIsNone(self.rm.get_reserved_lane_change_segment("never-seen"))
+        self.assertIsNone(self.rm.get_lane_change_claim("never-seen"))
 
     def test_a_registered_change_reads_back(self):
-        self.rm.set_reserved_lane_change_segment("c", (4, self.target))
-        self.assertEqual(self.rm.get_reserved_lane_change_segment("c"), (4, self.target))
+        self.rm.set_lane_change_claim("c", LaneChangeClaim(self.target, 4))
+        claim = self.rm.get_lane_change_claim("c")
+        self.assertEqual((claim.segment, claim.claimed_at), (self.target, 4))
+
+    def test_a_claim_reads_back_as_uncommitted(self):
+        self.rm.set_lane_change_claim("c", LaneChangeClaim(self.target, 4))
+        self.assertFalse(self.rm.get_lane_change_claim("c").committed)
+
+    def test_committing_marks_the_claim_and_leaves_it_in_place(self):
+        self.rm.set_lane_change_claim("c", LaneChangeClaim(self.target, 4))
+        self.rm.commit_lane_change_claim("c")
+        claim = self.rm.get_lane_change_claim("c")
+        self.assertTrue(claim.committed)
+        self.assertEqual(self.rm.get_cars_changing_into_segment(self.target), ["c"])
+
+    def test_committing_a_claim_nobody_holds_does_nothing(self):
+        self.rm.commit_lane_change_claim("never-seen")
+        self.assertIsNone(self.rm.get_lane_change_claim("never-seen"))
+
+    def test_a_committed_change_is_listed_alongside_a_bare_claim(self):
+        self.rm.set_lane_change_claim("a", LaneChangeClaim(self.target, 0))
+        self.rm.set_lane_change_claim("b", LaneChangeClaim(self.target, 0))
+        self.rm.commit_lane_change_claim("b")
+        self.assertEqual(sorted(self.rm.get_cars_changing_into_segment(self.target)),
+                         ["a", "b"])
 
     def test_removing_a_change_clears_it(self):
-        self.rm.set_reserved_lane_change_segment("c", (4, self.target))
-        self.rm.remove_reserved_lane_change_segment("c")
-        self.assertIsNone(self.rm.get_reserved_lane_change_segment("c"))
+        self.rm.set_lane_change_claim("c", LaneChangeClaim(self.target, 4))
+        self.rm.remove_lane_change_claim("c")
+        self.assertIsNone(self.rm.get_lane_change_claim("c"))
 
     def test_cars_changing_into_a_segment_are_listed(self):
-        self.rm.set_reserved_lane_change_segment("a", (0, self.target))
-        self.rm.set_reserved_lane_change_segment("b", (0, self.target))
-        self.rm.set_reserved_lane_change_segment("c", (0, self.other))
+        self.rm.set_lane_change_claim("a", LaneChangeClaim(self.target, 0))
+        self.rm.set_lane_change_claim("b", LaneChangeClaim(self.target, 0))
+        self.rm.set_lane_change_claim("c", LaneChangeClaim(self.other, 0))
         self.assertEqual(sorted(self.rm.get_cars_changing_into_segment(self.target)),
                          ["a", "b"])
 
     def test_a_cleared_change_no_longer_counts_towards_a_segment(self):
-        self.rm.set_reserved_lane_change_segment("a", (0, self.target))
-        self.rm.remove_reserved_lane_change_segment("a")
+        self.rm.set_lane_change_claim("a", LaneChangeClaim(self.target, 0))
+        self.rm.remove_lane_change_claim("a")
         self.assertEqual(self.rm.get_cars_changing_into_segment(self.target), [])
 
     def test_a_segment_nobody_is_moving_into_lists_nobody(self):

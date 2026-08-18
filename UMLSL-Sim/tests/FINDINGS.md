@@ -57,6 +57,9 @@ record of every segment ever considered rather than every segment occupied.
 
 ### 3. `get_reserved_lane_change_segment` raised `KeyError` for a car that never changed lane
 
+*(The method is now `get_lane_change_claim` and returns a `LaneChangeClaim`;
+the finding and its fix carried over unchanged.)*
+
 **Where:** [`simulation/reservations/reservation_management.py`](../src/umlsl_sim/simulation/reservations/reservation_management.py)
 **Covered by:** `tests/test_reservations.py::TestReservationManagementLaneChanges::test_a_car_that_never_registered_one_reads_as_none`
 
@@ -194,6 +197,8 @@ invisible.
 
 Cosmetic: the candidate `SegmentInfo` was constructed before the
 `lane_change_blocked` guard that may `continue` past it. Moved after the guard.
+*(That guard has since been removed altogether: a lane change starts as a
+blind claim, so no candidate is vetoed for being occupied.)*
 
 ---
 
@@ -235,7 +240,7 @@ the code is a deliberate act rather than an accident.
 | `Car.get_position` | `car.py` | The GUI reads `car.pos` / `car.w` / `car.h` directly. |
 | `TrafficEnv.moved` | `traffic_environment.py` | Set in `__init__` and `reset`, never read, and documented as an attribute in the class docstring. Pinned in `TestMovedFlag`. |
 | `Problem.NO_NEXT_SEGMENT`, `SLOWER_WHILE_0`, `FASTER_WHILE_MAX`, `LANE_TOO_SHORT` | `road_network.py` | `Car.change_lane` is the only producer of `Problem` and returns only the other two members. Pinned in `TestPointAndProblem`. |
-| `CLAIMTIME`, `JUMP_TIME_STEPS` | `logic_constants.py` | Documented as live. |
+| `CLAIM_TIME`, `JUMP_TIME_STEPS` | `logic_constants.py` | Documented as live. `CLAIM_TIME` (was the unused `CLAIMTIME`) now bounds the withdrawable phase of a lane change. |
 | `clock_wise`, `direction_axis` | `road_network.py` | Pinned in `TestDirectionTables` (they are at least self-consistent). |
 
 ### 13. `_pick_name_color` fails silently when the palettes run out
