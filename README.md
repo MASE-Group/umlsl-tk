@@ -1,5 +1,7 @@
 # UMLSL-TK — A Toolkit for Urban Multi-Lane Spatial Logic
 
+[![DOI](https://zenodo.org/badge/1331243023.svg)](https://doi.org/10.5281/zenodo.23578837)
+
 UMLSL-TK bundles two complementary tools built on the traffic model and logic of
 Urban Multi-Lane Spatial Logic (UMLSL):
 
@@ -320,5 +322,62 @@ name first: `pip uninstall mlsl-simulation`.
 
 ## Citing
 
-If you use UMLSL-TK in academic work, please cite the accompanying tool paper
-and the UMLSL foundations it builds on.
+If you use UMLSL-TK in academic work, please cite the software itself and the
+UMLSL foundations it builds on. GitHub's "Cite this repository" button (backed
+by [CITATION.cff](CITATION.cff)) produces the same software citation in APA and
+BibTeX.
+
+**The software**
+
+```bibtex
+@software{umlsl_tk,
+  author    = {Hamarneh, Qais and
+               Wenninghoff, Nils and
+               Bairy, Akhila and
+               Bihler, Mattis and
+               Portscher, Florian and
+               Kreuch, Tim and
+               Schmidt, Tao and
+               Schwammberger, Maike},
+  title     = {{UMLSL-TK}: A Toolkit for {Urban Multi-Lane Spatial Logic}},
+  year      = {2026},
+  version   = {2026.5.2},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.23578837},
+  url       = {https://doi.org/10.5281/zenodo.23578837}
+}
+```
+
+**The UMLSL foundations**
+
+```bibtex
+@article{Schwammberger18,
+  author  = {Maike Schwammberger},
+  title   = {An abstract model for proving safety of autonomous urban traffic},
+  journal = {Theoretical Computer Science},
+  volume  = {744},
+  pages   = {143--169},
+  year    = {2018},
+  doi     = {10.1016/J.TCS.2018.05.028}
+}
+
+@inproceedings{Schwammberger21Extending,
+  author    = {Maike Schwammberger and Gleifer Vaz Alves},
+  title     = {Extending {Urban Multi-Lane Spatial Logic} to Formalise Road
+               Junction Rules},
+  booktitle = {Proceedings Third Workshop on Formal Methods for Autonomous
+               Systems, {FMAS} 2021, Virtual, October 21--22, 2021},
+  series    = {{EPTCS}},
+  volume    = {348},
+  pages     = {1--19},
+  year      = {2021},
+  doi       = {10.4204/EPTCS.348.1}
+}
+```
+
+The DOI above resolves to the archived release on Zenodo. When citing a specific
+version for reproducibility, use that release's version DOI from the Zenodo
+record.
+
+The bibliographic entry for the accompanying tool paper will be added here once
+it is published.

@@ -6,6 +6,7 @@ date-released: 2026-10-22
 license: CC-BY-NC-SA-4.0
 repository-code: "https://github.com/MASE-Group/umlsl-tk"
 url: "https://mase.kastel.kit.edu"
+doi: 10.5281/zenodo.23578837
 keywords:
   - Formal Verification
   - Autonomous Driving
