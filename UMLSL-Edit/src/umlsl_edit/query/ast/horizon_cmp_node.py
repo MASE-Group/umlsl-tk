@@ -13,7 +13,8 @@ if typing.TYPE_CHECKING:
 # The horizontal chop constructs its split points by arithmetic on interval endpoints, so a split
 # intended to make the observed space exactly `k` long yields a length that differs from `k` by a
 # few units in the last place. Without a tolerance, non-strict comparisons reject those splits and
-# a formula such as "l >= k and l <= k" is unsatisfiable for every k.
+# a formula such as "l >= k and l <= k" is unsatisfiable for every k. A length within the tolerance of
+# `k` counts as equal to `k` for every comparison, so that "!(l < k)" and "l >= k" agree.
 LENGTH_EPSILON = 1e-9
 
 
@@ -30,8 +31,12 @@ class HorizonComparisonNode(AtomNode):
     def evaluate(self, traffic_snapshot: "TrafficSnapshotModel", view: View, variable_car_map: dict[str, Car]) -> bool:
         return self._cmp(view.horizon.length(), self._length)
 
-    def length_constants(self) -> set[float]:
-        return {self._length}
+    def length_offsets(self) -> frozenset[float]:
+        return frozenset({0.0, self._length})
+
+    def anchor_offsets(self) -> frozenset[float]:
+        # only the length of the observed space matters, not where it lies
+        return frozenset()
 
 
 class HorizonCmpGreaterEqualsNode(HorizonComparisonNode):
@@ -49,7 +54,7 @@ class HorizonCmpGreaterNode(HorizonComparisonNode):
     length.
     """
     def __init__(self, length: float):
-        super().__init__(">", lambda x, y: x > y, length)
+        super().__init__(">", lambda x, y: x > y + LENGTH_EPSILON, length)
 
 
 class HorizonCmpLessNode(HorizonComparisonNode):
@@ -57,7 +62,7 @@ class HorizonCmpLessNode(HorizonComparisonNode):
     The HorizonCmpLessNode is a unary node that evaluates to true if the horizon length is less than the specified length.
     """
     def __init__(self, length: float):
-        super().__init__("<", lambda x, y: x < y, length)
+        super().__init__("<", lambda x, y: x < y - LENGTH_EPSILON, length)
 
 
 class HorizonCmpLessEqualsNode(HorizonComparisonNode):

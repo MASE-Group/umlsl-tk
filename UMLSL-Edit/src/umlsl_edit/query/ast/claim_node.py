@@ -2,7 +2,6 @@ import typing
 
 from umlsl_edit.model.entities.car import Car
 from umlsl_edit.model.interval import Interval
-from umlsl_edit.model.traffic_value_objects.segments.segment import Segment
 from umlsl_edit.query.ast.ast import View, AtomNode
 from umlsl_edit.query.ast.car_resolve import CarResolve
 
@@ -35,8 +34,7 @@ class ClaimNode(AtomNode):
         single_lane = view.virtual_lanes[0]
         claimed_intervals: list[Interval] = []
         for segment_interval in single_lane.segment_intervals:
-            segment: Segment = segment_interval.segment
-            interval = claimed_segments.get(segment)
+            interval = claimed_segments.get(segment_interval)
             if interval is None:
                 return False
 

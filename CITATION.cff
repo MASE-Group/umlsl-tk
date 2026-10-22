@@ -1,0 +1,75 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "UMLSL-TK: A Toolkit for Urban Multi-Lane Spatial Logic"
+version: 2026.5.2
+date-released: 2026-10-22
+license: CC-BY-NC-SA-4.0
+repository-code: "https://github.com/MASE-Group/umlsl-tk"
+url: "https://mase.kastel.kit.edu"
+keywords:
+  - Formal Verification
+  - Autonomous Driving
+  - Spatial Logic
+  - Urban Multi-lane Spatial Logic
+  - Satisfaction Checking
+  - Reinforcement Learning
+  - Traffic Simulation
+authors:
+  - family-names: Hamarneh
+    given-names: Qais
+    orcid: "https://orcid.org/0009-0009-9718-1664"
+    affiliation: "Karlsruhe Institute of Technology"
+    city: Karlsruhe
+    post-code: "76131"
+    country: DE
+  - family-names: Wenninghoff
+    given-names: Nils
+    orcid: "https://orcid.org/0000-0002-3788-9291"
+    affiliation: "Karlsruhe Institute of Technology"
+    city: Karlsruhe
+    post-code: "76131"
+    country: DE
+  - family-names: Bairy
+    given-names: Akhila
+    orcid: "https://orcid.org/0000-0002-8796-1474"
+    affiliation: "Karlsruhe Institute of Technology"
+    city: Karlsruhe
+    post-code: "76131"
+    country: DE
+  - family-names: Bihler
+    given-names: Mattis
+    orcid: "https://orcid.org/0009-0005-9777-1235"
+    affiliation: "Karlsruhe Institute of Technology"
+    city: Karlsruhe
+    post-code: "76131"
+    country: DE
+  - family-names: Portscher
+    given-names: Florian
+    orcid: "https://orcid.org/0009-0004-5912-3766"
+    affiliation: "Karlsruhe Institute of Technology"
+    city: Karlsruhe
+    post-code: "76131"
+    country: DE
+  - family-names: Kreuch
+    given-names: Tim
+    orcid: "https://orcid.org/0009-0006-8091-6263"
+    affiliation: "Karlsruhe Institute of Technology"
+    city: Karlsruhe
+    post-code: "76131"
+    country: DE
+  - family-names: Schmidt
+    given-names: Tao
+    orcid: "https://orcid.org/0009-0008-8425-7693"
+    affiliation: "Karlsruhe Institute of Technology"
+    city: Karlsruhe
+    post-code: "76131"
+    country: DE
+  - family-names: Schwammberger
+    given-names: Maike
+    orcid: "https://orcid.org/0000-0002-3344-6282"
+    affiliation: "Karlsruhe Institute of Technology"
+    city: Karlsruhe
+    post-code: "76131"
+    country: DE
+# After Zenodo mints the DOI, add:  doi: 10.5281/zenodo.XXXXXXX
+# Once the SBMF 2026 paper is accepted, add a preferred-citation block for it.

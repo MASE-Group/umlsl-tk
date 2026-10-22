@@ -2,7 +2,8 @@ import typing
 
 from umlsl_edit.model.entities.car import Car
 from umlsl_edit.model.environment.view_coordinate_translation import translate_into_ego_coordinates
-from umlsl_edit.model.traffic_value_objects.segments.segment import Segment
+from umlsl_edit.model.interval import Interval
+from umlsl_edit.model.traffic_value_objects.segments.segment_interval import SegmentInterval
 from umlsl_edit.model.traffic_value_objects.segments.virtual_lane import VirtualLane
 from umlsl_edit.query.ast.ast import ASTNode
 from umlsl_edit.query.ast.car_resolve import ConstantCarResolve, VariableCarResolve, CarResolve
@@ -66,16 +67,31 @@ class ParsedUMLSLQuery:
         horizon = self._ego.environment.horizon
 
         # collect visible segments
-        segments_in_view: list[Segment] = []
+        segments_in_view: list[SegmentInterval] = []
         for virtual_lane in parallel_virtual_lane:
             for segment_interval in virtual_lane.segment_intervals:
                 if segment_interval.interval.intersects(horizon):
-                    segments_in_view.append(segment_interval.segment)
+                    segments_in_view.append(segment_interval)
 
         # translate environment information into ego's coordinate system
         coordinate_translation = translate_into_ego_coordinates(
             self._traffic_snapshot, self._ego, horizon, parallel_virtual_lane
         )
+
+        # the quantifiers range over the cars whose reservation or claim overlaps the view (spaces
+        # that merely touch do not overlap), whether or not the car itself is inside the view
+        def overlaps_view(segment_intervals: dict[SegmentInterval, Interval]) -> bool:
+            for interval in segment_intervals.values():
+                overlap = interval.intersection(horizon)
+                if overlap is not None and overlap.length() > 0:
+                    return True
+            return False
+
+        cars_in_view = [
+            car_uid for car_uid in coordinate_translation.reserved
+            if overlaps_view(coordinate_translation.reserved[car_uid])
+            or overlaps_view(coordinate_translation.claimed[car_uid])
+        ]
 
         view = View(
             parallel_virtual_lane,
@@ -85,6 +101,7 @@ class ParsedUMLSLQuery:
             coordinate_translation.visible,
             coordinate_translation.reserved,
             coordinate_translation.claimed,
+            cars_in_view,
         )
 
         return self._ast.evaluate(self._traffic_snapshot, view, {})

@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 from umlsl_edit.model.entities.car import Car
 from umlsl_edit.model.interval import Interval
-from umlsl_edit.model.traffic_value_objects.segments.segment import Segment
 from umlsl_edit.model.traffic_value_objects.segments.segment_interval import SegmentInterval
 from umlsl_edit.model.traffic_value_objects.segments.virtual_lane import VirtualLane
 
@@ -21,10 +20,12 @@ class CoordinateTranslation:
         visible: maps each car to a map that equips each visible segment with its interval information
         reserved: maps each car to a map that equips each reserved segment with its interval information
         claimed: maps each car to a map that equips each claimed segment with its interval information
+    The segments are those of the virtual lanes, given by their segment intervals: a segment that lies on several
+    virtual lanes lies at a different position on each of them.
     """
-    visible: dict[str, dict[Segment, Interval]]
-    reserved: dict[str, dict[Segment, Interval]]
-    claimed: dict[str, dict[Segment, Interval]]
+    visible: dict[str, dict[SegmentInterval, Interval]]
+    reserved: dict[str, dict[SegmentInterval, Interval]]
+    claimed: dict[str, dict[SegmentInterval, Interval]]
 
 
 def translate_into_ego_coordinates(
@@ -37,8 +38,8 @@ def translate_into_ego_coordinates(
 
     def translate_coordinate_system(
             segments_of_car: Callable[[Car], list[SegmentInterval]]
-    ) -> dict[str, dict[Segment, Interval]]:
-        translated: dict[str, dict[Segment, Interval]] = {}
+    ) -> dict[str, dict[SegmentInterval, Interval]]:
+        translated: dict[str, dict[SegmentInterval, Interval]] = {}
         for perceived_car in ts.get_car_list():
             translated[perceived_car.uid] = ego.environment.translate_interval_coordinates(
                 virtual_lanes,
@@ -50,11 +51,11 @@ def translate_into_ego_coordinates(
         return translated
 
     # translate physical, reserved and claimed intervals of every car into the coordinate system of ego
-    visible_cars: dict[str, dict[Segment, Interval]] = translate_coordinate_system(
+    visible_cars: dict[str, dict[SegmentInterval, Interval]] = translate_coordinate_system(
         lambda c: c.environment.physical_segment_intervals)
-    reserved_segments: dict[str, dict[Segment, Interval]] = translate_coordinate_system(
+    reserved_segments: dict[str, dict[SegmentInterval, Interval]] = translate_coordinate_system(
         lambda c: c.environment.reserved)
-    claimed_segments: dict[str, dict[Segment, Interval]] = translate_coordinate_system(
+    claimed_segments: dict[str, dict[SegmentInterval, Interval]] = translate_coordinate_system(
         lambda c: c.environment.claimed
     )
 

@@ -6,12 +6,13 @@ from umlsl_edit.query.ast.ast import View, BinaryNode, Precedence, ASTNode
 if typing.TYPE_CHECKING:
     from umlsl_edit.model.domain_models.traffic_snapshot_model import TrafficSnapshotModel
 
-# Safety valves for the critical-point construction. Length constants compose along a chain of
-# nested chops, so the number of distinct offsets grows with the chop depth; these bound that growth
-# for formulas that nest many chops over many distinct constants. Dropping offsets keeps the search
-# sound, and only costs completeness for formulas deeper than the bound.
-MAX_CRITICAL_POINTS = 4096
-MAX_OFFSET_SUMMANDS = 8
+
+class _ChopOffsets(typing.NamedTuple):
+    left_lengths: frozenset[float]
+    right_lengths: frozenset[float]
+    operand_anchors: frozenset[float]
+    lengths: frozenset[float]
+    anchors: frozenset[float]
 
 
 class HorizontalChopNode(BinaryNode):
@@ -24,6 +25,7 @@ class HorizontalChopNode(BinaryNode):
         super().__init__(Precedence.BINARY_CHOP, left, right)
         self.latex_left = left.to_latex()
         self.latex_right = right.to_latex()
+        self._offsets: _ChopOffsets | None = None
 
     @classmethod
     def create_nested_hchop(cls, operands: list[ASTNode]):
@@ -45,12 +47,20 @@ class HorizontalChopNode(BinaryNode):
         """
         The split positions the horizontal chop has to try.
 
-        The truth of a subformula over an observed space [b, r] can only change when r crosses a
-        position at which some atomic proposition changes: the endpoint of a car, of a reservation,
-        of a claim, or of a segment. Between two consecutive such positions every atom keeps its
-        value, so one representative per open gap suffices, and we use the midpoint. Formulas that
-        constrain the length of the observed space add further critical positions, namely the
-        constants they compare against, measured from either end of the observed space.
+        Whether the left operand holds on [b, r] and the right operand on [r, e] can only change when
+        the split r crosses one of these positions:
+          - a base point: b, e, or the endpoint of a car, of a reservation, of a claim, or of a
+            segment, which is where the atomic propositions change;
+          - b plus a length offset of the left operand, or e minus one of the right operand, which
+            is where a length comparison changes;
+          - a base point plus an anchor offset of either operand, which is where a length
+            comparison chained to an atom changes, e.g. a split exactly 1 before a reservation.
+        Between two consecutive such positions both operands keep their value, so one representative
+        per open gap suffices, and we use the midpoint.
+
+        The offsets are derived from the structure of the operands (see length_offsets and
+        anchor_offsets), so every position at which the operands can change is a candidate, however
+        deeply the chops are nested, and no bound on the chop depth is needed.
 
         Returns the base points first (a witness is far more often an endpoint than an interior
         point), then the offsets, then the gap representatives.
@@ -75,52 +85,59 @@ class HorizontalChopNode(BinaryNode):
                 interval = segment_interval.interval
                 base.update(p for p in (interval.start, interval.end) if within(p))
 
-        offsets: set[float] = set()
-        constants = {constant for constant in self.length_constants() if 0.0 < constant < e - b}
-        if constants:
-            # A chain of n nested chops can compose up to n constants, so the reachable offsets are
-            # the sums of constants with repetition, bounded by the chop depth of this subtree.
-            #
-            # The offsets are measured from the two ends of the observed space only, never from the
-            # interior points. A length constraint always constrains the space it is evaluated on,
-            # and the recursion evaluates the operands on spaces that begin or end at this split, so
-            # an offset from an interior point p is generated again -- as an offset from an end --
-            # by the recursive call on the space starting at p. Anchoring at every base point
-            # instead multiplies the number of candidates by the size of the view at every level of
-            # nesting, which is what made deeply nested length formulas intractable.
-            sums: set[float] = {0.0}
-            for _ in range(min(self.chop_depth(), MAX_OFFSET_SUMMANDS)):
-                grown = {s + c for s in sums for c in constants if s + c <= e - b}
-                if grown <= sums or len(grown) > MAX_CRITICAL_POINTS:
-                    break
-                sums |= grown
-            sums.discard(0.0)
+        offsets = self._chop_offsets()
+        positions: set[float] = set()
+        positions.update(p for p in (b + length for length in offsets.left_lengths) if within(p))
+        positions.update(p for p in (e - length for length in offsets.right_lengths) if within(p))
 
-            for anchor in (b, e):
-                for offset in sums:
-                    offsets.update(p for p in (anchor + offset, anchor - offset) if within(p))
+        # Anchoring at b and e alone is not enough: in <hchop{l <= 1 and free}{re{c}}> the enclosing
+        # chop of the somewhere has to split within 1 before c's reservation, before the chop that
+        # reaches the reservation is even evaluated.
+        shifts = [shift for shift in offsets.operand_anchors if shift != 0.0 and abs(shift) < e - b]
+        for point in base:
+            positions.update(p for p in (point + shift for shift in shifts) if within(p))
+        positions -= base
 
-        ordered = sorted(base | offsets)
+        ordered = sorted(base | positions)
         gap_representatives = [
             (ordered[i] + ordered[i + 1]) / 2.0
             for i in range(len(ordered) - 1)
             if ordered[i + 1] - ordered[i] > 0.0
         ]
 
-        return sorted(base) + sorted(offsets) + gap_representatives
+        return sorted(base) + sorted(positions) + gap_representatives
 
-    def chop_depth(self) -> int:
-        """
-        The largest number of horizontal chops on any path through this subtree, i.e. how many
-        length constants can be composed along a chain of nested chops.
-        """
-        def depth(node: ASTNode) -> int:
-            children = [child for child in (getattr(node, "_left", None), getattr(node, "_right", None),
-                                            getattr(node, "_child", None)) if child is not None]
-            below = max((depth(child) for child in children), default=0)
-            return below + 1 if isinstance(node, HorizontalChopNode) else below
+    def length_offsets(self) -> frozenset[float]:
+        return self._chop_offsets().lengths
 
-        return max(depth(self), 1)
+    def anchor_offsets(self) -> frozenset[float]:
+        return self._chop_offsets().anchors
+
+    def _chop_offsets(self) -> _ChopOffsets:
+        """
+        The offsets of the operands, and those of this chop derived from them.
+
+        The chopped space is as long as both parts together, so its length offsets are the sums of
+        one length offset of each operand. A split anchored at a base point p fixes the start of the
+        chopped space at p minus a length of the left operand, and its end at p plus a length of the
+        right operand, so the anchor offsets of the operands are shifted by those lengths.
+
+        The formula does not change after parsing, but the critical points are computed for every
+        observed space the chop is evaluated on, so this is computed once.
+        """
+        if self._offsets is None:
+            left_lengths = self._left.length_offsets()
+            right_lengths = self._right.length_offsets()
+            operand_anchors = self._left.anchor_offsets() | self._right.anchor_offsets()
+            shifts = {-length for length in left_lengths} | right_lengths
+            self._offsets = _ChopOffsets(
+                left_lengths=left_lengths,
+                right_lengths=right_lengths,
+                operand_anchors=operand_anchors,
+                lengths=frozenset(left + right for left in left_lengths for right in right_lengths),
+                anchors=frozenset(anchor + shift for anchor in operand_anchors for shift in shifts),
+            )
+        return self._offsets
 
     def evaluate_at_split(self, view: View, traffic_snapshot: "TrafficSnapshotModel", variable_car_map: dict[str, Car],
                           split_value: float):

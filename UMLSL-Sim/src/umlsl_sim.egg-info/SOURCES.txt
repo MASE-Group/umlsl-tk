@@ -108,6 +108,7 @@ src/umlsl_sim/simulation/reservations/__init__.py
 src/umlsl_sim/simulation/reservations/car_reservation_store.py
 src/umlsl_sim/simulation/reservations/crossing_segment_state.py
 src/umlsl_sim/simulation/reservations/intersection_state.py
+src/umlsl_sim/simulation/reservations/lane_change_claim.py
 src/umlsl_sim/simulation/reservations/reservation_management.py
 src/umlsl_sim/simulation/reservations/segment_occupancy_tracker.py
 src/umlsl_sim/simulation/road_network/__init__.py

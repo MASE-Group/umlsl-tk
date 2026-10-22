@@ -10,20 +10,20 @@ if typing.TYPE_CHECKING:
 
 class FreeNode(AtomNode):
     """
-    The FreeNode evaluates to true if the horizon if no car intersects the View.
+    The FreeNode evaluates to true if no car reserves or claims any part of the View.
     """
     def __init__(self):
         super().__init__("free")
 
     def evaluate(self, traffic_snapshot: "TrafficSnapshotModel", view: View, variable_car_map: dict[str, Car]) -> bool:
-        if len(view.virtual_lanes) != 1 or view.horizon.length() <= 0:
-            return False
-
         horizon = view.horizon
 
         # free is the derived formula  neg exists c: <re(c) or cl(c)>, so it is the reservations and
         # the claims that make a space occupied, not the physical extent of the cars: a car's safety
         # envelope reaches beyond its body, and that space is not free.
+        #
+        # Unlike the atoms, it is not restricted to a single lane: it holds on any number of lanes
+        # (including none) as long as no car reserves or claims any part of them.
         #
         # Two spaces that merely touch do not overlap. A reservation ending exactly where this
         # observed space begins therefore leaves it free, which is what makes "re(c) hchop free"

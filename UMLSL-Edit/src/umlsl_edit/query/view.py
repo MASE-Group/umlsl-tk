@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, TypeVar, Generic, Callable
 
 from umlsl_edit.model.interval import Interval
-from umlsl_edit.model.traffic_value_objects.segments.segment import Segment
+from umlsl_edit.model.traffic_value_objects.segments.segment_interval import SegmentInterval
 from umlsl_edit.model.traffic_value_objects.segments.virtual_lane import VirtualLane
 
 if TYPE_CHECKING:
@@ -41,16 +41,20 @@ class View:
     changes there); and is only recomputed in the newly created View when needed.
     """
 
-    def __init__(self, virtual_lanes: list[VirtualLane], segments_in_view: list[Segment],
+    def __init__(self, virtual_lanes: list[VirtualLane], segments_in_view: list[SegmentInterval],
                  horizon: Interval, ego: 'Car',
-                 visible_cars: dict[str, dict[Segment, Interval]],
-                 reserved_segments: dict[str, dict[Segment, Interval]],
-                 claimed_segments: dict[str, dict[Segment, Interval]],
+                 visible_cars: dict[str, dict[SegmentInterval, Interval]],
+                 reserved_segments: dict[str, dict[SegmentInterval, Interval]],
+                 claimed_segments: dict[str, dict[SegmentInterval, Interval]],
+                 cars_in_view: list[str],
                  ):
         self.virtual_lanes = virtual_lanes
         self.segments_in_view = segments_in_view
         self.horizon = horizon
         self.ego = ego
+        # the cars (uids) whose reservation or claim overlaps ego's whole view, which the quantifiers
+        # range over in every observed space; unlike the other data, it does not shrink on chops
+        self.cars_in_view = cars_in_view
 
         self._lazy_visible_cars = LazyEvaluator(
             visible_cars,
@@ -98,20 +102,23 @@ class View:
         return lower_view, upper_view
 
     def _construct_view(self, horizon: Interval, lanes: list[VirtualLane]) -> 'View':
-        segments_in_view: list[Segment] = []
+        segments_in_view: list[SegmentInterval] = []
         new_virtual_lanes: list[VirtualLane] = []
 
         for virtual_lane in lanes:
             new_virtual_lane = []
 
             for segment_interval in virtual_lane.segment_intervals:
-                # only take those segments that are in the horizon
-                if horizon.intersects(segment_interval.interval):
-                    segments_in_view.append(segment_interval.segment)
+                # only take those segments that overlap the horizon; a segment that merely touches it
+                # at an endpoint shares no space with it
+                overlap = horizon.intersection(segment_interval.interval)
+                if overlap is not None and overlap.length() > 0:
+                    segments_in_view.append(segment_interval)
                     new_virtual_lane.append(segment_interval)
 
-            if len(new_virtual_lane) > 0:
-                new_virtual_lanes.append(VirtualLane(new_virtual_lane))
+            # the lane stays part of the observed space even where it has no segment (a virtual lane
+            # may end before the horizon does), so that atoms still see how many lanes it spans
+            new_virtual_lanes.append(VirtualLane(new_virtual_lane))
 
         return View(
             new_virtual_lanes,
@@ -120,12 +127,13 @@ class View:
             self.ego,
             self._lazy_visible_cars.data,
             self._lazy_reserved_segments.data,
-            self._lazy_claimed_segments.data
+            self._lazy_claimed_segments.data,
+            self.cars_in_view
         )
 
-    def _compute_visible_cars_in_view(self, old_cars: dict[str, dict[Segment, Interval]]):
+    def _compute_visible_cars_in_view(self, old_cars: dict[str, dict[SegmentInterval, Interval]]):
         # only consider cars that intersect with the horizon
-        updated_visible_cars: dict[str, dict[Segment, Interval]] = dict()
+        updated_visible_cars: dict[str, dict[SegmentInterval, Interval]] = dict()
         for intersecting_car, occupied_segment_interval in old_cars.items():
             # if there is any intersection with the horizon, we can put all the occupied segments of the car in the view
             # this won't break the logic and safes us computation time
@@ -138,16 +146,16 @@ class View:
 
         return updated_visible_cars
 
-    def _compute_reserved_segments_in_view(self, old_reserved_segments: dict[str, dict[Segment, Interval]]):
+    def _compute_reserved_segments_in_view(self, old_reserved_segments: dict[str, dict[SegmentInterval, Interval]]):
         return self._recompute_segments_in_view(old_reserved_segments)
 
-    def _compute_claimed_segments_in_view(self, old_claimed_segments: dict[str, dict[Segment, Interval]]):
+    def _compute_claimed_segments_in_view(self, old_claimed_segments: dict[str, dict[SegmentInterval, Interval]]):
         return self._recompute_segments_in_view(old_claimed_segments)
 
-    def _recompute_segments_in_view(self, old_segments: dict[str, dict[Segment, Interval]]):
-        new_segments: dict[str, dict[Segment, Interval]] = dict()
+    def _recompute_segments_in_view(self, old_segments: dict[str, dict[SegmentInterval, Interval]]):
+        new_segments: dict[str, dict[SegmentInterval, Interval]] = dict()
         for car, reserved_segments in old_segments.items():
-            new_car_segments: dict[Segment, Interval] = dict()
+            new_car_segments: dict[SegmentInterval, Interval] = dict()
             for segment, interval in reserved_segments.items():
                 if segment in self.segments_in_view and self.horizon.intersects(interval):
                     new_car_segments[segment] = interval
@@ -156,7 +164,7 @@ class View:
 
         return new_segments
 
-    def get_visible_cars(self) -> dict[str, dict[Segment, Interval]]:
+    def get_visible_cars(self) -> dict[str, dict[SegmentInterval, Interval]]:
         """
         Returns the visible cars in the view.
 
@@ -165,7 +173,7 @@ class View:
         """
         return self._lazy_visible_cars.acquire_data()
 
-    def get_reserved_segments(self) -> dict[str, dict[Segment, Interval]]:
+    def get_reserved_segments(self) -> dict[str, dict[SegmentInterval, Interval]]:
         """
         Returns the reserved cars in the view.
 
@@ -174,7 +182,7 @@ class View:
         """
         return self._lazy_reserved_segments.acquire_data()
 
-    def get_claimed_segments(self) -> dict[str, dict[Segment, Interval]]:
+    def get_claimed_segments(self) -> dict[str, dict[SegmentInterval, Interval]]:
         """
         Returns the claimed segments in the view.
 

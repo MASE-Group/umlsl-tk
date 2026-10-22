@@ -46,8 +46,8 @@ GREEN_HOVER: RGB = lighten(GREEN, 0.14)
 RED_HOVER: RGB = lighten(RED, 0.14)
 PANEL: RGB = darken(LAYER, 0.25)    # slightly darker than LAYER for the panel body
 
-# Scene background matches the simulation's pale-green map colour.
-SCENE_BG: RGB = (144, 215, 164)
+# Scene background matches the editor's canvas (blocks between roads).
+SCENE_BG: RGB = GREEN
 
 # --- Metrics --------------------------------------------------------------
 FONT = "Arial"

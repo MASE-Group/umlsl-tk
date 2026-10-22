@@ -4,7 +4,7 @@ Regression tests for the critical points of the horizontal chop.
 The horizontal chop has to try enough split positions that it finds a witness whenever one exists.
 Endpoints of cars, reservations, claims and segments are not enough on their own: a formula that
 constrains the length of the observed space is satisfied only by splits at a fixed distance from one
-of its ends, and nested chops compose those distances.
+of its ends or from such an endpoint, and nested chops compose those distances.
 """
 import unittest
 
@@ -80,6 +80,32 @@ class TestHorizontalChopCriticalPoints(unittest.TestCase):
         self.assertTrue(
             self.check("hchop{hchop{l >= 0.7 and l <= 0.7}{l >= 1.3 and l <= 1.3}}{true}")
         )
+
+    def test_witness_can_compose_more_constants_than_the_chop_depth(self):
+        # Three nested chops pin four pieces of length 1, so the outermost split lies at distance 4
+        # from the start: more constants than the nesting depth of the chops.
+        one = "(l >= 1 and l <= 1)"
+        self.assertTrue(
+            self.check(f"hchop{{hchop{{hchop{{{one}}}{{{one}}}}}{{hchop{{{one}}}{{{one}}}}}}}{{true}}")
+        )
+
+        piece = self.view_length() / 4 + 0.1
+        pinned = f"(l >= {piece} and l <= {piece})"
+        self.assertFalse(
+            self.check(f"hchop{{hchop{{hchop{{{pinned}}}{{{pinned}}}}}{{hchop{{{pinned}}}{{{pinned}}}}}}}{{true}}")
+        )
+
+    def test_offsets_are_anchored_at_base_points_inside_the_view(self):
+        # E's reservation starts and ends inside the view. The outer chop of the somewhere has to
+        # split within distance 1 before it (resp. the inner chop at distance 1 after it), which is
+        # neither a base point nor at a fixed distance from either end of the view.
+        self.assertTrue(self.check("<hchop{l <= 1 and free}{re{E}}>"))
+        self.assertTrue(self.check("<hchop{l >= 1 and l <= 1 and free}{re{E}}>"))
+        self.assertTrue(self.check("<hchop{re{E}}{l >= 1 and l <= 1 and free}>"))
+
+        # a free stretch as long as the view does not fit before the reservation
+        too_long = self.view_length()
+        self.assertFalse(self.check(f"<hchop{{l >= {too_long} and l <= {too_long} and free}}{{re{{E}}}}>"))
 
     def test_length_constraint_beyond_the_view_is_unsatisfiable(self):
         # Soundness in the other direction: the search must not invent witnesses.

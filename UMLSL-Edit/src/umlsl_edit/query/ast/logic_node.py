@@ -17,6 +17,9 @@ class TrueNode(AtomNode):
     def evaluate(self, traffic_snapshot: "TrafficSnapshotModel", view: View, variable_car_map: dict[str, Car]) -> bool:
         return True
 
+    def anchor_offsets(self) -> frozenset[float]:
+        return frozenset()
+
 
 class NegationNode(UnaryNode):
     """

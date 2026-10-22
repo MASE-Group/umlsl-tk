@@ -1,4 +1,3 @@
-from itertools import product
 from typing import TYPE_CHECKING
 
 from umlsl_edit.model.domain_models.settings_model import SettingsModel
@@ -288,32 +287,49 @@ class EnvironmentCreation:
             self, turn_segment: LaneSegment,
             turn_direction: TurnDirection) -> list[list[list[Segment]]]:
         src_segments: list[LaneSegment] = compute_parallel_lane_segments(self.ts, self.start_segment, 1)
-        start_road_orientation: RoadOrientation = self.ts.get_road_by_uid(self.start_segment.lane.road_uid).orientation
 
-        if start_road_orientation == RoadOrientation.VERTICAL and turn_direction == TurnDirection.LEFT:
+        # The vertical chop puts its first operand on the first lanes, which therefore have to be on the
+        # car's left. The segments are sorted by lane index, i.e. north to south on horizontal roads and
+        # west to east on vertical ones, which is left to right only for cars driving east or north.
+        if self.car_direction in (Direction.LEFT, Direction.DOWN):
             src_segments.reverse()
 
         target_segments: list[LaneSegment] = compute_parallel_lane_segments(self.ts, turn_segment, 1)
 
-        order_lanes: list[list[list[Segment]]] = []
-        for src_seg in src_segments:
-            paths = []
-            for target_segment in target_segments:
+        # the same order for the target lanes, with respect to the direction the car leaves the crossing in
+        dx, dy = self.car_direction.value
+        exit_direction = {TurnDirection.STRAIGHT: self.car_direction,
+                          TurnDirection.LEFT: Direction((-dy, dx)),
+                          TurnDirection.RIGHT: Direction((dy, -dx))}[turn_direction]
+        if exit_direction in (Direction.LEFT, Direction.DOWN):
+            target_segments.reverse()
+
+        # UMLSL's view is a single one, with one path per virtual lane: the car's lane follows the car's path,
+        # and the other lanes keep their position relative to it. The lane k lanes to the left of the car's
+        # lane continues on the target lane k lanes to the left of the car's target lane or, if that one cannot
+        # be reached, on the closest one that can, preferring the one on the same side.
+        own_src = src_segments.index(self.start_segment)
+        own_target = target_segments.index(turn_segment)
+
+        virtual_lanes: list[list[Segment]] = []
+        for i, src_seg in enumerate(src_segments):
+            candidates: list[tuple[int, list[Segment]]] = []
+            for j, target_segment in enumerate(target_segments):
                 path: list[Segment] | None = compute_path_through_crossing(self.ts, src_seg, target_segment)
-                if path is not None:
-                    paths.append(path)
-                else:
+                if path is None:
                     path = compute_path_through_crossing(self.ts, target_segment, src_seg)
                     if path is not None:
                         path.reverse()
-                        paths.append(path)
+                if path is not None:
+                    candidates.append((j, path))
 
-            if len(paths) > 0:
-                order_lanes.append(paths)
+            if len(candidates) > 0:
+                wanted = own_target + i - own_src
+                _, path = min(candidates, key=lambda candidate: (abs(candidate[0] - wanted),
+                                                                 -abs(candidate[0] - own_target)))
+                virtual_lanes.append(path)
 
-        parallel_lanes: list[list[list[Segment]]] = [list(p) for p in product(*order_lanes)]
-
-        return parallel_lanes
+        return [virtual_lanes]
 
     def _compute_claimed_envelope(self, reserved_segment_intervals: list[SegmentInterval], transition: float) -> list[
         SegmentInterval]:

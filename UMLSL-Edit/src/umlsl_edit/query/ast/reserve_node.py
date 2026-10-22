@@ -2,7 +2,7 @@ import typing
 
 from umlsl_edit.model.entities.car import Car
 from umlsl_edit.model.interval import Interval
-from umlsl_edit.model.traffic_value_objects.segments.segment import Segment
+from umlsl_edit.model.traffic_value_objects.segments.segment_interval import SegmentInterval
 from umlsl_edit.query.ast.ast import View, AtomNode
 from umlsl_edit.query.ast.car_resolve import CarResolve
 
@@ -29,16 +29,15 @@ class ReserveNode(AtomNode):
         if reserved_segments is None:
             return False
 
-        car_reserved_segments: list[Segment] = list(reserved_segments.keys())
+        car_reserved_segments: list[SegmentInterval] = list(reserved_segments.keys())
         single_lane = view.virtual_lanes[0]
         reserved_intervals: list[Interval] = []
         for segment_interval in single_lane.segment_intervals:
-            segment = segment_interval.segment
             # we have to ensure every segment of the lane is contained in a reserved segment of the car
-            if segment_interval.segment not in car_reserved_segments:
+            if segment_interval not in car_reserved_segments:
                 return False
 
-            interval = reserved_segments.get(segment)
+            interval = reserved_segments.get(segment_interval)
             if interval is None:
                 return False
 

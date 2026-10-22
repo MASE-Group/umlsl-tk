@@ -17,6 +17,17 @@ class SomewhereNode(UnaryNode):
     """
 
     def evaluate(self, traffic_snapshot: "TrafficSnapshotModel", view: View, variable_car_map: dict[str, Car]) -> bool:
+        return self._expanded().evaluate(traffic_snapshot, view, variable_car_map)
+
+    # The critical points of an enclosing chop have to account for the two chops of the expansion,
+    # so the offsets are those of the expansion, not of the child.
+    def length_offsets(self) -> frozenset[float]:
+        return self._expanded().length_offsets()
+
+    def anchor_offsets(self) -> frozenset[float]:
+        return self._expanded().anchor_offsets()
+
+    def _expanded(self) -> HorizontalChopNode:
         # The expansion depends only on the child, so it is built once and reused: evaluate is
         # called once per candidate split of every enclosing chop, and rebuilding the tree there
         # dominated the cost of the surrounding search.
@@ -28,7 +39,7 @@ class SomewhereNode(UnaryNode):
                     TrueNode()
                 ]
             )
-        return self._expansion.evaluate(traffic_snapshot, view, variable_car_map)
+        return self._expansion
 
     def to_latex(self) -> str:
         # we do not need to encapsulate anything in parentheses, it is already clear because of <...>

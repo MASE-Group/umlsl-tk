@@ -10,7 +10,7 @@ if typing.TYPE_CHECKING:
 class ExistsNode(UnaryNode):
     """
     The ExistsNode is a unary node that evaluates to true if the specified variable holds for at least one car.
-    Note that we only iterate through the visible cars of ego.
+    Note that we only iterate through the cars in ego's view.
     """
     def __init__(self, variable: str, child: ASTNode):
         super().__init__(child)
@@ -19,7 +19,7 @@ class ExistsNode(UnaryNode):
 
     def evaluate(self, traffic_snapshot: "TrafficSnapshotModel", view: View, variable_car_map: dict[str, Car]) -> bool:
         # the AST parser guarantees that the variable is not already in the map
-        for car_uid in view.get_visible_cars().keys():
+        for car_uid in view.cars_in_view:
             new_variable_map = variable_car_map.copy()
             new_variable_map[self._variable] = traffic_snapshot.cars[car_uid]
 
@@ -35,7 +35,7 @@ class ExistsNode(UnaryNode):
 class ForallNode(UnaryNode):
     """
     The ForallNode is a unary node that evaluates to true if the specified variable holds for all cars.
-    Note that we only iterate through the visible cars of ego.
+    Note that we only iterate through the cars in ego's view.
     """
     def __init__(self, variable: str, child: ASTNode):
         super().__init__(child)
@@ -44,7 +44,7 @@ class ForallNode(UnaryNode):
 
     def evaluate(self, traffic_snapshot: "TrafficSnapshotModel", view: View, variable_car_map: dict[str, Car]) -> bool:
         # the AST parser guarantees that the variable is not already in the map
-        for car_uid in view.get_visible_cars().keys():
+        for car_uid in view.cars_in_view:
             new_variable_map = variable_car_map.copy()
             new_variable_map[self._variable] = traffic_snapshot.cars[car_uid]
 

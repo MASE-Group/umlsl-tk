@@ -49,15 +49,30 @@ class ASTNode(ABC):
         """
         pass
 
-    def length_constants(self) -> set[float]:
+    def length_offsets(self) -> frozenset[float]:
         """
-        The set of constants this subtree compares the length of the observed space against.
+        The lengths of the observed space at which this subtree can change its truth value; always
+        contains 0.
 
-        These constants are needed as critical points by the horizontal chop: a formula such as
+        These are needed as critical points by the horizontal chop: a formula such as
         "l >= 2 and l <= 2" is only satisfied by the single split at distance 2 from the start of the
-        observed space, which is in general not the endpoint of any car, reservation or claim.
+        observed space, which is in general not the endpoint of any car, reservation or claim. A
+        horizontal chop adds up the lengths of its operands, so they are composed bottom-up.
         """
-        return set()
+        return frozenset({0.0})
+
+    def anchor_offsets(self) -> frozenset[float]:
+        """
+        The offsets from the base points (the endpoints of cars, reservations, claims and segments)
+        at which an end of the observed space can change the truth value of this subtree.
+
+        A subtree that depends on where the observed space lies changes at the base points
+        themselves (offset 0). A horizontal chop shifts these by the lengths of its operands: in
+        "hchop{(l >= 1 and l <= 1) and free}{re{c}}" the observed space has to start exactly 1
+        before c's reservation. Empty if the subtree does not depend on where the observed space
+        lies; atoms default to depending on it, which only costs candidates, never witnesses.
+        """
+        return frozenset({0.0})
 
 
 class AtomNode(ASTNode, ABC):
@@ -81,8 +96,11 @@ class UnaryNode(ASTNode, ABC):
         super().__init__(Precedence.UNARY)
         self._child = child
 
-    def length_constants(self) -> set[float]:
-        return self._child.length_constants()
+    def length_offsets(self) -> frozenset[float]:
+        return self._child.length_offsets()
+
+    def anchor_offsets(self) -> frozenset[float]:
+        return self._child.anchor_offsets()
 
     def to_latex(self) -> str:
         child_text = self._child.to_latex()
@@ -107,8 +125,11 @@ class BinaryNode(ASTNode, ABC):
         self._left = left
         self._right = right
 
-    def length_constants(self) -> set[float]:
-        return self._left.length_constants() | self._right.length_constants()
+    def length_offsets(self) -> frozenset[float]:
+        return self._left.length_offsets() | self._right.length_offsets()
+
+    def anchor_offsets(self) -> frozenset[float]:
+        return self._left.anchor_offsets() | self._right.anchor_offsets()
 
     def to_latex(self) -> str:
         left_text = self._left.to_latex()
