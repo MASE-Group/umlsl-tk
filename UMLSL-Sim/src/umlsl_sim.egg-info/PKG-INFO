@@ -378,7 +378,7 @@ rl_algorithm_type=RLAlgorithmType.PPO
 PPO with invalid-action masking ([sb3-contrib](https://sb3-contrib.readthedocs.io/en/master/modules/ppo_mask.html)).
 Selecting it attaches an
 [`ActionShield`](src/umlsl_sim/control/safety/action_shield.py) to the environment:
-before each decision the safety controller is asked which accelerations and lane
+before each decision the safe controller is asked which accelerations and lane
 changes are safe, and everything else is removed from the agent's choice set.
 Unsafe actions are therefore never taken, rather than taken and then penalised,
 which frees the reward to speak only about the objective:
