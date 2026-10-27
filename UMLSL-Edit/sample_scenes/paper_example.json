@@ -1,0 +1,97 @@
+{
+  "meta": {
+    "version": 2
+  },
+  "roads": [
+    {
+      "uid": "3a0076c1-6cda-4095-925e-e1a0f2463a59",
+      "name": "R1",
+      "orientation": "HORIZONTAL",
+      "position": 0.0,
+      "number_of_forward_lanes": 2,
+      "number_of_backward_lanes": 1
+    },
+    {
+      "uid": "0ba941ed-9a0c-4944-b839-ea163113b0b0",
+      "name": "R2",
+      "orientation": "VERTICAL",
+      "position": 4.0,
+      "number_of_forward_lanes": 1,
+      "number_of_backward_lanes": 2
+    }
+  ],
+  "cars": [
+    {
+      "uid": "94ca05ff-9c06-4972-b1b4-a5517aa2ccf0",
+      "name": "B",
+      "road_uid": "3a0076c1-6cda-4095-925e-e1a0f2463a59",
+      "lane_index": -1,
+      "position_on_lane": -2.0,
+      "transition": 0.0,
+      "speed": 5.0,
+      "length": 1,
+      "color": "#AA6622",
+      "acceleration": 1.0,
+      "next_turn": null
+    },
+    {
+      "uid": "b7d83afb-43ec-4d37-82b2-000ab391e7b5",
+      "name": "C",
+      "road_uid": "3a0076c1-6cda-4095-925e-e1a0f2463a59",
+      "lane_index": 1,
+      "position_on_lane": -6.574999999999998,
+      "transition": 0.1,
+      "speed": 6.0,
+      "length": 1,
+      "color": "#22BB22",
+      "acceleration": 0.0,
+      "next_turn": null
+    },
+    {
+      "uid": "d479d8fe-62c7-4481-b0f4-b2d43d4a9723",
+      "name": "D",
+      "road_uid": "3a0076c1-6cda-4095-925e-e1a0f2463a59",
+      "lane_index": -1,
+      "position_on_lane": 6.0,
+      "transition": 0.0,
+      "speed": 5.0,
+      "length": 1,
+      "color": "#CC66AA",
+      "acceleration": 1.0,
+      "next_turn": {
+        "direction": "LEFT",
+        "target_lane": {
+          "road_uid": "0ba941ed-9a0c-4944-b839-ea163113b0b0",
+          "lane_index": -1
+        }
+      }
+    },
+    {
+      "uid": "67730eb9-d2f9-484c-93da-50d9e0146732",
+      "name": "E",
+      "road_uid": "3a0076c1-6cda-4095-925e-e1a0f2463a59",
+      "lane_index": 0,
+      "position_on_lane": -0.8676113026536839,
+      "transition": 0.0,
+      "speed": 3.0,
+      "length": 1,
+      "color": "#02CCFE",
+      "acceleration": 1.0,
+      "next_turn": null
+    }
+  ],
+  "queries": [
+    {
+      "uid": "a5f5aae0-22e7-4a7f-8f8b-fa989d0904de",
+      "latex": "< hchop {re{E}} {free and (neg <cs>) and l >2} {cs} >",
+      "should_only_evaluate_on_cars_lane": false,
+      "assigned_car_uid": "67730eb9-d2f9-484c-93da-50d9e0146732"
+    },
+    {
+      "uid": "c8adfa7b-cdc4-44a2-8a40-f546733f8588",
+      "latex": "neg exists c: (c != D and < re{c} and re{D} >)",
+      "should_only_evaluate_on_cars_lane": false,
+      "assigned_car_uid": "d479d8fe-62c7-4481-b0f4-b2d43d4a9723"
+    }
+  ]
+}

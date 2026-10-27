@@ -158,6 +158,26 @@ class TestLaneChangeClaims(UMLSLSemanticsTestCase):
         ])
 
 
+class TestEnvelopeEndingBeforeACrossing(UMLSLSemanticsTestCase):
+    """
+    Horizontal road with lanes l1 (westbound), r1 and r2 (eastbound) from north to south, crossed at x=10 by a
+    vertical road (d1 x in [9, 10], u1 [10, 11]).
+      C on r2, rear x=-6.9, v=3, changing to r1 -> RE(C) = r2 x in [-6.9, -3.65], CL(C) = r1 x in [-6.9, -3.65]
+      E on r2, rear x=4, v=0                    -> RE(E) = x in [4, 5]; V(E) has r1, r2 and X = x in [-5, 13]
+    C's envelope ends 12.65 before the crossing. Its end, rounded, minus its start is not exactly 3.25, and the
+    rounding error left over must not be taken for envelope reaching into the crossing.
+    """
+    roads = [road("R1", "HORIZONTAL", 0, 2, 1), road("R2", "VERTICAL", 10, 1, 1)]
+    cars = [car("C", "R1", 1, -6.9, 3, transition=0.5), car("E", "R1", 1, 4, 0)]
+
+    def test_reservation_does_not_reach_the_crossing(self):
+        self.check("E", [
+            ("<re{C} and cs>", False),
+            ("<hchop{re{C}}{free and l > 7.6}{re{E}}>", True),  # r2 is free in [-3.65, 4]
+            ("<cl{C}>", True),  # a car claims the adjacent lane only while its reservation is on a single segment
+        ])
+
+
 class TestCrossingEdges(UMLSLSemanticsTestCase):
     """
     Horizontal road (r1, l1) crossed by a vertical road at x=10 (d1, u1): the crossing is x in [9, 11].

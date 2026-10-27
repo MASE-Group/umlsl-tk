@@ -8,6 +8,11 @@ This file includes helper functions for equipping each segment with its interval
 of segments).
 """
 
+# A size left to cover that is below this is the rounding error of subtracting the covered length, e.g.
+# 3.25 - ((63.1 + 3.25) - 63.1) = 7e-15, not space the car still occupies. Carried on, it would push a space that
+# ends on a lane segment into the next one, and, if that is a crossing, through the whole crossing.
+SIZE_EPSILON = 1e-9
+
 
 def compute_physical_segment_intervals(
         ts: TrafficSnapshotReader,
@@ -38,7 +43,7 @@ def compute_physical_segment_intervals(
     next_size = car_size
 
     i = 0
-    while next_size > 0:
+    while next_size > SIZE_EPSILON:
         current_size = next_size
 
         if i >= len(path):
@@ -95,7 +100,7 @@ def compute_segments_safety_envelope(
     size = car_size
 
     i = 0
-    while size > 0 and i < len(path):
+    while size > SIZE_EPSILON and i < len(path):
         seg_i = path[i]
         seg_size = seg_i.get_size_in_direction(ts)
 

@@ -93,14 +93,27 @@ class ParsedUMLSLQuery:
             or overlaps_view(coordinate_translation.claimed[car_uid])
         ]
 
+        # only the cars with something in the view are carried into it, by the same test the View
+        # filters its data with. A car with nothing there makes no atom true and adds no chopping
+        # candidate, but every observed space constructed on a chop would go through it again, so
+        # the cost of a formula would grow with the scenario rather than with the view.
+        def in_view(
+                occupancy: dict[str, dict[SegmentInterval, Interval]]
+        ) -> dict[str, dict[SegmentInterval, Interval]]:
+            return {
+                car_uid: segment_intervals for car_uid, segment_intervals in occupancy.items()
+                if any(segment in segments_in_view and interval.intersects(horizon)
+                       for segment, interval in segment_intervals.items())
+            }
+
         view = View(
             parallel_virtual_lane,
             segments_in_view,
             horizon,
             self._ego,
-            coordinate_translation.visible,
-            coordinate_translation.reserved,
-            coordinate_translation.claimed,
+            in_view(coordinate_translation.visible),
+            in_view(coordinate_translation.reserved),
+            in_view(coordinate_translation.claimed),
             cars_in_view,
         )
 
