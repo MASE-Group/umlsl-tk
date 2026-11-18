@@ -41,6 +41,14 @@ class View:
     changes there); and is only recomputed in the newly created View when needed.
     """
 
+    # A chop builds two Views per candidate split, so they are kept small: no per-instance dict, and the
+    # lazily filtered data in plain fields rather than in a LazyEvaluator with a closure each.
+    __slots__ = (
+        "virtual_lanes", "segments_in_view", "horizon", "ego", "cars_in_view", "lane_range", "memo",
+        "_visible_cars", "_reserved_segments", "_claimed_segments",
+        "_visible_cars_filtered", "_reserved_segments_filtered", "_claimed_segments_filtered",
+    )
+
     def __init__(self, virtual_lanes: list[VirtualLane], segments_in_view: list[SegmentInterval],
                  horizon: Interval, ego: 'Car',
                  visible_cars: dict[str, dict[SegmentInterval, Interval]],
@@ -69,18 +77,13 @@ class View:
         self.lane_range = lane_range
         self.memo = {} if memo is None else memo
 
-        self._lazy_visible_cars = LazyEvaluator(
-            visible_cars,
-            lambda old_cars: self._compute_visible_cars_in_view(old_cars)
-        )
-        self._lazy_reserved_segments = LazyEvaluator(
-            reserved_segments,
-            lambda old_reserved: self._compute_reserved_segments_in_view(old_reserved)
-        )
-        self._lazy_claimed_segments = LazyEvaluator(
-            claimed_segments,
-            lambda old_claimed: self._compute_claimed_segments_in_view(old_claimed)
-        )
+        # the data as passed in until it is first asked for, then filtered to this View (see get_*)
+        self._visible_cars = visible_cars
+        self._reserved_segments = reserved_segments
+        self._claimed_segments = claimed_segments
+        self._visible_cars_filtered = False
+        self._reserved_segments_filtered = False
+        self._claimed_segments_filtered = False
 
     def chop_horizontally(self, split: float) -> tuple['View', 'View']:
         """
@@ -144,9 +147,10 @@ class View:
             segments_in_view,
             horizon,
             self.ego,
-            self._lazy_visible_cars.data,
-            self._lazy_reserved_segments.data,
-            self._lazy_claimed_segments.data,
+            # filtered already if this View was asked for it, otherwise as passed in to this View
+            self._visible_cars,
+            self._reserved_segments,
+            self._claimed_segments,
             self.cars_in_view,
             lane_range,
             self.memo,
@@ -192,7 +196,10 @@ class View:
         Returns:
             the a map that maps each car (uid) to a map that maps each segment (uid) to the interval of that segment
         """
-        return self._lazy_visible_cars.acquire_data()
+        if not self._visible_cars_filtered:
+            self._visible_cars = self._compute_visible_cars_in_view(self._visible_cars)
+            self._visible_cars_filtered = True
+        return self._visible_cars
 
     def get_reserved_segments(self) -> dict[str, dict[SegmentInterval, Interval]]:
         """
@@ -201,7 +208,10 @@ class View:
         Returns:
             the a map that maps each car (uid) to a map that maps each reserved segment (uid) to the interval of that segment
         """
-        return self._lazy_reserved_segments.acquire_data()
+        if not self._reserved_segments_filtered:
+            self._reserved_segments = self._compute_reserved_segments_in_view(self._reserved_segments)
+            self._reserved_segments_filtered = True
+        return self._reserved_segments
 
     def get_claimed_segments(self) -> dict[str, dict[SegmentInterval, Interval]]:
         """
@@ -210,4 +220,7 @@ class View:
         Returns:
             the a map that maps each car (uid) to a map that maps each claimed segment (uid) to the interval of that segment
         """
-        return self._lazy_claimed_segments.acquire_data()
+        if not self._claimed_segments_filtered:
+            self._claimed_segments = self._compute_claimed_segments_in_view(self._claimed_segments)
+            self._claimed_segments_filtered = True
+        return self._claimed_segments
