@@ -12,6 +12,11 @@ from PySide6.QtWidgets import QApplication
 from umlsl_edit.commands.command import CommandValidationError
 from umlsl_edit.controllers import ApplicationController
 from umlsl_edit.model.errors.errors import BaseError
+from umlsl_edit.services.editor_instance import (
+    EditorInstanceServer,
+    forward_to_running_editor,
+    import_request,
+)
 from umlsl_edit.view.ui.exception_handling.exception_handler import (
     ExceptionHandler,
 )
@@ -28,8 +33,19 @@ class Main:
         self.open_window()
 
     def open_window(self) -> None:
-        """Launch the main window with a sample scene for testing."""
+        """
+        Launch the main window.
+
+        ``python -m umlsl_edit.main FILE`` opens FILE. With
+        ``--import-from-sim FILE`` (how UMLSL-Sim opens the editor), an editor
+        that is already open imports FILE instead and this process ends.
+        Otherwise this window opens and imports FILE.
+        """
         app = QApplication(sys.argv)
+
+        sim_file = import_request(sys.argv)
+        if sim_file is not None and forward_to_running_editor(os.path.abspath(sim_file)):
+            sys.exit(0)
 
         app.setApplicationName("UMLSL-Edit")
         app.setApplicationDisplayName("UMLSL-Edit")
@@ -46,9 +62,16 @@ class Main:
         # sys.excepthook = exception_handler.handle_exception
         warnings.showwarning = exception_handler.handle_warning
 
+        # The first open editor receives the snapshots that UMLSL-Sim sends.
+        instance_server = EditorInstanceServer(window)
+        instance_server.import_requested.connect(window.global_controls.receive_from_simulator)
+        instance_server.listen()
+
         window.show()
 
-        if len(sys.argv) > 1:
+        if sim_file is not None:
+            QTimer.singleShot(0, lambda: window.global_controls.open_from_simulator(sim_file))
+        elif len(sys.argv) > 1:
             file_path = sys.argv[1]
             if os.path.exists(file_path):
                 QTimer.singleShot(0, lambda: self.load_command_line_file(file_path, window))
@@ -57,11 +80,12 @@ class Main:
 
     def load_command_line_file(self, file_path: str, window) -> None:
         try:
-            self.application_controller.command_controller.load_traffic_snapshot(file_path)
+            notes = self.application_controller.command_controller.load_traffic_snapshot(file_path)
         except (BaseError, CommandValidationError) as exc:
             WarningDialog("Cannot open file", str(exc), window).exec()
         else:
             window.snackbar.show_message("File opened successfully.")
+            window.global_controls.show_import_notes(notes)
 
 
 if __name__ == "__main__":

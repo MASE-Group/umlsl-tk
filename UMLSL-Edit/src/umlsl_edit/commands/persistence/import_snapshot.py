@@ -24,6 +24,8 @@ class ImportSnapshot(Command[None]):
     def __init__(self, file_path: str, application_controller: "ApplicationController"):
         self._file_path = file_path
         self._application_controller = application_controller
+        self.notes: list[str] = []
+        """What the import changed to fit the editor (see ``ExternalPersistenceService.deserialize``)."""
 
     def execute(self) -> None:
         """Loads a traffic_snapshot from the specified file path and
@@ -51,7 +53,7 @@ class ImportSnapshot(Command[None]):
 
         try:
             if ExternalPersistenceService.is_external_payload(payload):
-                ExternalPersistenceService.deserialize(
+                self.notes = ExternalPersistenceService.deserialize(
                     payload,
                     new_snapshot,
                     new_snapshot,

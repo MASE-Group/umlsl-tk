@@ -497,6 +497,8 @@ QMenu::item:selected {
     <addaction name="separator"/>
     <addaction name="actionExport_to_UMLSL_Sim"/>
     <addaction name="actionImport_from_UMLSL_Sim"/>
+    <addaction name="separator"/>
+    <addaction name="actionSimulate_in_UMLSL_Sim"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
@@ -551,6 +553,14 @@ QMenu::item:selected {
   <action name="actionImport_from_UMLSL_Sim">
    <property name="text">
     <string>Import from UMLSL-Sim</string>
+   </property>
+  </action>
+  <action name="actionSimulate_in_UMLSL_Sim">
+   <property name="text">
+    <string>Simulate in UMLSL-Sim…</string>
+   </property>
+   <property name="toolTip">
+    <string>Export the current scenario to UMLSL-Sim and start simulating it</string>
    </property>
   </action>
  </widget>

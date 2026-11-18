@@ -113,13 +113,14 @@ python -m umlsl_edit.main UMLSL-Edit/sample_scenes/two_crossings_predefined.json
 Sample snapshots are in [UMLSL-Edit/sample_scenes/](UMLSL-Edit/sample_scenes/).
 `File ▸ Open` and the command line accept both the editor's native format and
 the UMLSL-Sim interchange format — the format is detected from the file itself.
-(`two_crossings_predefined.json` is an interchange-format sample; the other
-three are native.)
+(`two_crossings_predefined.json` is an interchange-format sample; the others
+are native. The `sim_demo_*.json` scenes showcase
+[Simulate in UMLSL-Sim](#umlsl-edit--umlsl-sim-in-one-step).)
 
 **Navigation.** Drag with the left mouse button or use the arrow keys to pan;
 zoom with the mouse wheel or the `+`/`-` buttons. Add and edit entities from the
-left panel; `Settings` and `File` (`Load`, `Save`, `Save As`, `Export`, `Import`)
-live in the top-left menu.
+left panel; `Settings` and `File` (`Load`, `Save`, `Save As`, `Export`, `Import`,
+`Simulate in UMLSL-Sim…`) live in the top-left menu.
 
 | Action | Shortcut |
 | :--- | :--- |
@@ -139,7 +140,12 @@ python -m umlsl_sim.app.run_control_gui
 
 The control panel lets you pick a scenario and the number of NPC cars, start,
 pause and rerun the simulation, configure the RL mode, algorithm, observation
-model and reward, and save a paused run as a new scenario.
+model and reward, save a paused run as a new scenario, and open the run in
+UMLSL-Edit (**Open in UMLSL-Edit**, see
+[below](#umlsl-sim--umlsl-edit-in-one-step)).
+
+`--scenario NAME` preselects a scenario and `--run` starts simulating it as soon
+as the window opens; UMLSL-Edit's **File ▸ Simulate in UMLSL-Sim…** uses both.
 
 ### Scripted use
 
@@ -183,9 +189,30 @@ both directions:
 | **UMLSL-Sim** | — | `name`, `scenario_name`, `players`, `roads`, and an optional `cars` — every file in `UMLSL-Sim/src/umlsl_sim/scenario/scenarios/`. A file without `cars` places its `players` cars at random; an export from UMLSL-Edit always writes `cars`, so the scenario is reproduced exactly. |
 
 The interchange format is exactly UMLSL-Sim's scenario format, so no conversion
-step is needed on the simulator side.
+step is needed on the simulator side. A scenario that UMLSL-Sim saves from a
+paused run also gives each car a `next_lane`: the lane it enters after its next
+crossing, taken from its planned route. UMLSL-Sim ignores it; UMLSL-Edit reads
+it as the car's turn intention.
 
-### UMLSL-Edit ➜ UMLSL-Sim
+### UMLSL-Edit ➜ UMLSL-Sim in one step
+
+Choose **File ▸ Simulate in UMLSL-Sim…** (`Ctrl` + `R`). UMLSL-Edit
+
+1. checks that UMLSL-Sim can run the snapshot, and lists every problem if it
+   cannot (see [below](#what-is-checked-before-export));
+2. asks for a scenario name, suggested from the current file name, and asks
+   before replacing a scenario that already exists;
+3. writes the scenario into UMLSL-Sim's scenario folder, found from the
+   installed `umlsl_sim` package;
+4. opens the UMLSL-Sim control GUI with that scenario selected and already
+   running. If UMLSL-Sim stops right after starting, its error is shown in the
+   editor.
+
+UMLSL-Sim must be installed in the same environment as UMLSL-Edit
+(`./install.sh all`). The sample scenes `UMLSL-Edit/sample_scenes/sim_demo_*.json`
+showcase the feature; `sim_demo_not_simulatable.json` shows the alert.
+
+### UMLSL-Edit ➜ UMLSL-Sim by hand
 
 1. Build and check your snapshot in UMLSL-Edit.
 2. Choose **File ▸ Export to UMLSL-Sim**.
@@ -209,13 +236,53 @@ UMLSL-Sim looks for scenarios.
 **What is carried over.** All roads and cars, with their lanes, positions,
 speeds, colors and turn intentions; the exported `players` count equals the
 number of cars, so UMLSL-Sim reproduces exactly the cars you edited and adds no
-random traffic. All cars are exported as type `NPC`.
+random traffic. All cars are exported as type `NPC`, and each car's `max_speed`
+is the editor's global **Max Speed** setting. A turn intention becomes the car's
+first goal: the target lane just past the crossing. A car without one gets the
+next stretch of its own lane past the next crossing. After that first goal,
+UMLSL-Sim picks goals at random.
+
+<a id="what-is-checked-before-export"></a>**What is checked before export.**
+Both export commands refuse a snapshot that UMLSL-Sim could not load or run, and
+list every reason:
+
+* no roads, or no cars;
+* a road outside the 40 × 24-lane canvas (horizontal roads within y = −11 … 11,
+  vertical roads within x = −19 … 19, inside the border roads), or two parallel
+  roads that overlap;
+* a car outside the canvas, or whose rear is inside a crossing — this includes
+  the crossings with the border roads at the canvas edge;
+* two cars that overlap, or a car driving backwards;
+* more cars than the road network has lane segments.
+
+A lane change in progress, or a turn intention that UMLSL-Sim cannot express, is
+a warning: you can export anyway, and the simulation starts slightly differently
+from the snapshot.
 
 **What is not.** UMLSL queries are *not* part of the interchange format. Keep a
 native `File ▸ Save` copy of any snapshot whose queries you want to preserve —
 exporting alone will lose them.
 
-### UMLSL-Sim ➜ UMLSL-Edit
+### UMLSL-Sim ➜ UMLSL-Edit in one step
+
+Press **Open in UMLSL-Edit** in the UMLSL-Sim control GUI while a simulation is
+running or paused. UMLSL-Sim
+
+1. pauses the simulation;
+2. saves the paused run like **Save paused scenario** does, under the name in
+   **New scenario name** or else `<scenario>_paused`. If that name is taken,
+   it adds `_2`, `_3`, … rather than replace a scenario;
+3. opens the saved scenario in UMLSL-Edit. If an UMLSL-Edit window is already
+   open, that window gets the scenario. If the window has unsaved changes, it
+   first asks you to **Save** them, **Don't save** them, or **Cancel** and keep
+   editing. Otherwise a new UMLSL-Edit window opens.
+
+If UMLSL-Edit stops right after starting, its error is shown in the status log.
+UMLSL-Edit must be installed in the same environment as UMLSL-Sim
+(`./install.sh all`). The UMLSL-Edit window that opened first receives the
+scenarios; a crash leaves no lock behind.
+
+### UMLSL-Sim ➜ UMLSL-Edit by hand
 
 1. Run a simulation, then pause it at the state you want to analyse
    (**Play / Pause**).
@@ -231,6 +298,29 @@ exporting alone will lose them.
 An imported scenario has no native file associated with it, so **Save** asks you
 to **Save As** first. This is deliberate: it prevents the editor from writing
 native JSON — which UMLSL-Sim cannot read — over a working simulator scenario.
+
+**What is carried over.** The conversion is the inverse of the export. Roads,
+lanes, car positions, sizes, colours and speeds map back exactly. A car's turn
+intention comes from its `next_lane` or, in a file without one, from its first
+goal, when that lies just past the next crossing, where the export puts it. The
+editor only knows the turn at the next crossing, so other goals mean "straight
+on". The border roads that the export adds are left out when no car uses them,
+because the next export adds them again. AGENT cars become ordinary cars.
+
+UMLSL-Edit has three rules that UMLSL-Sim does not have, so the import adjusts
+the snapshot to fit them and lists every change it made:
+
+* A car or road name that contains a UMLSL token, such as the `re` in `Green`,
+  is upper-cased: `Green` becomes `GREEN`.
+* The global **Max Speed** grows to the smallest whole number at which every
+  car's braking distance plus its length fits. A car that drives at its own
+  maximum speed never fits otherwise.
+* A car whose rear is exactly on the edge of a crossing moves 1 px (1/40 lane)
+  into its lane, because the editor counts the edge as part of the crossing.
+
+A car whose next move is a U-turn, a lane change inside a crossing, or a route
+across the canvas edge cannot be shown as a turn in UMLSL-Edit. It goes
+straight on, and the list names it.
 
 Any scenario shipped with UMLSL-Sim can be imported the same way, which is a
 convenient starting point:
@@ -250,14 +340,17 @@ and understanding it explains small coordinate shifts you may notice:
 | Unit size | 1 unit = 1 | 1 unit = 40 |
 | Origin | centre of the canvas | bottom-left corner |
 | Canvas | unbounded, view is panned | fixed 40 × 24 lanes |
-| Lane indexing | signed, `-n … -1 \| 0 … n` around the road axis | two groups counted outward, `right` and `left` |
+| Lane indexing | signed, `-n … -1 \| 0 … n` around the road axis | two groups: `right` lanes counted from the road's lower edge, `left` lanes from its centre line |
 | Maximum speed | one global setting | one value per car |
 | Turning | explicit turn intention | implicit, via the car's goal |
 
-Because UMLSL-Sim's canvas is bounded, exporting a snapshot that contains no
-road named `bottom`, `top`, `left` or `right` adds those four border roads
-automatically, and coordinates are rebased between the two origins. Round trips
-are therefore faithful in structure but not byte-identical.
+UMLSL-Sim's canvas is a bounded torus: every road spans it and wraps around at
+the edge, which needs a road along each edge. Exporting adds a one-lane border
+road along every edge that no road touches yet, and coordinates are rebased
+between the two origins. Importing leaves out the border roads that no car
+uses, if exporting would add exactly the same roads again. So an Edit ➜ Sim ➜
+Edit round trip gives back the original roads, and a Sim ➜ Edit ➜ Sim round
+trip gives back the same roads and car positions.
 
 ## Repository layout
 

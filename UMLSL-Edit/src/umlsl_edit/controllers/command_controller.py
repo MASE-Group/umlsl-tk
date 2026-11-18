@@ -50,6 +50,10 @@ from umlsl_edit.model.errors.road_errors import (
 )
 from umlsl_edit.model.traffic_value_objects.lane import Lane
 from umlsl_edit.model.traffic_value_objects.turn_intent import TurnIntent
+from umlsl_edit.services.simulator_scenario import (
+    SimulatorScenario,
+    build_simulator_scenario,
+)
 
 
 class CommandController:
@@ -493,9 +497,13 @@ class CommandController:
         signal = self._application_controller.view_event_handler.get_on_snapshot_changed_signal()
         signal.emit(self._traffic_snapshot_changed_since_last_save)
 
-    def load_traffic_snapshot(self, file_path: str) -> None:
+    def load_traffic_snapshot(self, file_path: str) -> list[str]:
         """
         Loads a traffic snapshot from the specified file path.
+
+        Returns:
+            For a file in the UMLSL-Sim interchange format, what the import
+            changed to fit the editor. Empty for a native file.
         """
         if not file_path:
             raise CommandValidationError("File path is required to load a snapshot.")
@@ -509,6 +517,7 @@ class CommandController:
         # keeping its path would make 'Save' overwrite a simulator scenario with
         # native editor JSON, so the user is sent through 'Save As' instead.
         self.set_current_snapshot_path(None if load_command.loaded_external else file_path)
+        return load_command.notes
 
     def save_traffic_snapshot(self) -> None:
         """
@@ -548,12 +557,31 @@ class CommandController:
         export_command = ExportSnapshot(
             file_path,
             self.traffic_snapshot_reader,
+            max_speed=self.settings_model.max_speed,
         )
         self._execute_command(export_command)
 
-    def import_snapshot(self, file_path: str) -> None:
+    def check_simulator_export(self) -> SimulatorScenario:
+        """
+        Translates the current snapshot for UMLSL-Sim without writing anything.
+
+        Returns:
+            The translation, whose ``errors`` say why UMLSL-Sim could not run it
+            and whose ``warnings`` say where the simulation will differ.
+        """
+        return build_simulator_scenario(
+            self.traffic_snapshot_reader.to_dict(),
+            "check",
+            self.settings_model.max_speed,
+        )
+
+    def import_snapshot(self, file_path: str) -> list[str]:
         """
         Imports a traffic snapshot from the specified file path.
+
+        Returns:
+            What the import changed to fit the editor, one sentence per kind of
+            change (see ``ExternalPersistenceService.deserialize``).
         """
         if not file_path:
             raise CommandValidationError("File path is required to import a snapshot.")
@@ -566,6 +594,7 @@ class CommandController:
         # sends the next 'Save' through 'Save As', so native editor JSON can
         # never be written over the file that was open before the import.
         self.set_current_snapshot_path(None)
+        return load_command.notes
 
     def change_braking_acceleration(self, value: float) -> None:
         """

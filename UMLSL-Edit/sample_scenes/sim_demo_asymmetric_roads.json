@@ -1,0 +1,157 @@
+{
+  "meta": {
+    "version": 2
+  },
+  "roads": [
+    {
+      "uid": "1698d1c1-a07b-5a87-a800-badd83c7a7c8",
+      "name": "H1",
+      "orientation": "HORIZONTAL",
+      "position": -4.0,
+      "number_of_forward_lanes": 2,
+      "number_of_backward_lanes": 1
+    },
+    {
+      "uid": "97402267-fac5-52e2-8e71-e36b077ca218",
+      "name": "H2",
+      "orientation": "HORIZONTAL",
+      "position": 5.0,
+      "number_of_forward_lanes": 1,
+      "number_of_backward_lanes": 2
+    },
+    {
+      "uid": "cc8db852-117d-5360-aeca-69504b1867e5",
+      "name": "V1",
+      "orientation": "VERTICAL",
+      "position": -9.0,
+      "number_of_forward_lanes": 1,
+      "number_of_backward_lanes": 2
+    },
+    {
+      "uid": "bda511b5-3ccd-5359-8bd3-11d6ab8f0b55",
+      "name": "V2",
+      "orientation": "VERTICAL",
+      "position": 8.0,
+      "number_of_forward_lanes": 3,
+      "number_of_backward_lanes": 1
+    }
+  ],
+  "cars": [
+    {
+      "uid": "0cb54d82-0485-52b5-8033-c88aa122c298",
+      "name": "R",
+      "road_uid": "1698d1c1-a07b-5a87-a800-badd83c7a7c8",
+      "lane_index": 1,
+      "position_on_lane": -16.0,
+      "transition": 0.0,
+      "speed": 8.0,
+      "length": 1.0,
+      "color": "#D7263D",
+      "acceleration": 0.0,
+      "next_turn": {
+        "direction": "LEFT",
+        "target_lane": {
+          "road_uid": "cc8db852-117d-5360-aeca-69504b1867e5",
+          "lane_index": 0
+        }
+      }
+    },
+    {
+      "uid": "0251c1a1-4d00-5793-a27f-95334f76e7b1",
+      "name": "G",
+      "road_uid": "1698d1c1-a07b-5a87-a800-badd83c7a7c8",
+      "lane_index": -1,
+      "position_on_lane": 14.0,
+      "transition": 0.0,
+      "speed": 5.0,
+      "length": 1.0,
+      "color": "#1B998B",
+      "acceleration": 0.0,
+      "next_turn": null
+    },
+    {
+      "uid": "98e9afe5-6b2f-52eb-91e2-368d391c1f65",
+      "name": "B",
+      "road_uid": "bda511b5-3ccd-5359-8bd3-11d6ab8f0b55",
+      "lane_index": 2,
+      "position_on_lane": -10.0,
+      "transition": 0.0,
+      "speed": 7.0,
+      "length": 1.0,
+      "color": "#2E294E",
+      "acceleration": 0.0,
+      "next_turn": {
+        "direction": "LEFT",
+        "target_lane": {
+          "road_uid": "1698d1c1-a07b-5a87-a800-badd83c7a7c8",
+          "lane_index": -1
+        }
+      }
+    },
+    {
+      "uid": "7e9741bb-aac2-5e52-b1a7-988098bea02e",
+      "name": "Y",
+      "road_uid": "bda511b5-3ccd-5359-8bd3-11d6ab8f0b55",
+      "lane_index": -1,
+      "position_on_lane": 10.0,
+      "transition": 0.0,
+      "speed": 6.0,
+      "length": 1.0,
+      "color": "#F46036",
+      "acceleration": 0.0,
+      "next_turn": null
+    },
+    {
+      "uid": "9e6eeaa8-bf57-5132-baab-461f0b05d1ea",
+      "name": "P",
+      "road_uid": "97402267-fac5-52e2-8e71-e36b077ca218",
+      "lane_index": 0,
+      "position_on_lane": 0.0,
+      "transition": 0.0,
+      "speed": 9.0,
+      "length": 1.0,
+      "color": "#C5D86D",
+      "acceleration": 0.0,
+      "next_turn": {
+        "direction": "RIGHT",
+        "target_lane": {
+          "road_uid": "bda511b5-3ccd-5359-8bd3-11d6ab8f0b55",
+          "lane_index": -1
+        }
+      }
+    },
+    {
+      "uid": "b6088414-b886-548b-9645-ac74168dafe5",
+      "name": "O",
+      "road_uid": "cc8db852-117d-5360-aeca-69504b1867e5",
+      "lane_index": -2,
+      "position_on_lane": 9.0,
+      "transition": 0.0,
+      "speed": 4.0,
+      "length": 1.0,
+      "color": "#8E6C8A",
+      "acceleration": 0.0,
+      "next_turn": {
+        "direction": "LEFT",
+        "target_lane": {
+          "road_uid": "97402267-fac5-52e2-8e71-e36b077ca218",
+          "lane_index": 0
+        }
+      }
+    }
+  ],
+  "queries": [
+    {
+      "uid": "b47aa464-71c0-57ff-aaa0-ebb2d42c5a5c",
+      "latex": "forall c: (c!=P =>  !<re{P} and re{c}>)",
+      "should_only_evaluate_on_cars_lane": false,
+      "assigned_car_uid": "9e6eeaa8-bf57-5132-baab-461f0b05d1ea"
+    },
+    {
+      "uid": "aa8e4b0a-a113-5f09-9cc6-907bf0308086",
+      "latex": "<vchop{re{B}}{re{Y}}>",
+      "should_only_evaluate_on_cars_lane": false,
+      "assigned_car_uid": "98e9afe5-6b2f-52eb-91e2-368d391c1f65"
+    }
+  ]
+}

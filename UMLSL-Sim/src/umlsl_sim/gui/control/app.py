@@ -4,8 +4,8 @@ Layout (left → right):
 
 * a fixed-width control panel with dropdowns (scenario, RL mode, RL algorithm,
   observation model, reward, saved model), a players field, a "show
-  reservations" toggle, action buttons (Run / Play-Pause / Rerun / Save) and a
-  status log;
+  reservations" toggle, action buttons (Run / Play-Pause / Rerun / Save /
+  Open in UMLSL-Edit) and a status log;
 * the live simulation, rendered into the remaining area.
 
 All simulation stepping happens on the pyglet clock owned by this window, so the
@@ -23,6 +23,7 @@ from pyglet.window import key
 
 from umlsl_sim.scenario.loader import load_scenario
 from umlsl_sim.gui.control import rl_support, theme
+from umlsl_sim.gui.control.editor_launcher import EditorNotInstalledError, EditorProcess, open_in_editor
 from umlsl_sim.gui.control.scene_renderer import SceneRenderer
 from umlsl_sim.gui.control.scenario_saver import save_current_scenario, scenarios_dir
 from umlsl_sim.gui.control.sim_engine import STEP_INTERVAL, SimulationEngine
@@ -59,7 +60,15 @@ def read_scenario_meta(stem: str) -> dict:
 
 
 class ControlWindow(pyglet.window.Window):
-    def __init__(self) -> None:
+    def __init__(self, scenario: Optional[str] = None, autorun: bool = False) -> None:
+        """Build the window.
+
+        Args:
+            scenario: Scenario key to preselect in the dropdown (case-insensitive).
+                ``None`` keeps the default selection.
+            autorun: Start a plain simulation of the selected scenario as soon
+                as the window is up, as if Run had been pressed.
+        """
         super().__init__(width=WIN_W, height=WIN_H, caption="UMLSL-Sim", resizable=False)
         from pyglet.gl import glClearColor
 
@@ -94,6 +103,7 @@ class ControlWindow(pyglet.window.Window):
 
         self._build_chrome()
         self._build_controls()
+        requested = self._select_requested_scenario(scenario)
         self._apply_mode_visibility()
         self._on_scenario_change(self.scenario_dd.selected, initial=True)
         self._sync_controls()
@@ -101,7 +111,12 @@ class ControlWindow(pyglet.window.Window):
         if not rl_support.RUNTIME_AVAILABLE:
             self.log("RL runtime not installed — plain simulation only.")
             self.log(rl_support.RUNTIME_REASON)
-        self.log("Ready. Pick a scenario and press Run.")
+        if autorun and requested:
+            self._on_run()
+            # Opened by another program (UMLSL-Edit): come to the front.
+            self.activate()
+        else:
+            self.log("Ready. Pick a scenario and press Run.")
 
         pyglet.clock.schedule_interval(self.engine.update, STEP_INTERVAL)
         pyglet.clock.schedule_interval(self._tick, 0.1)
@@ -265,7 +280,10 @@ class ControlWindow(pyglet.window.Window):
         )
         yb = slot(36)
         self.save_btn = self._add_button(
-            inner_x, yb, inner_w, 36, "Save paused scenario", self._on_save,
+            inner_x, yb, half, 36, "Save paused scenario", self._on_save,
+        )
+        self.edit_btn = self._add_button(
+            inner_x + half + theme.GAP, yb, half, 36, "Open in UMLSL-Edit", self._on_open_in_editor,
         )
 
         # Log fills remaining space
@@ -275,6 +293,21 @@ class ControlWindow(pyglet.window.Window):
         self.log_view = LogView(
             inner_x, log_bottom, inner_w, log_h, self.ui_batch, self.g_base, title="Status",
         )
+
+    def _select_requested_scenario(self, scenario: Optional[str]) -> bool:
+        """Preselect ``scenario`` in the dropdown. Returns whether it was found.
+
+        An unknown name is reported in the status log and leaves the default
+        selection in place, so the window still opens normally.
+        """
+        if scenario is None:
+            return False
+        stem = scenario.lower()
+        if stem not in self.scenario_dd.options:
+            self.log(f"[error] Scenario '{scenario}' not found in {scenarios_dir()}.")
+            return False
+        self.scenario_dd.set_selected(stem)
+        return True
 
     # widget factory helpers
     def _add_dropdown(self, x, y, w, h, options, on_change, selected=None) -> Dropdown:
@@ -325,6 +358,7 @@ class ControlWindow(pyglet.window.Window):
         self.rerun_btn.set_enabled(active or self.engine.can_restart)
         can_save = active and (self.engine.paused or self.engine.finished) and self.engine.game_model is not None
         self.save_btn.set_enabled(bool(can_save))
+        self.edit_btn.set_enabled(active and self.engine.game_model is not None)
         self.run_btn.set_enabled(not self.rl_worker.running)
         self._hint.visible = not active
         self._sync_agent_banner()
@@ -494,6 +528,50 @@ class ControlWindow(pyglet.window.Window):
         # make the new scenario selectable without restarting
         self.scenario_dd.set_options(list_scenarios(), selected=self.scenario_dd.selected)
 
+    def _on_open_in_editor(self) -> None:
+        """Pause the run, save it as a new scenario, and open that in UMLSL-Edit.
+
+        The counterpart of UMLSL-Edit's "Simulate in UMLSL-Sim". The snapshot
+        is saved like "Save paused scenario" does, but a taken name gets a
+        numbered suffix instead of failing, so it can always be opened.
+        """
+        if self.engine.game_model is None:
+            self.log("[warn] Nothing to open — run a simulation first.")
+            return
+        if not (self.engine.paused or self.engine.finished):
+            self.engine.toggle_pause()
+            self._sync_controls()  # logs "Paused." before the save
+        name = self.name_field.value.strip() or f"{self.scenario_dd.selected}_paused"
+        try:
+            result = save_current_scenario(self.engine.game_model, name, unique=True)
+        except Exception as exc:
+            self.log(f"[error] Save failed: {exc}")
+            return
+
+        self.log(f"Saved {result.n_cars} cars to {result.path.name}.")
+        if result.n_agents:
+            self.log(f"Note: {result.n_agents} AGENT car(s) become ordinary cars in UMLSL-Edit.")
+        if result.snapped:
+            self.log(f"Note: snapped mid-crossing car(s): {', '.join(result.snapped)}.")
+        self.scenario_dd.set_options(list_scenarios(), selected=self.scenario_dd.selected)
+
+        try:
+            editor = open_in_editor(result.path)
+        except EditorNotInstalledError as exc:
+            self.log(f"[error] {exc}")
+            return
+        except OSError as exc:
+            self.log(f"[error] Could not start UMLSL-Edit: {exc}")
+            return
+        self.log(f"Opening '{result.path.stem}' in UMLSL-Edit…")
+        pyglet.clock.schedule_once(lambda _dt: self._report_editor_failure(editor), 5.0)
+
+    def _report_editor_failure(self, editor: EditorProcess) -> None:
+        """Log why UMLSL-Edit closed, if it stopped with an error right after starting."""
+        failure = editor.failure()
+        if failure is not None:
+            self.log(f"[error] {failure}")
+
     # --- rendering --------------------------------------------------------
     def on_draw(self) -> None:
         self.clear()
@@ -575,12 +653,18 @@ class ControlWindow(pyglet.window.Window):
                 self.open_dropdown = None
 
 
-def launch() -> None:
+def launch(scenario: Optional[str] = None, autorun: bool = False) -> None:
+    """Open the control window and run the pyglet event loop.
+
+    Args:
+        scenario: Scenario key to preselect (see ``ControlWindow``).
+        autorun: Start simulating the preselected scenario immediately.
+    """
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s | %(levelname)s | %(filename)s:%(lineno)s | %(message)s",
     )
-    ControlWindow()
+    ControlWindow(scenario=scenario, autorun=autorun)
     pyglet.app.run()
 
 

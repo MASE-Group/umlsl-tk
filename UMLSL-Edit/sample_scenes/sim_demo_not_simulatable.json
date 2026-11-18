@@ -1,0 +1,80 @@
+{
+  "meta": {
+    "version": 2
+  },
+  "roads": [
+    {
+      "uid": "f1228fd6-c7cf-5ebd-a1d0-439f966940f7",
+      "name": "Main",
+      "orientation": "HORIZONTAL",
+      "position": 0.0,
+      "number_of_forward_lanes": 1,
+      "number_of_backward_lanes": 1
+    },
+    {
+      "uid": "0007949a-e0d2-57a3-bb0d-dfe8426e5423",
+      "name": "Far",
+      "orientation": "HORIZONTAL",
+      "position": 13.0,
+      "number_of_forward_lanes": 1,
+      "number_of_backward_lanes": 1
+    },
+    {
+      "uid": "6ce6defe-1bb9-5d66-b937-016a2e2a1c6a",
+      "name": "Cross",
+      "orientation": "VERTICAL",
+      "position": 4.0,
+      "number_of_forward_lanes": 1,
+      "number_of_backward_lanes": 1
+    }
+  ],
+  "cars": [
+    {
+      "uid": "62bfe21e-f3d6-5e88-9d6c-33392a8f867e",
+      "name": "Edge",
+      "road_uid": "f1228fd6-c7cf-5ebd-a1d0-439f966940f7",
+      "lane_index": 0,
+      "position_on_lane": 19.3,
+      "transition": 0.0,
+      "speed": 3.0,
+      "length": 1.0,
+      "color": "#E4572E",
+      "acceleration": 0.0,
+      "next_turn": null
+    },
+    {
+      "uid": "4b25ab3a-312f-5581-b386-b0926dc88ef2",
+      "name": "P",
+      "road_uid": "f1228fd6-c7cf-5ebd-a1d0-439f966940f7",
+      "lane_index": 0,
+      "position_on_lane": -8.0,
+      "transition": 0.0,
+      "speed": 4.0,
+      "length": 1.0,
+      "color": "#17BEBB",
+      "acceleration": 0.0,
+      "next_turn": null
+    },
+    {
+      "uid": "b1156a91-80f4-5e5d-a23c-8232d403d241",
+      "name": "Q",
+      "road_uid": "f1228fd6-c7cf-5ebd-a1d0-439f966940f7",
+      "lane_index": 0,
+      "position_on_lane": -7.5,
+      "transition": 0.0,
+      "speed": 4.0,
+      "length": 1.0,
+      "color": "#FFC914",
+      "acceleration": 0.0,
+      "next_turn": null
+    }
+  ],
+  "queries": [
+    {
+      "uid": "72d237cb-c467-55b4-920d-716a880bdbb5",
+      "latex": "<hchop{re{P}}{free and l > 2}>",
+      "should_only_evaluate_on_cars_lane": false,
+      "assigned_car_uid": "4b25ab3a-312f-5581-b386-b0926dc88ef2"
+    }
+  ]
+}

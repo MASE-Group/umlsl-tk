@@ -26,6 +26,8 @@ class LoadTrafficSnapshot(Command[None]):
         self._application_controller = application_controller
         self.loaded_external = False
         """True when the opened file was in the UMLSL-Sim interchange format."""
+        self.notes: list[str] = []
+        """For an interchange file: what the import changed to fit the editor."""
 
     def execute(self) -> None:
         """Loads a traffic_snapshot from the specified file path and
@@ -59,7 +61,7 @@ class LoadTrafficSnapshot(Command[None]):
 
         try:
             if self.loaded_external:
-                ExternalPersistenceService.deserialize(
+                self.notes = ExternalPersistenceService.deserialize(
                     payload,
                     new_snapshot,
                     new_snapshot,

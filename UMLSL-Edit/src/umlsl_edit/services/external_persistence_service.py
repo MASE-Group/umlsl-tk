@@ -1,7 +1,7 @@
+import math
+import re
 import uuid
 from typing import Any, Final
-
-from PIL import ImageColor
 
 from umlsl_edit.model.domain_models.settings_model import SettingsModel
 from umlsl_edit.model.domain_models.traffic_snapshot_model import (
@@ -13,37 +13,35 @@ from umlsl_edit.model.domain_models.traffic_snapshot_reader import (
 from umlsl_edit.model.domain_models.traffic_snapshot_writer import (
     TrafficSnapshotWriter,
 )
+from umlsl_edit.query.lexer import TokenType
+from umlsl_edit.services.simulator_scenario import (
+    HEIGHT_LANES,
+    UNIT,
+    WIDTH_LANES,
+    _Network,
+    build_simulator_scenario,
+    removable_border_roads,
+    sim_road,
+    unmap_lane,
+    unmap_position,
+    unmap_road,
+    unmap_turn,
+)
 
 
 class ExternalPersistenceService:
     """
     Handles saving/loading JSON payloads to and from Simulator.
 
-                            Editor          vs             Simulator
-
-                                                        right   left
-    lane indexing :    -3 -2 -1 | 0 1 2                 0 1 2 | 0 1 2
-                    -3          ^                   2   ^
-                    -2          |            left   1   |
-                    -1                              0
-                -> ---                             ---
-                    0                               2
-                    1                        right  1
-                    2                            -> 0
-
-                (Arrows show the saved position of the road.)
-
-    Unit/Lane size: 1 unit = 1;                        1 unit = 40
-    canvas size:    "infinite", but view is limited;   height: 24 lanes, width: 40 lanes
-    Origin:         center of screen, draggable;       bottom left
-    Colors:         hex, "lightblue";                  rgb
-    Max Speed:      one max speed for all;             one per car
-    Turning:        explicitly through turn intend;    implicitly through goal
+    The coordinate, unit and lane-order mapping between the two tools is
+    described, and implemented, in ``umlsl_edit.services.simulator_scenario``.
+    Writing goes through ``build_simulator_scenario``; reading inverts the same
+    mapping here.
     """
 
-    HEIGHT_SIMULATOR:Final[int] = 24
-    WIDTH_SIMULATOR:Final[int] = 40
-    UNIT_SIZE:Final[int] = 40
+    HEIGHT_SIMULATOR: Final[int] = HEIGHT_LANES
+    WIDTH_SIMULATOR: Final[int] = WIDTH_LANES
+    UNIT_SIZE: Final[int] = UNIT
 
     @staticmethod
     def is_external_payload(data: Any) -> bool:
@@ -71,231 +69,16 @@ class ExternalPersistenceService:
     def serialize(
             snapshot: TrafficSnapshotModel,
             filename: str,
+            max_speed: float | None = None,
     ) -> dict[str, Any]:
         """
         Serialize snapshot to the external JSON format (e.g., 'two_crossings_predefined').
+
+        This returns the payload only. Use
+        ``simulator_scenario.build_simulator_scenario`` to also learn whether
+        UMLSL-Sim can run it.
         """
-        snapshot_data = snapshot.to_dict()
-
-        internal_roads = snapshot_data.get("roads", [])
-        internal_cars = snapshot_data.get("cars", [])
-
-        external_roads = []
-
-        # saving these for easy lookup when serializing cars
-        road_uid_to_name = {}
-        road_uid_to_orientation = {}
-        road_uid_to_right_lanes = {}
-        road_uid_to_left_lanes = {}
-        road_uid_to_position = {}
-
-        for r in internal_roads:
-            road_name = r.get("name", "unknown")
-            road_uid_to_name[r.get("uid")] = road_name
-
-            orientation = r.get("orientation") == "HORIZONTAL"
-            road_uid_to_orientation[r.get("uid")] = orientation
-
-            # offsetting position so that 0,0 is in the bottom left corner and not in the center
-            offset = ExternalPersistenceService.HEIGHT_SIMULATOR/2 if orientation else ExternalPersistenceService.WIDTH_SIMULATOR/2
-            top = (r.get("position", 0.0) + offset)
-
-            right = r.get("number_of_forward_lanes", 0)
-            left = r.get("number_of_backward_lanes", 0)
-
-            road_uid_to_right_lanes[r.get("uid")] = right
-            road_uid_to_left_lanes[r.get("uid")] = left
-
-            # adjusting position so it is the minimum x/y coordinate and not the center of the road
-            if orientation:
-                top -= right
-            else:
-                (right, left) = (left, right)
-                top -= left
-
-            road_uid_to_position[r.get("uid")] = top
-
-            # scaling position so one lane is 40 units wide
-            top *= ExternalPersistenceService.UNIT_SIZE
-
-
-            external_roads.append(
-                {
-                    "name": road_name,
-                    "horizontal": orientation,
-                    "top": top,
-                    "right": r.get("number_of_forward_lanes", 0),
-                    "left": r.get("number_of_backward_lanes", 0),
-                }
-            )
-
-        if not any(r.get("name") in ["bottom", "right", "top", "left"] for r in external_roads):
-            # if no border roads are present, add them. Needed in simulator.
-            border_roads = [
-                {"name": "bottom", "horizontal": True, "top": 0, "right": 1, "left": 0},
-                {"name": "right", "horizontal": False, "top": (ExternalPersistenceService.WIDTH_SIMULATOR-1)*ExternalPersistenceService.UNIT_SIZE, "right": 0, "left": 1},
-                {"name": "top", "horizontal": True, "top": (ExternalPersistenceService.HEIGHT_SIMULATOR-1)*ExternalPersistenceService.UNIT_SIZE, "right": 0, "left": 1},
-                {"name": "left", "horizontal": False, "top": 0, "right": 1, "left": 0},
-            ]
-            external_roads.extend(border_roads)
-
-        external_cars = []
-        # A snapshot may legitimately contain no cars at all, so max() needs a default.
-        space_after_crossing = max(
-            (c.get("length", 1.0) for c in internal_cars), default=1.0
-        ) + 0.01
-
-        for c in internal_cars:
-            road_uid = c.get("road_uid")
-            road_name = road_uid_to_name.get(road_uid, "unknown")
-
-            lane_index = c.get("lane_index", 0)
-            lane = lane_index if lane_index >= 0 else abs(lane_index) - 1
-
-            offset = ExternalPersistenceService.WIDTH_SIMULATOR/2 if road_uid_to_orientation.get(road_uid) else ExternalPersistenceService.HEIGHT_SIMULATOR/2
-            position = (c.get("position_on_lane", 0.0) + offset) * ExternalPersistenceService.UNIT_SIZE
-
-            # Determine direction based on lane_index (negative index indicates backward/left lane)
-            direction = "right" if c.get("lane_index", 0) >= 0 else "left"
-            if not road_uid_to_orientation.get(road_uid):
-                direction = "right" if direction == "left" else "left"
-
-            # switch lane index for roads with direction "right" (so lane 0 to lane 2 becomes lane 2 to lane 0)
-            if direction == "right":
-                # get the number of right lanes for the road that this car is on
-                num_of_right_lanes = road_uid_to_right_lanes.get(road_uid)
-                # switch lane index for roads with direction "right"
-                lane = num_of_right_lanes - lane - 1
-
-
-            start = {
-                "road": road_name,
-                "direction": direction,
-                "lane": lane,
-                "position": position
-            }
-
-            color = ImageColor.getrgb(c.get("color", "green"))
-
-            # turn_intend -> goal. So goal is the position right after the next turn
-            next_turn = c.get("next_turn")
-
-            if next_turn and next_turn.get("direction", 2)!= 2:
-                target_lane = next_turn.get("target_lane", {})
-                target_road_uid = target_lane.get("road_uid")
-                target_lane_index = target_lane.get("lane_index", 0)
-
-                turn_direction = next_turn.get("direction")
-
-                after_turn_car_direction = "right" if target_lane_index >= 0 else "left"
-                if not road_uid_to_orientation.get(target_road_uid):
-                    after_turn_car_direction = "right" if after_turn_car_direction == "left" else "left"
-
-                turn_road_name = road_uid_to_name.get(target_road_uid, "unknown")
-
-                #same lane index conversion like the car lane
-                turn_lane = target_lane_index if target_lane_index >= 0 else abs(target_lane_index) - 1
-
-
-                if after_turn_car_direction == "right":
-                    num_of_right_lanes = road_uid_to_right_lanes.get(target_road_uid)
-                    turn_lane = num_of_right_lanes - turn_lane - 1
-
-                # adding the width of the road to the minimum x/y pos of the road to get the correct position after the turn
-                # but only if the car turns to the far side of the road
-                # also adding a very small offset after the turn so the position is in the correct segment
-
-                # road_uid_to_orientation holds booleans (True == horizontal), not the
-                # "HORIZONTAL"/"VERTICAL" strings of the native format.
-                cars_is_horizontal = bool(road_uid_to_orientation.get(road_uid))
-                car_is_on_positive_axis_lane = (cars_is_horizontal and direction == "right") or (not cars_is_horizontal and direction == "left")
-
-                if (car_is_on_positive_axis_lane and turn_direction == "RIGHT") or (not car_is_on_positive_axis_lane and turn_direction == "LEFT"):
-                    turn_offset =  road_uid_to_right_lanes.get(road_uid, 0) + road_uid_to_left_lanes.get(road_uid, 0) + space_after_crossing
-                else:
-                    turn_offset = -space_after_crossing
-
-
-                # The position right after the next turn defaults to the start of the lane (position_on_lane = 0.0)
-                turn_position = road_uid_to_position.get(road_uid, 0) + turn_offset
-                turn_position *= ExternalPersistenceService.UNIT_SIZE
-            else:
-                # If straight, use current lane and direction but offset the position so it is over the next crossing
-                turn_road_name = road_name
-                after_turn_car_direction = direction
-                turn_lane = lane
-
-                car_orientation = road_uid_to_orientation.get(road_uid)
-
-                roads_in_other_direction = {
-                    uid: is_horizontal
-                    for uid, is_horizontal in road_uid_to_orientation.items()
-                    if is_horizontal != car_orientation
-                }
-
-                #find next road in other direction
-                car_drives_in_positive_direction = c.get("lane_index", 0) >= 0
-                next_road_uid = None
-                cpos = position/ExternalPersistenceService.UNIT_SIZE
-
-                #finds the next road crossing in the positive direction and calculates the position after the turn with the position of the road + the width of the road + a small offset
-                if car_drives_in_positive_direction:
-                    next_road_position = float('inf')
-                    for uid in roads_in_other_direction:
-                        pos = road_uid_to_position.get(uid)
-                        if pos > cpos and pos < next_road_position:
-                            next_road_position = pos
-                            next_road_uid = uid
-
-                    # if no road found, use current position as crossing point
-                    if not next_road_uid:
-                        pos_after_crossing = cpos
-                    else:
-                        pos_after_crossing = next_road_position + road_uid_to_left_lanes.get(next_road_uid) + road_uid_to_right_lanes.get(next_road_uid) + space_after_crossing
-
-                # find the next road crossing in the negative direction and calculate the position after the turn with the position of the road - a small offset
-                else:
-                    next_road_position = float('-inf')
-                    for uid in roads_in_other_direction:
-                        pos = road_uid_to_position.get(uid) - road_uid_to_left_lanes.get(uid) - road_uid_to_right_lanes.get(uid)
-                        if pos < cpos and road_uid_to_position.get(uid) > next_road_position:
-                            next_road_position = road_uid_to_position.get(uid)
-                            next_road_uid = uid
-
-                    # if no road found, use current position as crossing point
-                    if not next_road_uid:
-                        pos_after_crossing = cpos
-                    else:
-                        pos_after_crossing = next_road_position - space_after_crossing
-
-                turn_position = pos_after_crossing * ExternalPersistenceService.UNIT_SIZE
-
-            turn_goal = {
-                "road": turn_road_name,
-                "direction": after_turn_car_direction,
-                "lane": turn_lane,
-                "position": turn_position
-            }
-
-
-            external_cars.append({
-                "type": "NPC",
-                "name": c.get("name", ""),
-                "start": start,
-                "first_goal": turn_goal,
-                "color": color,
-                "size": c.get("length", 1.0)*ExternalPersistenceService.UNIT_SIZE,
-                "speed": c.get("speed", 0.0),
-                "max_speed": c.get("speed", 0.0),
-            })
-
-        return {
-            "name": filename.upper(),
-            "scenario_name": filename.lower(), #TODO: Remove scenario_name
-            "players": len(external_cars),
-            "roads": external_roads,
-            "cars": external_cars
-        }
+        return build_simulator_scenario(snapshot.to_dict(), filename, max_speed).payload
 
     @staticmethod
     def deserialize(
@@ -303,68 +86,94 @@ class ExternalPersistenceService:
             traffic_snapshot_writer: TrafficSnapshotWriter,
             traffic_snapshot_reader: TrafficSnapshotReader,
             settings_model: SettingsModel
-    ) -> None:
+    ) -> list[str]:
         """
         Populate snapshot from the external JSON format.
+
+        Each step inverts the matching step of ``build_simulator_scenario``:
+
+        * Roads and lanes go back through ``unmap_road`` and ``unmap_lane``.
+        * A car's turn intent comes from ``unmap_turn``. The target is the
+          car's ``next_lane``, which UMLSL-Sim writes from the car's planned
+          route. Without one, the target is its ``first_goal``, which is where
+          the export puts the goal of a turning car. Goals beyond the next
+          crossing cannot be expressed, so those cars go straight on.
+        * Border roads that no car uses are left out when exporting would add
+          exactly the same road again (``removable_border_roads``).
+
+        Three rules of the editor have no counterpart in UMLSL-Sim, so the
+        data is adjusted to fit them:
+
+        * A car whose rear lies exactly on the edge of a crossing moves 1 px
+          into its lane segment, because the editor counts the edge as part of
+          the crossing.
+        * A car or road name that contains a UMLSL token is upper-cased (see
+          ``_make_names_valid``).
+        * The global maximum speed grows until every car's braking distance
+          plus its length fits in the global braking distance (see
+          ``_max_speed_for``).
+
+        Returns:
+            One sentence for each kind of change the user should know about:
+            renamed cars or roads, a higher global maximum speed, and cars
+            whose planned move the editor cannot show. Empty if none applies.
         """
 
         ext_roads = data.get("roads", [])
         ext_cars = data.get("cars", [])
+        original_max_speed = settings_model.max_speed
+
+        sim_roads = [sim_road(r) for r in ext_roads]
+        sim_road_by_name = {r.name: r for r in sim_roads}
+        network = _Network(sim_roads)
+
+        def start_of(car: dict[str, Any]) -> dict[str, Any]:
+            start = dict(car.get("start", {}))
+            # "down" is an old name for the "right" lane group.
+            start["direction"] = "right" if start.get("direction", "right") in ("right", "down") else "left"
+            return start
+
+        turns = [
+            unmap_turn(start_of(c), c["next_lane"] if "next_lane" in c else c.get("first_goal"), network)
+            for c in ext_cars
+        ]
+        used = {start_of(c).get("road", "") for c in ext_cars} | {t.road for t in turns if t is not None}
+        left_out = removable_border_roads(sim_roads, used)
 
         internal_roads = []
         road_name_to_uid = {}
-        road_uid_to_horizontal = {}
-
-        for r in ext_roads:
+        for road in sim_roads:
+            if road.name in left_out:
+                continue
             road_uid = str(uuid.uuid4())
-            road_name = r.get("name", "")
-            road_name_to_uid[road_name] = road_uid
-
-            horizontal = bool(r.get("horizontal"))
-            road_uid_to_horizontal[road_uid] = horizontal
-
-            # Reverse road position calculation: top = (position + offset) * 40
-            road_offset = ExternalPersistenceService.HEIGHT_SIMULATOR/2 if horizontal else ExternalPersistenceService.WIDTH_SIMULATOR/2
-            position = (r.get("top", 0.0) / ExternalPersistenceService.UNIT_SIZE) - road_offset
-
-            number_of_forward_lanes = r.get("right", 0)
-            number_of_backward_lanes = r.get("left", 0)
-
-            # Offset position because position of road is middle lane and not minimum x/y coordinate
-            if horizontal:
-                position += number_of_forward_lanes
-            else:
-                (number_of_forward_lanes, number_of_backward_lanes) = (number_of_backward_lanes, number_of_forward_lanes)
-                position += number_of_backward_lanes
-
-            internal_roads.append({
-                "uid": road_uid,
-                "name": road_name,
-                "orientation": "HORIZONTAL" if horizontal else "VERTICAL",
-                "position": position,
-                "number_of_forward_lanes": number_of_forward_lanes,
-                "number_of_backward_lanes": number_of_backward_lanes
-            })
+            road_name_to_uid[road.name] = road_uid
+            internal_roads.append({"uid": road_uid, "name": road.name, **unmap_road(road)})
 
         internal_cars = []
-        for idx, c in enumerate(ext_cars):
-            start = c.get("start", {})
+        for idx, (c, turn) in enumerate(zip(ext_cars, turns)):
+            start = start_of(c)
             road_name = start.get("road", "")
-            direction = start.get("direction", "right")
-            lane_val = start.get("lane", 0)
             road_uid = road_name_to_uid.get(road_name, "")
+            road = sim_road_by_name.get(road_name)
+            horizontal = road.horizontal if road is not None else False
 
-            # Reverse lane_index calculation
-            if (direction in ["right", "down"] and road_uid_to_horizontal.get(road_uid)) or (direction in ["left", "up"] and not road_uid_to_horizontal.get(road_uid)):
-                lane_index = lane_val
-            else:
-                lane_index = -(lane_val + 1)
+            lane_index = unmap_lane(
+                horizontal,
+                road.right if road is not None else 0,
+                start["direction"],
+                int(start.get("lane", 0)),
+            )
+            position = float(start.get("position", 0.0))
+            if road is not None:
+                position = _off_crossing_edge(network.segments_along(road), position)
+            position_on_lane = unmap_position(horizontal, position)
 
-            # Reverse car position calculation: position = (position_on_lane + offset) * 40
-            horizontal = road_uid_to_horizontal.get(road_uid, False)
-            car_offset = ExternalPersistenceService.WIDTH_SIMULATOR/2 if horizontal else ExternalPersistenceService.HEIGHT_SIMULATOR/2
-            ext_position = start.get("position", 0.0)
-            position_on_lane = (ext_position / ExternalPersistenceService.UNIT_SIZE) - car_offset
+            next_turn = None
+            if turn is not None:
+                next_turn = {
+                    "direction": turn.direction,
+                    "target_lane": {"road_uid": road_name_to_uid[turn.road], "lane_index": turn.lane_index},
+                }
 
             # Reverse color calculation: RGB tuple back to hex string
             ext_color = c.get("color", (173, 216, 230))
@@ -388,10 +197,20 @@ class ExternalPersistenceService:
                 "length": length,
                 "color": color,
                 "acceleration": 1.0,
-                "next_turn": None
+                "next_turn": next_turn,
             })
             if c.get("max_speed", 0.0) > settings_model.max_speed:
                 settings_model.max_speed = c.get("max_speed")
+
+        # Checked before renaming, so the notes use the names from UMLSL-Sim.
+        straight_instead = [
+            str(c.get("name", "")) for c, turn in zip(ext_cars, turns)
+            if turn is None and "next_lane" in c and _lane_of(c["next_lane"]) != _lane_of(start_of(c))
+        ]
+        renamed = _make_names_valid(internal_roads + internal_cars)
+        required = _max_speed_for(internal_cars, settings_model.braking_acceleration)
+        if required > settings_model.max_speed:
+            settings_model.max_speed = required
 
         TrafficSnapshotModel.from_dict(
             {"roads": internal_roads, "cars": internal_cars},
@@ -399,3 +218,94 @@ class ExternalPersistenceService:
             traffic_snapshot_reader,
             settings_model
         )
+
+        notes = []
+        if renamed:
+            notes.append("Names that contain a UMLSL token were changed: "
+                         + ", ".join(f"{old} → {new}" for old, new in renamed) + ".")
+        if settings_model.max_speed > original_max_speed:
+            notes.append(f"The global maximum speed went up from {original_max_speed:g} to "
+                         f"{settings_model.max_speed:g}, so that every car's braking distance fits.")
+        if straight_instead:
+            notes.append("UMLSL-Edit cannot show the next move of " + ", ".join(straight_instead)
+                         + " as a turn at the next crossing (for example a U-turn, a lane change in a"
+                         " crossing, or a route across the canvas edge), so they go straight on.")
+        return notes
+
+
+EDGE_NUDGE: Final[int] = 1
+"""How far, in simulator pixels, a car on the edge of a crossing moves into its lane."""
+
+
+def _off_crossing_edge(segments: list[tuple[int, int]], position: float) -> float:
+    """
+    ``position`` moved ``EDGE_NUDGE`` into its lane segment if it lies on an end of one.
+
+    UMLSL-Sim counts both ends of a lane segment as part of it, while the editor
+    puts them in the neighbouring crossing and refuses a car there.
+    """
+    for low, high in segments:
+        if position == low:
+            return position + EDGE_NUDGE
+        if position == high:
+            return position - EDGE_NUDGE
+    return position
+
+
+def _lane_of(ref: dict[str, Any]) -> tuple[Any, Any, int]:
+    return ref.get("road"), ref.get("direction"), int(ref.get("lane", 0))
+
+
+def _has_token(name: str) -> bool:
+    return any(token.value in name for token in TokenType)
+
+
+def _make_names_valid(entities: list[dict[str, Any]]) -> list[tuple[str, str]]:
+    """
+    Rename, in place, every road and car whose name the editor refuses.
+
+    The editor refuses names that contain a UMLSL token anywhere, such as the
+    "re" in "Green". Every word token is lower case, so such a name is
+    upper-cased: "Green" becomes "GREEN". Characters other than letters, digits
+    and "_" become "_". A name that is still taken, or still contains a token,
+    gets a numbered suffix or, last, a generic name. Names that the editor
+    accepts are kept as they are.
+
+    Returns:
+        The (old, new) pairs of every renamed entity.
+    """
+    renamed = []
+    taken = {e["name"] for e in entities if not _has_token(e["name"])}
+    for index, entity in enumerate(entities, start=1):
+        name = entity["name"]
+        if not _has_token(name):
+            continue
+        base = re.sub(r"[^0-9A-Za-z_]+", "_", name).upper().strip("_")
+        if not base or _has_token(base):
+            base = f"N{index}"
+        candidate, n = base, 2
+        while candidate in taken:
+            candidate, n = f"{base}_{n}", n + 1
+        taken.add(candidate)
+        entity["name"] = candidate
+        renamed.append((name, candidate))
+    return renamed
+
+
+def _max_speed_for(cars: list[dict[str, Any]], braking_acceleration: float) -> float:
+    """
+    The smallest whole maximum speed at which the editor accepts every car.
+
+    The editor requires ``speed² / (2·a) + length <= max_speed² / (2·a)``, so a
+    car that drives at the maximum speed never fits. UMLSL-Sim has no such
+    rule. Returns 0 when there are no cars.
+    """
+    required = 0
+    for car in cars:
+        speed, length = float(car["speed"]), float(car["length"])
+        needed = math.ceil(math.sqrt(speed * speed + 2.0 * braking_acceleration * length))
+        # Guard against rounding: the editor compares the unrounded values.
+        while speed * speed / (2.0 * braking_acceleration) + length > needed * needed / (2.0 * braking_acceleration):
+            needed += 1
+        required = max(required, needed)
+    return required

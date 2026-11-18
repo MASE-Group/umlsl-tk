@@ -23,6 +23,7 @@ from typing import Dict, List, Optional, Tuple
 from umlsl_sim.simulation.car import Car
 from umlsl_sim.simulation.traffic_environment import TrafficEnv
 from umlsl_sim.simulation.road_network.road_network import (
+    CrossingSegment,
     Goal,
     LaneSegment,
     Road,
@@ -80,8 +81,36 @@ def _goal_ref(goal: Optional[Goal]) -> Optional[Dict]:
     return _position_ref(seg, axis_pos)
 
 
+def _next_lane_segment(car: Car, reservation_management, start: LaneSegment) -> Optional[LaneSegment]:
+    """The lane segment ``car`` enters after its next crossing, from its planned route.
+
+    The route is what the car has reserved from ``start`` on, continued with
+    A* towards its goal, the way ``Car.get_next_segment`` plans it. ``None`` if
+    the car has no route past the crossing.
+    """
+    route = [info.segment for info in reservation_management.get_car_reservations(car.id)]
+    route = route[route.index(start):] if start in route else [start]
+    goal = car.second_goal if car.goal is not None and car.goal.lane_segment is start else car.goal
+    if goal is not None:
+        route += car.astar(reservations_management=reservation_management,
+                           start_seg=route[-1], goal=goal)[1:]
+    crossed = False
+    for segment in route[1:]:
+        if isinstance(segment, CrossingSegment):
+            crossed = True
+        elif crossed and isinstance(segment, LaneSegment):
+            return segment
+    return None
+
+
 def car_to_spec(car: Car, reservation_management) -> Dict:
-    """Return the predefined-car spec dict for ``car``'s current state."""
+    """Return the predefined-car spec dict for ``car``'s current state.
+
+    Besides what the loader reads, the spec carries ``next_lane``: the lane the
+    car enters after its next crossing, at that lane segment's midpoint.
+    UMLSL-Sim ignores it. UMLSL-Edit reads it as the car's turn intent, because
+    the goals alone do not say where the car turns next.
+    """
     segment, loc = _first_lane_segment(car, reservation_management)
     position = segment.begin + loc
     spec: Dict = {
@@ -99,6 +128,10 @@ def car_to_spec(car: Car, reservation_management) -> Dict:
     second_goal = _goal_ref(car.second_goal)
     if second_goal is not None:
         spec["second_goal"] = second_goal
+    next_lane = _next_lane_segment(car, reservation_management, segment)
+    if next_lane is not None:
+        midpoint = (min(next_lane.begin, next_lane.end) + max(next_lane.begin, next_lane.end)) // 2
+        spec["next_lane"] = _position_ref(next_lane, midpoint)
     return spec
 
 
@@ -117,6 +150,14 @@ def sanitize_stem(name: str) -> str:
     return stem or "scenario"
 
 
+def unique_stem(stem: str, out_dir: Path) -> str:
+    """``stem``, or ``stem_2``, ``stem_3``, … : the first one with no file in ``out_dir``."""
+    candidate, n = stem, 2
+    while (out_dir / f"{candidate}.json").exists():
+        candidate, n = f"{stem}_{n}", n + 1
+    return candidate
+
+
 @dataclass
 class SaveResult:
     path: Path
@@ -130,10 +171,14 @@ def save_current_scenario(
     display_name: str,
     out_dir: Optional[Path] = None,
     overwrite: bool = False,
+    unique: bool = False,
 ) -> SaveResult:
     """Write ``game_model``'s current state to ``<stem>.json`` and return a
     :class:`SaveResult`. Raises ``FileExistsError`` if the target exists and
-    ``overwrite`` is False, ``ValueError`` on an empty world."""
+    ``overwrite`` is False, ``ValueError`` on an empty world.
+
+    With ``unique``, a taken name gets the first free suffix (``_2``, ``_3``, …)
+    instead, so the save never fails or replaces a file."""
     rm = game_model.reservation_management
     cars = list(game_model.cars)
     if not cars:
@@ -142,6 +187,8 @@ def save_current_scenario(
     out_dir = out_dir or _scenarios_dir()
     out_dir.mkdir(parents=True, exist_ok=True)
     stem = sanitize_stem(display_name)
+    if unique:
+        stem = unique_stem(stem, out_dir)
     path = out_dir / f"{stem}.json"
     if path.exists() and not overwrite:
         raise FileExistsError(str(path))
