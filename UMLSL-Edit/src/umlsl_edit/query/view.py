@@ -47,6 +47,8 @@ class View:
                  reserved_segments: dict[str, dict[SegmentInterval, Interval]],
                  claimed_segments: dict[str, dict[SegmentInterval, Interval]],
                  cars_in_view: list[str],
+                 lane_range: tuple[int, int] | None = None,
+                 memo: dict | None = None,
                  ):
         self.virtual_lanes = virtual_lanes
         self.segments_in_view = segments_in_view
@@ -55,6 +57,17 @@ class View:
         # the cars (uids) whose reservation or claim overlaps ego's whole view, which the quantifiers
         # range over in every observed space; unlike the other data, it does not shrink on chops
         self.cars_in_view = cars_in_view
+
+        # Below the root, an observed space is determined by its horizon and by the slice of the root's
+        # virtual lanes it spans: a horizontal chop keeps the slice and filters the lanes' segments by
+        # the new horizon, a vertical chop keeps the horizon and narrows the slice, and filtering by a
+        # horizon after filtering by a wider one is the same as filtering by it alone. The root is
+        # built differently (its lanes are not filtered), so its lane_range is None, which no chopped
+        # View has. `memo` is shared by every View chopped from the same root, so a subformula decided
+        # on an observed space is not decided again when another chop reaches the same space (see
+        # HorizontalChopNode).
+        self.lane_range = lane_range
+        self.memo = {} if memo is None else memo
 
         self._lazy_visible_cars = LazyEvaluator(
             visible_cars,
@@ -77,11 +90,13 @@ class View:
         Returns:
             left, right: where left is the left View and right is the right View
         """
+        lane_range = self.lane_range or (0, len(self.virtual_lanes))
+
         left_horizon = Interval(self.horizon.start, split)
-        left_view = self._construct_view(left_horizon, self.virtual_lanes)
+        left_view = self._construct_view(left_horizon, self.virtual_lanes, lane_range)
 
         right_horizon = Interval(split, self.horizon.end)
-        right_view = self._construct_view(right_horizon, self.virtual_lanes)
+        right_view = self._construct_view(right_horizon, self.virtual_lanes, lane_range)
 
         return left_view, right_view
 
@@ -93,15 +108,19 @@ class View:
         Returns:
             lower, upper: where lower is the lower View and upper is the upper View
         """
+        # the slice of the root's virtual lanes each part spans; the root spans all of them
+        low, high = self.lane_range or (0, len(self.virtual_lanes))
+
         lower_lanes = self.virtual_lanes[:split]  # take all lanes whose index is < split_index
-        lower_view = self._construct_view(self.horizon, lower_lanes)
+        middle = low + len(lower_lanes)
+        lower_view = self._construct_view(self.horizon, lower_lanes, (low, middle))
 
         upper_lanes = self.virtual_lanes[split:]
-        upper_view = self._construct_view(self.horizon, upper_lanes)
+        upper_view = self._construct_view(self.horizon, upper_lanes, (middle, high))
 
         return lower_view, upper_view
 
-    def _construct_view(self, horizon: Interval, lanes: list[VirtualLane]) -> 'View':
+    def _construct_view(self, horizon: Interval, lanes: list[VirtualLane], lane_range: tuple[int, int]) -> 'View':
         segments_in_view: list[SegmentInterval] = []
         new_virtual_lanes: list[VirtualLane] = []
 
@@ -128,7 +147,9 @@ class View:
             self._lazy_visible_cars.data,
             self._lazy_reserved_segments.data,
             self._lazy_claimed_segments.data,
-            self.cars_in_view
+            self.cars_in_view,
+            lane_range,
+            self.memo,
         )
 
     def _compute_visible_cars_in_view(self, old_cars: dict[str, dict[SegmentInterval, Interval]]):

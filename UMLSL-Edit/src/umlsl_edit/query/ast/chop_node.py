@@ -37,11 +37,26 @@ class HorizontalChopNode(BinaryNode):
             return cls(operands[0], cls.create_nested_hchop(operands[1:]))
 
     def evaluate(self, traffic_snapshot: "TrafficSnapshotModel", view: View, variable_car_map: dict[str, Car]) -> bool:
+        # Nested chops reach the same observed space through many splits of the enclosing chops (in a
+        # left-nested chain every split of the outer chop re-decides the inner one on a prefix the
+        # previous split already tried), so the verdict is remembered per observed space (see View) and
+        # binding of the variables. The cars are named by uid; the binding of a node always lists the
+        # variables of the quantifiers above it in the same order.
+        horizon = view.horizon
+        binding = tuple((variable, car.uid) for variable, car in variable_car_map.items()) if variable_car_map else ()
+        key = (self, horizon.start, horizon.end, view.lane_range, binding)
+        memo = view.memo
+        verdict = memo.get(key)
+        if verdict is not None:
+            return verdict
+
+        verdict = False
         for split in self.critical_points(view):
             if self.evaluate_at_split(view, traffic_snapshot, variable_car_map, split):
-                return True
-
-        return False
+                verdict = True
+                break
+        memo[key] = verdict
+        return verdict
 
     def critical_points(self, view: View) -> list[float]:
         """
