@@ -1,0 +1,22 @@
+{
+  "name": "umlsl-tk-sbmf2026-talk",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "slidev --open",
+    "build": "slidev build",
+    "qr": "node scripts/make-qr.mjs",
+    "export": "slidev export --output umlsl-tk-sbmf2026.pdf --timeout 60000",
+    "export:clicks": "slidev export --with-clicks --output umlsl-tk-sbmf2026-clicks.pdf --timeout 60000",
+    "check": "node scripts/check-overflow.mjs"
+  },
+  "dependencies": {
+    "@fontsource/libre-franklin": "^5.2.5",
+    "@slidev/cli": "^53.1.0",
+    "@slidev/theme-default": "latest"
+  },
+  "devDependencies": {
+    "playwright-chromium": "^1.55.0",
+    "qrcode": "^1.5.4"
+  }
+}
