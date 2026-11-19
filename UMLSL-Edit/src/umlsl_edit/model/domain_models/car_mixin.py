@@ -80,7 +80,9 @@ class CarMixin:
             )
         car.update_from_params(car_params, self, self.settings_model)
         self.cars[car_uid] = car
-        self._revalidate_cars()
+        # only this car can have changed (see add_car); revalidating all of them also notified every
+        # other car as updated, and the canvas redraws a car's segments on each such notification
+        self._revalidate_cars([car])
 
     def _revalidate_cars(self: "TrafficSnapshotModel", cars: list[Car] | None = None):
         """Revalidates the given cars (all of them by default) and recomputes their environments."""
