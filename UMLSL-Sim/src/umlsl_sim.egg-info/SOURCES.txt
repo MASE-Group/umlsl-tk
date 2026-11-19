@@ -39,6 +39,7 @@ src/umlsl_sim/gui/colors/map_colors.py
 src/umlsl_sim/gui/control/__init__.py
 src/umlsl_sim/gui/control/__main__.py
 src/umlsl_sim/gui/control/app.py
+src/umlsl_sim/gui/control/editor_launcher.py
 src/umlsl_sim/gui/control/rl_support.py
 src/umlsl_sim/gui/control/scenario_saver.py
 src/umlsl_sim/gui/control/scene_renderer.py
@@ -92,6 +93,7 @@ src/umlsl_sim/scenario/scenarios/left_right_overtake.json
 src/umlsl_sim/scenario/scenarios/left_right_overtake_2.json
 src/umlsl_sim/scenario/scenarios/one_crossing.json
 src/umlsl_sim/scenario/scenarios/one_road.json
+src/umlsl_sim/scenario/scenarios/sim_demo_one_crossing.json
 src/umlsl_sim/scenario/scenarios/starting_scenario.json
 src/umlsl_sim/scenario/scenarios/two_crossings.json
 src/umlsl_sim/scenario/scenarios/two_crossings_predefined.json
@@ -113,12 +115,14 @@ src/umlsl_sim/simulation/reservations/reservation_management.py
 src/umlsl_sim/simulation/reservations/segment_occupancy_tracker.py
 src/umlsl_sim/simulation/road_network/__init__.py
 src/umlsl_sim/simulation/road_network/road_network.py
+tests/test_app_run_control_gui.py
 tests/test_control_action_shield.py
 tests/test_control_astar.py
 tests/test_control_safety_controller.py
 tests/test_factories_car_spec.py
 tests/test_factories_create_cars.py
 tests/test_factories_create_segments.py
+tests/test_gui_control_editor_hand_off.py
 tests/test_reservations.py
 tests/test_road_network.py
 tests/test_simulation_car.py

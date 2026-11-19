@@ -1,0 +1,43 @@
+23:50  up 3 days, 13:20, 3 users, load averages: 7.34 6.07 5.95
+[uniform] 2 cars in view (40 in the scenario)
+    F1               10.3 ms  (n=15, 9.5..31.6)  -> True
+    F2               37.2 ms  (n=15, 36.4..45.9)  -> True
+    F3               80.9 ms  (n=15, 77.5..102.5)  -> True
+    F4               82.4 ms  (n=15, 78.9..104.4)  -> True
+[uniform] 4 cars in view (40 in the scenario)
+    F1               22.0 ms  (n=15, 20.0..41.3)  -> True
+    F2              179.2 ms  (n=15, 172.9..218.6)  -> True
+    F3              221.8 ms  (n=15, 211.6..246.0)  -> True
+    F4              217.9 ms  (n=15, 207.9..248.0)  -> True
+[uniform] 6 cars in view (40 in the scenario)
+    F1               27.5 ms  (n=15, 25.8..49.5)  -> True
+    F2              448.7 ms  (n=15, 436.4..478.9)  -> True
+    F3              336.4 ms  (n=15, 326.6..377.0)  -> True
+    F4              335.7 ms  (n=15, 328.5..373.0)  -> True
+[uniform] 8 cars in view (40 in the scenario)
+    F1               59.7 ms  (n=15, 57.7..84.7)  -> True
+    F2             1143.6 ms  (n=15, 1121.3..1242.2)  -> True
+    F3              879.7 ms  (n=15, 863.0..909.4)  -> True
+    F4              878.4 ms  (n=15, 867.2..918.8)  -> True
+[uniform] 10 cars in view (40 in the scenario)
+    F1               71.7 ms  (n=15, 67.3..91.6)  -> True
+    F2             1630.9 ms  (n=15, 1612.7..1664.8)  -> True
+    F3             1126.7 ms  (n=15, 1101.1..1260.6)  -> True
+    F4             1121.0 ms  (n=15, 1102.5..1164.1)  -> True
+23:53  up 3 days, 13:22, 3 users, load averages: 5.81 5.72 5.81
+[uniform] 2 cars in view (40 in the scenario)
+    F5                8.8 ms  (n=15, 8.2..16.0)  -> True
+    F6             7248.0 ms  (n=9, 6874.4..7860.8)  -> False
+[uniform] 4 cars in view (40 in the scenario)
+    F5              119.0 ms  (n=15, 114.9..154.6)  -> True
+    F6            15075.7 ms  (n=4, 15016.0..15187.8)  -> False
+[uniform] 6 cars in view (40 in the scenario)
+    F5              320.1 ms  (n=15, 308.0..400.7)  -> True
+    F6            23992.7 ms  (n=3, 23881.9..24030.5)  -> False
+[uniform] 8 cars in view (40 in the scenario)
+    F5              751.8 ms  (n=15, 738.3..849.6)  -> True
+    F6            54518.5 ms  (n=3, 54328.8..57097.4)  -> False
+[uniform] 10 cars in view (40 in the scenario)
+    F5              701.3 ms  (n=15, 689.1..1000.9)  -> True
+    F6            73346.3 ms  (n=3, 72918.3..74233.5)  -> False
+ 0:03  up 3 days, 13:33, 3 users, load averages: 3.67 5.18 5.65

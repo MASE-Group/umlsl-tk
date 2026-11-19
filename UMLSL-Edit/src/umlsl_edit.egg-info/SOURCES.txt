@@ -102,8 +102,11 @@ src/umlsl_edit/query/ast/quantor_node.py
 src/umlsl_edit/query/ast/reserve_node.py
 src/umlsl_edit/query/ast/somewhere_node.py
 src/umlsl_edit/services/__init__.py
+src/umlsl_edit/services/editor_instance.py
 src/umlsl_edit/services/external_persistence_service.py
 src/umlsl_edit/services/persistence_service.py
+src/umlsl_edit/services/simulator_launcher.py
+src/umlsl_edit/services/simulator_scenario.py
 src/umlsl_edit/view/__init__.py
 src/umlsl_edit/view/ui_utils.py
 src/umlsl_edit/view/view_constants.py
@@ -124,6 +127,7 @@ src/umlsl_edit/view/ui/lists/edit_dialogs/confirm_deletion_dialog.py
 src/umlsl_edit/view/ui/lists/edit_dialogs/edit_car_dialog.py
 src/umlsl_edit/view/ui/lists/edit_dialogs/edit_query_dialog.py
 src/umlsl_edit/view/ui/lists/edit_dialogs/edit_road_dialog.py
+src/umlsl_edit/view/ui/lists/edit_dialogs/save_changes_dialog.py
 src/umlsl_edit/view/ui/lists/models/__init__.py
 src/umlsl_edit/view/ui/lists/models/car_list_model.py
 src/umlsl_edit/view/ui/lists/models/entity_list_model.py
@@ -216,4 +220,8 @@ tests/test_model_traffic_value_objects.py
 tests/test_model_umlsl_queries.py
 tests/test_query_critical_points.py
 tests/test_query_semantics.py
+tests/test_services_editor_instance.py
+tests/test_services_simulator_import.py
+tests/test_services_simulator_launcher.py
+tests/test_services_simulator_scenario.py
 tests/test_view_ui_utils.py

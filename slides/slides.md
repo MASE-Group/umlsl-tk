@@ -508,7 +508,7 @@ Together, these two arguments give Theorem 4.1.
 </div>
 <div>
   <TimesChart />
-  <div class="shot-cap">Median times from Table 1 of the paper (Apple M1 Max, one thread)</div>
+  <div class="shot-cap">Median times, Apple M1 Max, Python 3.14, one thread</div>
 </div>
 </div>
 
@@ -521,11 +521,11 @@ The algorithm explores order CP to the power d observed spaces. Each one costs o
 
 The evaluation confirms this. The scenario is a grid of eight roads with 40 cars. We vary the cars in the view from 2 to 10.
 
-F1, re of E somewhere, stays below 0.1 seconds. The safety property F2 grows from 34 milliseconds at two cars to 1.5 seconds at ten. F3, a gap of more than 2 units ahead of E, grows from 0.07 to 1.0 seconds. F4 is almost the same as F3.
+F1, re of E somewhere, stays below 20 milliseconds. The safety property F2 grows from 9 milliseconds at two cars to 0.36 seconds at ten. F3, a gap of more than 2 units ahead of E, grows from 21 milliseconds to 0.30 seconds. F4 is almost the same as F3.
 
-Nested chops are expensive when the checker cannot stop early. F6 has three nested chops and no witness. It takes 18 seconds at two cars and 4.2 minutes at ten.
+Nested chops are expensive when the checker cannot stop early. F6 has three nested chops and no witness. It takes 1.2 seconds at two cars and 13 seconds at ten.
 
-With ten cars in view, F1 to F4 change by at most 2 percent between scenarios of 10, 40 and 80 cars. The checker carries into the view only the cars with a claim or a reservation in it.
+With ten cars in view, F2 to F4 change by at most 6 percent between scenarios of 10, 40 and 80 cars. F1 grows by about 2 milliseconds, from 17 to 19. The checker carries into the view only the cars with a claim or a reservation in it.
 -->
 
 ---

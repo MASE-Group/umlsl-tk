@@ -12,8 +12,6 @@ from umlsl_sim.gui.gui_constants import (
 )
 from umlsl_sim.simulation.reservations.reservation_management import ReservationManagement
 from umlsl_sim.gui.colors.map_colors import *
-from umlsl_sim.gui.geometry import get_xy_crossingseg
-import umlsl_sim.gui.colors.map_colors
 
 class GameDrawer():
 
@@ -237,26 +235,6 @@ class GameDrawer():
             width=car.w, height=car.h,
             color=color
         )
-    
-    @classmethod
-    def draw_lines(cls, *line_coords: int, color: Tuple[int, int, int], width: int = 2) -> List[shapes.Line]:
-        """
-        Creates lines from given coordinates.
-
-        Args:
-            *line_coords (int): The coordinates of the lines.
-            color (Tuple[int, int, int]): The color of the lines.
-            width (int, optional): The width of the lines. Defaults to 2.
-
-        Returns:
-            List[shapes.Line]: A list of pyglet shapes representing the lines.
-        """
-        lines = []
-        for i in range(0, len(line_coords) - 2, 2):
-            lines.append(
-                shapes.Line(line_coords[i], line_coords[i + 1], line_coords[i + 2], line_coords[i + 3], color=color,
-                            thickness=width))
-        return lines
     
     @classmethod
     def draw_brake_line(cls, car: Car, color: Color, reservation_management: ReservationManagement) -> List[shapes.Line]:

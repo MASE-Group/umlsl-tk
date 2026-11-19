@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 from umlsl_edit.commands.settings.change_braking_acceleration import (
     ChangeBrakingAccelerationCommand,
 )
+from umlsl_edit.commands.settings.change_max_speed import ChangeMaxSpeedCommand
 from umlsl_edit.commands.umlsl.add_umlsl_query import AddUMLSLQuery
 from umlsl_edit.commands.umlsl.delete_umlsl_query import DeleteUMLSLQuery
 from umlsl_edit.commands.umlsl.edit_umlsl_query import EditUMLSLQuery
@@ -29,6 +30,25 @@ class TestChangeBrakingAccelerationCommand(unittest.TestCase):
             cmd.execute()
 
         settings.set_braking_acceleration.assert_not_called()
+
+
+class TestChangeMaxSpeedCommand(unittest.TestCase):
+    def test_execute_updates_settings(self):
+        settings = MagicMock()
+        cmd = ChangeMaxSpeedCommand(settings, value=12.0)
+
+        cmd.execute()
+
+        settings.set_max_speed.assert_called_once_with(12.0)
+
+    def test_execute_rejects_non_positive(self):
+        settings = MagicMock()
+        cmd = ChangeMaxSpeedCommand(settings, value=0)
+
+        with self.assertRaises(SettingsValidationError):
+            cmd.execute()
+
+        settings.set_max_speed.assert_not_called()
 
 
 class TestAddUMLSLQueryCommand(unittest.TestCase):

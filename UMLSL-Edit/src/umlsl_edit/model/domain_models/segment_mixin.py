@@ -166,12 +166,6 @@ class SegmentMixin:
                 return neighbor
         return None
 
-    def _get_segment_by_uid(self: "TrafficSnapshotModel", segment_uid: str) -> Segment:
-        segment = self._segments.get(segment_uid)
-        if segment is None:
-            raise ValueError(f"Segment with uid {segment_uid} not found.")
-        return segment
-
     def _recalculate_static_segments(self: "TrafficSnapshotModel") -> None:
         """
         Recalculate all static segments and their connections based on current roads.

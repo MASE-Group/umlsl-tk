@@ -35,10 +35,3 @@ class UMLSLQueriesEventType(Enum):
     UMLSL_QUERY_REMOVED = auto()
     UMLSL_QUERY_UPDATED = auto()
     UMLSL_QUERY_LOADING = auto()
-
-
-class SelectionEventType(Enum):
-    """Event types emitted by SelectionModel."""
-
-    ENTITY_SELECTED = auto()
-    SELECTION_CLEARED = auto()

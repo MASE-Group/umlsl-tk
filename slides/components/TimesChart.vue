@@ -1,30 +1,32 @@
 <script setup lang="ts">
 /*
- * Table 1 of the paper: median time to decide a formula vs. cars in the ego car's view.
+ * Median time to decide a formula vs. cars in the ego car's view, after the model-checker
+ * performance work (UMLSL-Edit/perf_runs/final, n=15 per cell except F6 at k=8/10: n=6/5).
+ * These are newer than Table 1 of the paper (which is slower) and do not match it.
  * One log-scaled y axis (ms). Greys only (green/red are reserved for safe/unsafe);
  * identity = marker shape + direct label + legend, never grey shade alone.
  */
 const cars = [2, 4, 6, 8, 10]
 const series = [
   { id: 'F6', note: '3 nested chops, no witness', color: '#002d4c', shape: 'diamond',
-    ms: [18200, 42400, 73700, 187200, 250300] },
+    ms: [1217.9, 2771.5, 4463.0, 10444.0, 13408.9] },
   { id: 'F2', note: 'safety property', color: '#445e6f', shape: 'square',
-    ms: [34.1, 164.3, 411.2, 1037.6, 1490.9] },
+    ms: [8.8, 36.9, 94.4, 249.4, 360.5] },
   { id: 'F3', note: 'gap ahead (F4 nearly equal)', color: '#6f8797', shape: 'triangle',
-    ms: [73.7, 197.1, 305.1, 805.6, 1038.4] },
+    ms: [21.3, 56.1, 88.1, 229.7, 296.9] },
   { id: 'F1', note: '⟨re(E)⟩', color: '#9aaebb', shape: 'circle',
-    ms: [9.2, 19.7, 24.9, 54.7, 66.0] },
+    ms: [3.3, 5.5, 7.0, 15.4, 17.9] },
 ]
 
 const W = 470, H = 300
 const m = { l: 56, r: 40, t: 12, b: 70 }
 const nudge: Record<string, number> = { F2: -7, F3: 8 }
 const x = (c: number) => m.l + ((c - 2) / 8) * (W - m.l - m.r)
-const lo = Math.log10(5), hi = Math.log10(500000)
+const lo = Math.log10(2), hi = Math.log10(30000)
 const y = (v: number) => m.t + (1 - (Math.log10(v) - lo) / (hi - lo)) * (H - m.t - m.b)
 const yTicks = [
   { v: 10, t: '10 ms' }, { v: 100, t: '100 ms' }, { v: 1000, t: '1 s' },
-  { v: 10000, t: '10 s' }, { v: 100000, t: '100 s' },
+  { v: 10000, t: '10 s' },
 ]
 const path = (ms: number[]) => ms.map((v, i) => `${i ? 'L' : 'M'}${x(cars[i])},${y(v)}`).join(' ')
 function marker(shape: string, cx: number, cy: number) {

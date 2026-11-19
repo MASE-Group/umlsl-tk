@@ -1,0 +1,338 @@
+{
+ "layout": "random2",
+ "total_cars": 40,
+ "ego_lane_only": false,
+ "by_cars": {
+  "2": {
+   "formulas": {
+    "F1": {
+     "timed_out": false,
+     "median_ms": 9.314084018114954,
+     "samples_ms": [
+      9.314084018114954
+     ],
+     "verdict": true
+    },
+    "F2": {
+     "timed_out": false,
+     "median_ms": 33.11162500176579,
+     "samples_ms": [
+      33.11162500176579
+     ],
+     "verdict": true
+    },
+    "F3": {
+     "timed_out": false,
+     "median_ms": 73.87079199543223,
+     "samples_ms": [
+      73.87079199543223
+     ],
+     "verdict": true
+    },
+    "F4": {
+     "timed_out": false,
+     "median_ms": 83.28337495913729,
+     "samples_ms": [
+      83.28337495913729
+     ],
+     "verdict": true
+    }
+   },
+   "cars_in_view": [
+    "E",
+    "N0"
+   ],
+   "placements": [
+    [
+     0,
+     94.966
+    ]
+   ]
+  },
+  "4": {
+   "formulas": {
+    "F1": {
+     "timed_out": false,
+     "median_ms": 13.104959041811526,
+     "samples_ms": [
+      13.104959041811526
+     ],
+     "verdict": true
+    },
+    "F2": {
+     "timed_out": false,
+     "median_ms": 188.09179199161008,
+     "samples_ms": [
+      188.09179199161008
+     ],
+     "verdict": true
+    },
+    "F3": {
+     "timed_out": false,
+     "median_ms": 134.39629203639925,
+     "samples_ms": [
+      134.39629203639925
+     ],
+     "verdict": true
+    },
+    "F4": {
+     "timed_out": false,
+     "median_ms": 143.33300001453608,
+     "samples_ms": [
+      143.33300001453608
+     ],
+     "verdict": true
+    }
+   },
+   "cars_in_view": [
+    "E",
+    "N0",
+    "N1",
+    "N2"
+   ],
+   "placements": [
+    [
+     1,
+     109.832
+    ],
+    [
+     -1,
+     101.097
+    ],
+    [
+     -1,
+     111.491
+    ]
+   ]
+  },
+  "6": {
+   "formulas": {
+    "F1": {
+     "timed_out": false,
+     "median_ms": 40.255040978081524,
+     "samples_ms": [
+      40.255040978081524
+     ],
+     "verdict": true
+    },
+    "F2": {
+     "timed_out": false,
+     "median_ms": 456.4318750053644,
+     "samples_ms": [
+      456.4318750053644
+     ],
+     "verdict": true
+    },
+    "F3": {
+     "timed_out": false,
+     "median_ms": 443.8612089725211,
+     "samples_ms": [
+      443.8612089725211
+     ],
+     "verdict": true
+    },
+    "F4": {
+     "timed_out": false,
+     "median_ms": 442.1076659928076,
+     "samples_ms": [
+      442.1076659928076
+     ],
+     "verdict": true
+    }
+   },
+   "cars_in_view": [
+    "E",
+    "N0",
+    "N1",
+    "N2",
+    "N3",
+    "N4"
+   ],
+   "placements": [
+    [
+     -1,
+     94.792
+    ],
+    [
+     -1,
+     99.003
+    ],
+    [
+     1,
+     104.088
+    ],
+    [
+     -1,
+     103.106
+    ],
+    [
+     1,
+     100.109
+    ]
+   ]
+  },
+  "8": {
+   "formulas": {
+    "F1": {
+     "timed_out": false,
+     "median_ms": 47.01612499775365,
+     "samples_ms": [
+      47.01612499775365
+     ],
+     "verdict": true
+    },
+    "F2": {
+     "timed_out": false,
+     "median_ms": 1064.5746249938384,
+     "samples_ms": [
+      1064.5746249938384
+     ],
+     "verdict": true
+    },
+    "F3": {
+     "timed_out": false,
+     "median_ms": 795.7140830112621,
+     "samples_ms": [
+      795.7140830112621
+     ],
+     "verdict": true
+    },
+    "F4": {
+     "timed_out": false,
+     "median_ms": 728.1778340111487,
+     "samples_ms": [
+      728.1778340111487
+     ],
+     "verdict": true
+    }
+   },
+   "cars_in_view": [
+    "E",
+    "N0",
+    "N1",
+    "N2",
+    "N3",
+    "N4",
+    "N5",
+    "N6"
+   ],
+   "placements": [
+    [
+     1,
+     111.203
+    ],
+    [
+     0,
+     113.584
+    ],
+    [
+     -1,
+     98.069
+    ],
+    [
+     0,
+     98.422
+    ],
+    [
+     -1,
+     103.603
+    ],
+    [
+     -1,
+     107.019
+    ],
+    [
+     -1,
+     113.133
+    ]
+   ]
+  },
+  "10": {
+   "formulas": {
+    "F1": {
+     "timed_out": false,
+     "median_ms": 66.74212502548471,
+     "samples_ms": [
+      66.74212502548471
+     ],
+     "verdict": true
+    },
+    "F2": {
+     "timed_out": false,
+     "median_ms": 1925.8056670078076,
+     "samples_ms": [
+      1925.8056670078076
+     ],
+     "verdict": true
+    },
+    "F3": {
+     "timed_out": false,
+     "median_ms": 1257.39079201594,
+     "samples_ms": [
+      1257.39079201594
+     ],
+     "verdict": true
+    },
+    "F4": {
+     "timed_out": false,
+     "median_ms": 1212.1365419588983,
+     "samples_ms": [
+      1212.1365419588983
+     ],
+     "verdict": true
+    }
+   },
+   "cars_in_view": [
+    "E",
+    "N0",
+    "N1",
+    "N2",
+    "N3",
+    "N4",
+    "N5",
+    "N6",
+    "N7",
+    "N8"
+   ],
+   "placements": [
+    [
+     -1,
+     108.035
+    ],
+    [
+     1,
+     103.391
+    ],
+    [
+     1,
+     112.049
+    ],
+    [
+     0,
+     96.934
+    ],
+    [
+     1,
+     99.019
+    ],
+    [
+     0,
+     113.54
+    ],
+    [
+     1,
+     107.85
+    ],
+    [
+     -1,
+     114.379
+    ],
+    [
+     -1,
+     99.092
+    ]
+   ]
+  }
+ },
+ "python": "3.14.10"
+}

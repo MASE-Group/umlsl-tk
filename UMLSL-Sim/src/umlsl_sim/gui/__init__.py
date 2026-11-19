@@ -10,7 +10,7 @@ What lives here:
 * `gui_constants` -- window size, frame rate, lane-line offsets. Constants that
   exist only because something is being drawn; the traffic model's own numbers
   are in `umlsl_sim.config`.
-* `geometry`, `scene_drawer`, `shape_batch` -- world coordinates to pyglet shapes.
+* `scene_drawer`, `shape_batch` -- world coordinates to pyglet shapes.
 * `simulation_window`, `manual_drive_window` -- the standalone windows.
 * `pyglet_renderer` -- the `Renderer` port implementation.
 * `control` -- the interactive control panel, a self-contained application that

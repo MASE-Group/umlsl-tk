@@ -1,0 +1,69 @@
+{
+  "scenario": "TWO_CROSSINGS",
+  "cars": 16,
+  "episodes": 5,
+  "frame_cap": 1500,
+  "deadlock_frames": 16,
+  "episodes_with_collision": 0,
+  "episodes_gridlock": 1,
+  "episodes_game_over": 0,
+  "episodes_step_limit": 4,
+  "mean_episode_frames": 1380.6,
+  "total_goals": 456,
+  "mean_cars_moving": 8.943606644518272,
+  "max_stall_frames": 16,
+  "indicative_frames_per_second": 125.82632156369355,
+  "episodes_gridlock_one_frame_rule": 1,
+  "per_episode": [
+    {
+      "outcome": "step_limit",
+      "frames": 1500,
+      "seconds": 6.861234750016592,
+      "crashes": 0,
+      "goals": 152,
+      "mean_cars_moving": 13.929333333333334,
+      "longest_stall": 0,
+      "first_all_stopped": null
+    },
+    {
+      "outcome": "step_limit",
+      "frames": 1500,
+      "seconds": 12.443252916971687,
+      "crashes": 0,
+      "goals": 61,
+      "mean_cars_moving": 6.092,
+      "longest_stall": 0,
+      "first_all_stopped": null
+    },
+    {
+      "outcome": "step_limit",
+      "frames": 1500,
+      "seconds": 7.12157583294902,
+      "crashes": 0,
+      "goals": 155,
+      "mean_cars_moving": 13.618666666666666,
+      "longest_stall": 0,
+      "first_all_stopped": null
+    },
+    {
+      "outcome": "step_limit",
+      "frames": 1500,
+      "seconds": 17.904715083015617,
+      "crashes": 0,
+      "goals": 56,
+      "mean_cars_moving": 5.421333333333333,
+      "longest_stall": 0,
+      "first_all_stopped": null
+    },
+    {
+      "outcome": "gridlock",
+      "frames": 903,
+      "seconds": 10.530556582962163,
+      "crashes": 0,
+      "goals": 32,
+      "mean_cars_moving": 5.656699889258029,
+      "longest_stall": 16,
+      "first_all_stopped": 872
+    }
+  ]
+}

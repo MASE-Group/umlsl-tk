@@ -4,9 +4,11 @@ Settings dialog for the UMLSL Traffic Editor.
 Provides a dialog window for configuring application settings.
 """
 
-from PySide6.QtWidgets import QDialog
+from PySide6.QtWidgets import QDialog, QDoubleSpinBox
 
 from umlsl_edit.controllers import ApplicationController
+from umlsl_edit.model.errors.settings_errors import SettingsValidationError
+from umlsl_edit.view.ui.exception_handling.warning_dialog import WarningDialog
 from umlsl_edit.view.widgets.compiled_widgets.ui_settings_dialog import (
     Ui_Settings_Dialog,
 )
@@ -42,6 +44,12 @@ class SettingsDialog(QDialog, Ui_Settings_Dialog):
         self._braking_spinbox = self.s_braking
         self._max_speed_spinbox = self.s_accerleration
 
+        # Both settings must be positive (the commands reject anything else).
+        # A positive minimum stops zero from being entered at all, so no
+        # warning interrupts the user while they type.
+        for spinbox in (self._braking_spinbox, self._max_speed_spinbox):
+            spinbox.setMinimum(10 ** -spinbox.decimals())
+
         self._coordinate_system_checkbox.clicked.connect(self._on_toggle_coordinate_system)
         self._coordinate_system_checkbox.setChecked(
             self._application_controller.view_event_handler.should_render_coordinate_system
@@ -69,14 +77,29 @@ class SettingsDialog(QDialog, Ui_Settings_Dialog):
         self._safety_distance_checkbox.hide()
 
     def _on_braking_changed(self) -> None:
-        self._application_controller.command_controller.settings_model.set_braking_acceleration(
-            self._braking_spinbox.value()
-        )
+        command_controller = self._application_controller.command_controller
+        try:
+            command_controller.change_braking_acceleration(self._braking_spinbox.value())
+        except SettingsValidationError as exc:
+            self._reject_value(
+                self._braking_spinbox, command_controller.settings_model.braking_acceleration, exc
+            )
 
     def _on_max_speed_changed(self) -> None:
-        self._application_controller.command_controller.settings_model.set_max_speed(
-            self._max_speed_spinbox.value()
-        )
+        command_controller = self._application_controller.command_controller
+        try:
+            command_controller.change_max_speed(self._max_speed_spinbox.value())
+        except SettingsValidationError as exc:
+            self._reject_value(
+                self._max_speed_spinbox, command_controller.settings_model.max_speed, exc
+            )
+
+    def _reject_value(self, spinbox: QDoubleSpinBox, current_value: float, exc: Exception) -> None:
+        """Show why a value was rejected and put the spinbox back on the value in use."""
+        spinbox.blockSignals(True)
+        spinbox.setValue(current_value)
+        spinbox.blockSignals(False)
+        WarningDialog("Invalid setting", str(exc), self).exec()
 
     def _on_toggle_coordinate_system(self) -> None:
         """Toggle coordinate system overlay rendering."""

@@ -46,6 +46,24 @@ class TestCommandController(unittest.TestCase):
 
         mock_execute.assert_called_once_with(mock_command_instance)
 
+    def test_change_braking_acceleration_updates_settings(self):
+        self.controller.change_braking_acceleration(6.5)
+
+        self.settings.set_braking_acceleration.assert_called_once_with(6.5)
+
+    def test_change_max_speed_updates_settings(self):
+        self.controller.change_max_speed(20.0)
+
+        self.settings.set_max_speed.assert_called_once_with(20.0)
+
+    def test_settings_changes_do_not_mark_snapshot_unsaved(self):
+        # Settings are not part of the saved snapshot file, so changing them
+        # must not trigger an "unsaved changes" prompt.
+        self.controller.change_braking_acceleration(6.5)
+        self.controller.change_max_speed(20.0)
+
+        self.assertFalse(self.controller.get_data_changed_since_last_save())
+
 
 if __name__ == "__main__":
     unittest.main()

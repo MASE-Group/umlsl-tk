@@ -283,17 +283,6 @@ class SegmentIntervalItem(QGraphicsItem):
         self._rect = self._path.boundingRect()
 
 
-class PathSegmentItem(SegmentIntervalItem):
-    """Visualizes standard path segments."""
-
-    def _setup_style(self) -> None:
-        self.pen = QPen(COLORS.TEXT, .04)
-        self.pen.setCosmetic(False)
-        self.color = QColor(COLORS.TEXT)
-        self.color.setAlphaF(0.2)
-        self.brush.setColor(self.color)
-
-
 class ViewSegmentItem(SegmentIntervalItem):
     """Visualizes view lanes with a soft background fill."""
 

@@ -1,0 +1,285 @@
+[random0] 2 cars in view (40 in the scenario)
+    F1                3.8 ms  (n=1, 3.8..3.8)  -> True
+    F2               15.4 ms  (n=1, 15.4..15.4)  -> True
+    F3               27.0 ms  (n=1, 27.0..27.0)  -> True
+    F4               52.3 ms  (n=1, 52.3..52.3)  -> True
+[random0] 4 cars in view (40 in the scenario)
+    F1               10.5 ms  (n=1, 10.5..10.5)  -> True
+    F2               37.6 ms  (n=1, 37.6..37.6)  -> True
+    F3              125.1 ms  (n=1, 125.1..125.1)  -> True
+    F4              129.5 ms  (n=1, 129.5..129.5)  -> True
+[random0] 6 cars in view (40 in the scenario)
+    F1               14.9 ms  (n=1, 14.9..14.9)  -> True
+    F2               80.9 ms  (n=1, 80.9..80.9)  -> True
+    F3              246.5 ms  (n=1, 246.5..246.5)  -> True
+    F4              225.4 ms  (n=1, 225.4..225.4)  -> True
+[random0] 8 cars in view (40 in the scenario)
+    F1               20.8 ms  (n=1, 20.8..20.8)  -> True
+    F2              207.0 ms  (n=1, 207.0..207.0)  -> True
+    F3              311.9 ms  (n=1, 311.9..311.9)  -> True
+    F4              345.7 ms  (n=1, 345.7..345.7)  -> True
+[random0] 10 cars in view (40 in the scenario)
+    F1               36.7 ms  (n=1, 36.7..36.7)  -> True
+    F2              365.8 ms  (n=1, 365.8..365.8)  -> True
+    F3              574.0 ms  (n=1, 574.0..574.0)  -> True
+    F4              693.8 ms  (n=1, 693.8..693.8)  -> True
+[random1] 2 cars in view (40 in the scenario)
+    F1                3.8 ms  (n=1, 3.8..3.8)  -> True
+    F2               14.1 ms  (n=1, 14.1..14.1)  -> True
+    F3               19.2 ms  (n=1, 19.2..19.2)  -> True
+    F4               18.2 ms  (n=1, 18.2..18.2)  -> True
+[random1] 4 cars in view (40 in the scenario)
+    F1              189.7 ms  (n=1, 189.7..189.7)  -> True
+    F2               32.3 ms  (n=1, 32.3..32.3)  -> True
+    F3               88.8 ms  (n=1, 88.8..88.8)  -> True
+    F4              146.7 ms  (n=1, 146.7..146.7)  -> True
+[random1] 6 cars in view (40 in the scenario)
+    F1               15.9 ms  (n=1, 15.9..15.9)  -> True
+    F2              119.1 ms  (n=1, 119.1..119.1)  -> True
+    F3              190.2 ms  (n=1, 190.2..190.2)  -> True
+    F4              254.5 ms  (n=1, 254.5..254.5)  -> True
+[random1] 8 cars in view (40 in the scenario)
+    F1               20.7 ms  (n=1, 20.7..20.7)  -> True
+    F2              233.1 ms  (n=1, 233.1..233.1)  -> True
+    F3              308.7 ms  (n=1, 308.7..308.7)  -> True
+    F4              368.0 ms  (n=1, 368.0..368.0)  -> True
+[random1] 10 cars in view (40 in the scenario)
+    F1               35.2 ms  (n=1, 35.2..35.2)  -> True
+    F2              347.4 ms  (n=1, 347.4..347.4)  -> True
+    F3              589.2 ms  (n=1, 589.2..589.2)  -> True
+    F4              712.6 ms  (n=1, 712.6..712.6)  -> True
+[random2] 2 cars in view (40 in the scenario)
+    F1                5.5 ms  (n=1, 5.5..5.5)  -> True
+    F2               14.2 ms  (n=1, 14.2..14.2)  -> True
+    F3               30.6 ms  (n=1, 30.6..30.6)  -> True
+    F4              208.2 ms  (n=1, 208.2..208.2)  -> True
+[random2] 4 cars in view (40 in the scenario)
+    F1               26.1 ms  (n=1, 26.1..26.1)  -> True
+    F2               43.8 ms  (n=1, 43.8..43.8)  -> True
+    F3               94.5 ms  (n=1, 94.5..94.5)  -> True
+    F4               56.8 ms  (n=1, 56.8..56.8)  -> True
+[random2] 6 cars in view (40 in the scenario)
+    F1               16.6 ms  (n=1, 16.6..16.6)  -> True
+    F2              142.6 ms  (n=1, 142.6..142.6)  -> True
+    F3              182.4 ms  (n=1, 182.4..182.4)  -> True
+    F4              244.0 ms  (n=1, 244.0..244.0)  -> True
+[random2] 8 cars in view (40 in the scenario)
+    F1               22.5 ms  (n=1, 22.5..22.5)  -> True
+    F2              238.8 ms  (n=1, 238.8..238.8)  -> True
+    F3              322.7 ms  (n=1, 322.7..322.7)  -> True
+    F4              379.7 ms  (n=1, 379.7..379.7)  -> True
+[random2] 10 cars in view (40 in the scenario)
+    F1              140.9 ms  (n=1, 140.9..140.9)  -> True
+    F2              272.5 ms  (n=1, 272.5..272.5)  -> True
+    F3              531.9 ms  (n=1, 531.9..531.9)  -> True
+    F4              607.5 ms  (n=1, 607.5..607.5)  -> True
+[random3] 2 cars in view (40 in the scenario)
+    F1                3.7 ms  (n=1, 3.7..3.7)  -> True
+    F2              165.4 ms  (n=1, 165.4..165.4)  -> True
+    F3               25.3 ms  (n=1, 25.3..25.3)  -> True
+    F4               25.2 ms  (n=1, 25.2..25.2)  -> True
+[random3] 4 cars in view (40 in the scenario)
+    F1                7.0 ms  (n=1, 7.0..7.0)  -> True
+    F2               76.9 ms  (n=1, 76.9..76.9)  -> True
+    F3               57.5 ms  (n=1, 57.5..57.5)  -> True
+    F4              102.6 ms  (n=1, 102.6..102.6)  -> True
+[random3] 6 cars in view (40 in the scenario)
+    F1               17.6 ms  (n=1, 17.6..17.6)  -> True
+    F2               77.8 ms  (n=1, 77.8..77.8)  -> True
+    F3              251.0 ms  (n=1, 251.0..251.0)  -> True
+    F4              235.0 ms  (n=1, 235.0..235.0)  -> True
+[random3] 8 cars in view (40 in the scenario)
+    F1               97.2 ms  (n=1, 97.2..97.2)  -> True
+    F2              137.7 ms  (n=1, 137.7..137.7)  -> True
+    F3              363.8 ms  (n=1, 363.8..363.8)  -> True
+    F4              398.9 ms  (n=1, 398.9..398.9)  -> True
+[random3] 10 cars in view (40 in the scenario)
+    F1               31.8 ms  (n=1, 31.8..31.8)  -> True
+    F2              370.9 ms  (n=1, 370.9..370.9)  -> True
+    F3              541.0 ms  (n=1, 541.0..541.0)  -> True
+    F4              613.2 ms  (n=1, 613.2..613.2)  -> True
+[random4] 2 cars in view (40 in the scenario)
+    F1                3.6 ms  (n=1, 3.6..3.6)  -> True
+    F2               15.7 ms  (n=1, 15.7..15.7)  -> True
+    F3               25.1 ms  (n=1, 25.1..25.1)  -> True
+    F4              190.4 ms  (n=1, 190.4..190.4)  -> True
+[random4] 4 cars in view (40 in the scenario)
+    F1                8.8 ms  (n=1, 8.8..8.8)  -> True
+    F2               38.0 ms  (n=1, 38.0..38.0)  -> True
+    F3              116.3 ms  (n=1, 116.3..116.3)  -> True
+    F4               70.8 ms  (n=1, 70.8..70.8)  -> True
+[random4] 6 cars in view (40 in the scenario)
+    F1               85.8 ms  (n=1, 85.8..85.8)  -> True
+    F2               78.4 ms  (n=1, 78.4..78.4)  -> True
+    F3              274.7 ms  (n=1, 274.7..274.7)  -> True
+    F4              215.2 ms  (n=1, 215.2..215.2)  -> True
+[random4] 8 cars in view (40 in the scenario)
+    F1               26.9 ms  (n=1, 26.9..26.9)  -> True
+    F2              228.9 ms  (n=1, 228.9..228.9)  -> True
+    F3              359.1 ms  (n=1, 359.1..359.1)  -> True
+    F4              461.0 ms  (n=1, 461.0..461.0)  -> True
+[random4] 10 cars in view (40 in the scenario)
+    F1               31.9 ms  (n=1, 31.9..31.9)  -> True
+    F2              339.1 ms  (n=1, 339.1..339.1)  -> True
+    F3              436.4 ms  (n=1, 436.4..436.4)  -> True
+    F4              522.6 ms  (n=1, 522.6..522.6)  -> True
+[random5] 2 cars in view (40 in the scenario)
+    F1                5.0 ms  (n=1, 5.0..5.0)  -> True
+    F2               14.2 ms  (n=1, 14.2..14.2)  -> True
+    F3              167.0 ms  (n=1, 167.0..167.0)  -> True
+    F4               30.4 ms  (n=1, 30.4..30.4)  -> True
+[random5] 4 cars in view (40 in the scenario)
+    F1                8.9 ms  (n=1, 8.9..8.9)  -> True
+    F2               36.6 ms  (n=1, 36.6..36.6)  -> True
+    F3              123.2 ms  (n=1, 123.2..123.2)  -> True
+    F4              114.8 ms  (n=1, 114.8..114.8)  -> True
+[random5] 6 cars in view (40 in the scenario)
+    F1               16.8 ms  (n=1, 16.8..16.8)  -> True
+    F2              133.2 ms  (n=1, 133.2..133.2)  -> True
+    F3             1654.3 ms  (n=1, 1654.3..1654.3)  -> False
+    F4             1991.3 ms  (n=1, 1991.3..1991.3)  -> False
+[random5] 8 cars in view (40 in the scenario)
+    F1               19.1 ms  (n=1, 19.1..19.1)  -> True
+    F2              144.2 ms  (n=1, 144.2..144.2)  -> True
+    F3              675.9 ms  (n=1, 675.9..675.9)  -> True
+    F4              329.7 ms  (n=1, 329.7..329.7)  -> True
+[random5] 10 cars in view (40 in the scenario)
+    F1              135.3 ms  (n=1, 135.3..135.3)  -> True
+    F2              271.4 ms  (n=1, 271.4..271.4)  -> True
+    F3              633.9 ms  (n=1, 633.9..633.9)  -> True
+    F4              684.5 ms  (n=1, 684.5..684.5)  -> True
+[random6] 2 cars in view (40 in the scenario)
+    F1                4.7 ms  (n=1, 4.7..4.7)  -> True
+    F2              179.5 ms  (n=1, 179.5..179.5)  -> True
+    F3               25.6 ms  (n=1, 25.6..25.6)  -> True
+    F4               25.2 ms  (n=1, 25.2..25.2)  -> True
+[random6] 4 cars in view (40 in the scenario)
+    F1                8.6 ms  (n=1, 8.6..8.6)  -> True
+    F2               82.5 ms  (n=1, 82.5..82.5)  -> True
+    F3               69.6 ms  (n=1, 69.6..69.6)  -> True
+    F4              126.8 ms  (n=1, 126.8..126.8)  -> True
+[random6] 6 cars in view (40 in the scenario)
+    F1                8.8 ms  (n=1, 8.8..8.8)  -> True
+    F2              121.4 ms  (n=1, 121.4..121.4)  -> True
+    F3             1596.8 ms  (n=1, 1596.8..1596.8)  -> False
+    F4             1680.7 ms  (n=1, 1680.7..1680.7)  -> False
+[random6] 8 cars in view (40 in the scenario)
+    F1              370.6 ms  (n=1, 370.6..370.6)  -> True
+    F2              172.1 ms  (n=1, 172.1..172.1)  -> True
+    F3             2739.9 ms  (n=1, 2739.9..2739.9)  -> False
+    F4             3439.9 ms  (n=1, 3439.9..3439.9)  -> False
+[random6] 10 cars in view (40 in the scenario)
+    F1               33.4 ms  (n=1, 33.4..33.4)  -> True
+    F2              263.7 ms  (n=1, 263.7..263.7)  -> True
+    F3             1188.3 ms  (n=1, 1188.3..1188.3)  -> True
+    F4              681.0 ms  (n=1, 681.0..681.0)  -> True
+[random7] 2 cars in view (40 in the scenario)
+    F1                2.9 ms  (n=1, 2.9..2.9)  -> True
+    F2               15.3 ms  (n=1, 15.3..15.3)  -> True
+    F3              182.4 ms  (n=1, 182.4..182.4)  -> True
+    F4               19.5 ms  (n=1, 19.5..19.5)  -> True
+[random7] 4 cars in view (40 in the scenario)
+    F1                6.8 ms  (n=1, 6.8..6.8)  -> True
+    F2               35.8 ms  (n=1, 35.8..35.8)  -> True
+    F3              103.8 ms  (n=1, 103.8..103.8)  -> True
+    F4               56.3 ms  (n=1, 56.3..56.3)  -> True
+[random7] 6 cars in view (40 in the scenario)
+    F1               78.0 ms  (n=1, 78.0..78.0)  -> True
+    F2               76.4 ms  (n=1, 76.4..76.4)  -> True
+    F3              236.8 ms  (n=1, 236.8..236.8)  -> True
+    F4              254.2 ms  (n=1, 254.2..254.2)  -> True
+[random7] 8 cars in view (40 in the scenario)
+    F1              103.7 ms  (n=1, 103.7..103.7)  -> True
+    F2              141.6 ms  (n=1, 141.6..141.6)  -> True
+    F3              368.5 ms  (n=1, 368.5..368.5)  -> True
+    F4              408.5 ms  (n=1, 408.5..408.5)  -> True
+[random7] 10 cars in view (40 in the scenario)
+    F1              147.2 ms  (n=1, 147.2..147.2)  -> True
+    F2              325.5 ms  (n=1, 325.5..325.5)  -> True
+    F3              534.1 ms  (n=1, 534.1..534.1)  -> True
+    F4              610.5 ms  (n=1, 610.5..610.5)  -> True
+[random8] 2 cars in view (40 in the scenario)
+    F1                2.6 ms  (n=1, 2.6..2.6)  -> True
+    F2              166.2 ms  (n=1, 166.2..166.2)  -> True
+    F3              247.3 ms  (n=1, 247.3..247.3)  -> False
+    F4              331.6 ms  (n=1, 331.6..331.6)  -> False
+[random8] 4 cars in view (40 in the scenario)
+    F1                8.9 ms  (n=1, 8.9..8.9)  -> True
+    F2              138.6 ms  (n=1, 138.6..138.6)  -> True
+    F3               72.0 ms  (n=1, 72.0..72.0)  -> True
+    F4              124.7 ms  (n=1, 124.7..124.7)  -> True
+[random8] 6 cars in view (40 in the scenario)
+    F1               15.7 ms  (n=1, 15.7..15.7)  -> True
+    F2              125.6 ms  (n=1, 125.6..125.6)  -> True
+    F3              190.5 ms  (n=1, 190.5..190.5)  -> True
+    F4              254.3 ms  (n=1, 254.3..254.3)  -> True
+[random8] 8 cars in view (40 in the scenario)
+    F1               21.6 ms  (n=1, 21.6..21.6)  -> True
+    F2              235.9 ms  (n=1, 235.9..235.9)  -> True
+    F3              320.4 ms  (n=1, 320.4..320.4)  -> True
+    F4              376.4 ms  (n=1, 376.4..376.4)  -> True
+[random8] 10 cars in view (40 in the scenario)
+    F1              164.1 ms  (n=1, 164.1..164.1)  -> True
+    F2              285.4 ms  (n=1, 285.4..285.4)  -> True
+    F3              408.6 ms  (n=1, 408.6..408.6)  -> True
+    F4              507.1 ms  (n=1, 507.1..507.1)  -> True
+[random9] 2 cars in view (40 in the scenario)
+    F1                5.2 ms  (n=1, 5.2..5.2)  -> True
+    F2               14.8 ms  (n=1, 14.8..14.8)  -> True
+    F3              196.9 ms  (n=1, 196.9..196.9)  -> True
+    F4               29.3 ms  (n=1, 29.3..29.3)  -> True
+[random9] 4 cars in view (40 in the scenario)
+    F1               10.5 ms  (n=1, 10.5..10.5)  -> True
+    F2               35.9 ms  (n=1, 35.9..35.9)  -> True
+    F3              139.7 ms  (n=1, 139.7..139.7)  -> True
+    F4              129.4 ms  (n=1, 129.4..129.4)  -> True
+[random9] 6 cars in view (40 in the scenario)
+    F1               13.9 ms  (n=1, 13.9..13.9)  -> True
+    F2              132.6 ms  (n=1, 132.6..132.6)  -> True
+    F3              183.3 ms  (n=1, 183.3..183.3)  -> True
+    F4              244.1 ms  (n=1, 244.1..244.1)  -> True
+[random9] 8 cars in view (40 in the scenario)
+    F1               20.5 ms  (n=1, 20.5..20.5)  -> True
+    F2              221.4 ms  (n=1, 221.4..221.4)  -> True
+    F3              257.9 ms  (n=1, 257.9..257.9)  -> True
+    F4              330.7 ms  (n=1, 330.7..330.7)  -> True
+[random9] 10 cars in view (40 in the scenario)
+    F1              126.4 ms  (n=1, 126.4..126.4)  -> True
+    F2              317.0 ms  (n=1, 317.0..317.0)  -> True
+    F3              476.5 ms  (n=1, 476.5..476.5)  -> True
+    F4              558.2 ms  (n=1, 558.2..558.2)  -> True
+[uniform] 2 cars in view (40 in the scenario)
+    F1                4.7 ms  (n=1, 4.7..4.7)  -> True
+    F2               14.9 ms  (n=1, 14.9..14.9)  -> True
+    F3               30.4 ms  (n=1, 30.4..30.4)  -> True
+    F4               57.4 ms  (n=1, 57.4..57.4)  -> True
+    F5                4.1 ms  (n=1, 4.1..4.1)  -> True
+    F6             2945.5 ms  (n=1, 2945.5..2945.5)  -> False
+[uniform] 4 cars in view (40 in the scenario)
+    F1                9.4 ms  (n=1, 9.4..9.4)  -> True
+    F2              737.6 ms  (n=1, 737.6..737.6)  -> True
+    F3               68.7 ms  (n=1, 68.7..68.7)  -> True
+    F4              113.8 ms  (n=1, 113.8..113.8)  -> True
+    F5               90.2 ms  (n=1, 90.2..90.2)  -> True
+    F6             6823.7 ms  (n=1, 6823.7..6823.7)  -> False
+[uniform] 6 cars in view (40 in the scenario)
+    F1               11.7 ms  (n=1, 11.7..11.7)  -> True
+    F2               62.8 ms  (n=1, 62.8..62.8)  -> True
+    F3              108.6 ms  (n=1, 108.6..108.6)  -> True
+    F4              108.9 ms  (n=1, 108.9..108.9)  -> True
+    F5              142.6 ms  (n=1, 142.6..142.6)  -> True
+    F6            12327.0 ms  (n=1, 12327.0..12327.0)  -> False
+[uniform] 8 cars in view (40 in the scenario)
+    F1               25.1 ms  (n=1, 25.1..25.1)  -> True
+    F2              140.9 ms  (n=1, 140.9..140.9)  -> True
+    F3              265.0 ms  (n=1, 265.0..265.0)  -> True
+    F4              273.0 ms  (n=1, 273.0..273.0)  -> True
+    F5              356.1 ms  (n=1, 356.1..356.1)  -> True
+    F6            26196.8 ms  (n=1, 26196.8..26196.8)  -> False
+[uniform] 10 cars in view (40 in the scenario)
+    F1               32.3 ms  (n=1, 32.3..32.3)  -> True
+    F2              197.5 ms  (n=1, 197.5..197.5)  -> True
+    F3              332.6 ms  (n=1, 332.6..332.6)  -> True
+    F4             5494.2 ms  (n=1, 5494.2..5494.2)  -> True
+    F5              583.8 ms  (n=1, 583.8..583.8)  -> True
+    F6            29345.1 ms  (n=1, 29345.1..29345.1)  -> False

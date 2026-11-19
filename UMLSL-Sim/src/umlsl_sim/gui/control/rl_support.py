@@ -162,18 +162,6 @@ def list_model_ids(scenario_name: str, algo: str, obs: str, reward: str) -> List
     return ids
 
 
-def list_history_files(scenario_name: str, algo: str, obs: str, reward: str, id_model: str) -> List[str]:
-    root = _models_base()
-    if root is None:
-        return []
-    base = root / scenario_name / algo / obs / reward / id_model / "history"
-    if not base.is_dir():
-        return []
-    files = [p.name for p in base.iterdir() if p.suffix == ".pkl"]
-    files.sort(reverse=True)
-    return files
-
-
 # --- background worker for train / optimize -------------------------------
 class RLWorker:
     """Runs a headless RLRunner mode on a daemon thread and reports

@@ -202,15 +202,6 @@ class TrafficSnapshotValidator:
                 return False
         return True
 
-    def _check_uid_unique(self, uid: str) -> bool:
-        for car in self._model.cars.values():
-            if car.uid == uid:
-                return False
-        for road in self._model.roads.values():
-            if road.uid == uid:
-                return False
-        return True
-
     def _check_lane_valid(self, lane: Lane) -> bool:
         """Check if the lane exists in the traffic snapshot."""
         try:

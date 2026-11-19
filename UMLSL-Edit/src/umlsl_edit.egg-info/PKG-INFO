@@ -57,20 +57,53 @@ python -m umlsl_edit.main <path/to/snapshot_file>
 Example snapshots ship in [sample_scenes/](sample_scenes/). Both the editor's
 native format and the UMLSL-Sim interchange format are accepted — the format is
 detected from the file itself. `two_crossings_predefined.json` is an
-interchange-format sample; the other three are native.
+interchange-format sample; the others are native. The three `sim_demo_*.json`
+scenes showcase **Simulate in UMLSL-Sim** (see below).
 
 ## Editor Features & Navigation
 
 * **Canvas Navigation:** Click and drag the left mouse button or use the arrow keys to pan across the canvas. Zoom using the mouse wheel or the `+`/`-` buttons.
 * **Entity Management:** Use the left panel to manage your environment. Click `+` to add entities, or use the pen icon to edit/delete them.
 * **Drag & Drop:** Select any car or road and drag it with the mouse to quickly reposition it.
-* **Settings & Files:** Access `Settings` and `File` management (`Open`, `Save`, `Save As`, `Export to UMLSL-Sim`, `Import from UMLSL-Sim`) from the top-left menu.
+* **Settings & Files:** Access `Settings` and `File` management (`Open`, `Save`, `Save As`, `Export to UMLSL-Sim`, `Import from UMLSL-Sim`, `Simulate in UMLSL-Sim…`) from the top-left menu.
 
 Exporting writes the shared interchange format that UMLSL-Sim reads; UMLSL
 queries are not part of that format, so keep a native `Save` copy of any
 snapshot whose queries you want to preserve. An imported snapshot has no native
 file behind it, so `Save` asks you to `Save As` first. The round trip between
 the two tools is documented in the [toolkit README](../README.md#exchanging-scenarios-between-the-two-tools).
+
+### Simulate in UMLSL-Sim
+
+`File ▸ Simulate in UMLSL-Sim…` (`Ctrl` + `R`) exports the current snapshot
+into UMLSL-Sim's scenario folder and opens the UMLSL-Sim control GUI, already
+simulating it. UMLSL-Sim must be installed in the same Python environment.
+
+Before anything is written, the snapshot is checked against what UMLSL-Sim can
+run. A scenario with no roads or no cars, a road or car outside the simulator's
+40 × 24-lane canvas, a car inside a crossing, overlapping cars or parallel
+roads, or a car driving backwards is refused with a list of every problem.
+Differences that still let the simulation run, such as a lane change in
+progress, are listed for you to confirm. `Export to UMLSL-Sim` runs the same
+check.
+
+### Snapshots from UMLSL-Sim
+
+UMLSL-Sim's **Open in UMLSL-Edit** button sends a paused run here. If an
+UMLSL-Edit window is open, it receives the snapshot and first asks whether to
+save any unsaved changes. Otherwise a new window opens. The snapshot is read
+like `Import from UMLSL-Sim`. When the import has to change something to fit
+the editor (a renamed car, a higher global max speed, a move that cannot be
+shown as a turn), it lists every change. Details are in the
+[toolkit README](../README.md#umlsl-sim--umlsl-edit-in-one-step).
+
+Try Simulate in UMLSL-Sim with the sample scenes:
+
+| Scene | Shows |
+| :--- | :--- |
+| `sim_demo_one_crossing.json` | Five cars at one crossing, turning left and right and going straight. |
+| `sim_demo_asymmetric_roads.json` | Two-by-two crossings of roads with different lane counts per direction. |
+| `sim_demo_not_simulatable.json` | The alert: a road off the canvas, a car in a border crossing, two overlapping cars. |
 
 ## Keyboard Shortcuts
 
@@ -86,6 +119,7 @@ the two tools is documented in the [toolkit README](../README.md#exchanging-scen
 | Save As | `Ctrl`/`Cmd` + `Shift` + `S` |
 | Export to UMLSL-Sim | `Ctrl` + `E` |
 | Import from UMLSL-Sim | `Ctrl` + `I` |
+| Simulate in UMLSL-Sim | `Ctrl` + `R` |
 | Settings | `Ctrl` + `,` (`Cmd` + `,` on macOS) |
 
 ## Tests

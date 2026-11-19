@@ -104,16 +104,7 @@ class _Colors:
     ]
 
 
-@dataclass(frozen=True)
-class _UIPaths:
-    """Paths to UI resource files (relative to the widgets folder)."""
-    MAIN_WINDOW: str = "../widgets/main.compiled_widgets"
-    LIST_ITEM: str = "compiled_widgets/list.compiled_widgets"
-    CAR_EDIT: str = "../widgets/car_edit.compiled_widgets"
-
-
 # --- Public Singleton Instances ---
 Z_LAYERS = _ZLayers()
 DIMENSION = _Dimension()
 COLORS = _Colors()
-UI_PATHS = _UIPaths()

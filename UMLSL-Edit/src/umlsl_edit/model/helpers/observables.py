@@ -1,10 +1,9 @@
-from typing import TypeVar, MutableMapping, Iterator, MutableSequence, Callable, Any, KeysView, ValuesView, \
+from typing import TypeVar, MutableMapping, Iterator, Callable, Any, KeysView, ValuesView, \
     ItemsView, Mapping
 from enum import Enum
 
 Key = TypeVar("Key")
 Value = TypeVar("Value")
-T = TypeVar("T")
 
 
 class Observable:
@@ -115,75 +114,6 @@ class ObservableDict(MutableMapping[Key, Value]):
             on_update=self._on_update,
             initial_data=combined_data
         )
-
-
-class ObservableList(MutableSequence[T]):
-    """
-    A list that notifies via callbacks on additions, removals, and updates.
-    """
-    def __init__(
-            self,
-            on_add: Callable[[T], None] = None,
-            on_remove: Callable[[T], None] = None,
-            on_update: Callable[[T], None] = None,
-            initial_data: list[T] | None = None,
-    ):
-        """
-        Initialize an ObservableList.
-
-        Args:
-            on_add: Callback called when an item is added (receives item)
-            on_remove: Callback called when an item is removed (receives item)
-            on_update: Callback called when an item is updated (receives new item)
-            initial_data: Optional initial list data
-        """
-        self._data: list[T] = []
-        self._on_add = on_add
-        self._on_remove = on_remove
-        self._on_update = on_update
-
-        if initial_data:
-            self._data.extend(initial_data)
-
-    def insert(self, index: int, value: T) -> None:
-        """Insert an item at the given index, triggering on_add callback."""
-        self._data.insert(index, value)
-
-        if self._on_add:
-            self._on_add(value)
-
-    def __getitem__(self, index: int) -> T:
-        """Get an item by index."""
-        return self._data[index]
-
-    def __setitem__(self, index: int, value: T) -> None:
-        """Set an item at the given index, triggering on_update callback."""
-        self._data[index] = value
-
-        if self._on_update:
-            self._on_update(value)
-
-    def __delitem__(self, index: int) -> None:
-        """Delete an item at the given index, triggering on_remove callback."""
-        value = self._data[index]
-        del self._data[index]
-
-        if self._on_remove:
-            self._on_remove(value)
-
-    def __len__(self) -> int:
-        """Return the number of items."""
-        return len(self._data)
-
-    def append(self, value: T) -> None:
-        """Append an item to the end of the list, triggering on_add callback."""
-        self._data.append(value)
-
-        if self._on_add:
-            self._on_add(value)
-
-
-
 
 
 class ReadOnlyMergedDictView(Mapping[str, Any]):

@@ -21,6 +21,7 @@ from umlsl_edit.commands.roads import add_road, delete_road, edit_road
 from umlsl_edit.commands.settings.change_braking_acceleration import (
     ChangeBrakingAccelerationCommand,
 )
+from umlsl_edit.commands.settings.change_max_speed import ChangeMaxSpeedCommand
 from umlsl_edit.commands.umlsl import (
     add_umlsl_query,
     delete_umlsl_query,
@@ -108,9 +109,13 @@ class CommandController:
         ):
             # Saving and loading bring the snapshot back in sync with a file.
             self._set_snapshot_changed_since_last_save(False)
-        elif isinstance(command, ExportSnapshot):
+        elif isinstance(
+                command,
+                (ExportSnapshot, ChangeBrakingAccelerationCommand, ChangeMaxSpeedCommand),
+        ):
             # Exporting writes a separate interchange file and leaves the edited
-            # snapshot untouched, so it must not affect the unsaved-changes flag.
+            # snapshot untouched. Settings are not stored in the snapshot file.
+            # Neither may affect the unsaved-changes flag.
             pass
         else:
             self._set_snapshot_changed_since_last_save(True)
@@ -169,22 +174,6 @@ class CommandController:
             ):
                 return RoadTrafficSnapshotContextValidationError(content=str(exc))
         return None
-
-    def _execute_without_history(self, command: Command) -> None:
-        """
-        Executes a command without adding it to the undo/redo history.
-        Useful for ephemeral operations like selection changes.
-
-        Args:
-            command: The command to execute.
-
-        Returns:
-            The return value from the command's execute() method.
-
-        Raises:
-            CommandValidationError: If the command fails validation.
-        """
-        command.execute()
 
     def get_data_changed_since_last_save(self) -> bool:
         """
@@ -604,3 +593,10 @@ class CommandController:
             self.settings_model, value
         )
         self._execute_command(change_braking_acceleration_command)
+
+    def change_max_speed(self, value: float) -> None:
+        """
+        Changes the global maximum speed of the cars.
+        """
+        change_max_speed_command = ChangeMaxSpeedCommand(self.settings_model, value)
+        self._execute_command(change_max_speed_command)

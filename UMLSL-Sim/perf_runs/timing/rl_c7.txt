@@ -1,0 +1,3 @@
+SAFETY_AWARE_REWARD  shield=True    1.18 ms/step (best of 3)
+SAFETY_AWARE_REWARD  shield=False   1.33 ms/step (best of 3)
+INITIAL_REWARD       shield=True    1.17 ms/step (best of 3)

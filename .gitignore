@@ -2,7 +2,7 @@
 # UMLSL Toolkit — repository-wide ignore rules
 # Covers both sub-projects (UMLSL-Edit, UMLSL-Sim) and the top level.
 # ---------------------------------------------------------------------------
-
+.claude/
 # --- Python bytecode / caches ----------------------------------------------
 __pycache__/
 *.pyc

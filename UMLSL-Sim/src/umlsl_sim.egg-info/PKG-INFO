@@ -111,6 +111,16 @@ python -m umlsl_sim.app.run_control_gui
 
 Pick a scenario and the number of NPC cars, start / pause / rerun the run,
 configure the RL options, and save a paused run as a new scenario.
+**Open in UMLSL-Edit** pauses the run, saves it as a new scenario, and opens it
+in UMLSL-Edit, or in the UMLSL-Edit window that is already open (see the
+[toolkit README](../README.md#umlsl-sim--umlsl-edit-in-one-step)).
+
+To open the GUI on a given scenario and start simulating it at once (this is
+what UMLSL-Edit's `File ▸ Simulate in UMLSL-Sim…` does):
+
+```bash
+python -m umlsl_sim.app.run_control_gui --scenario my_scenario --run
+```
 
 ### Scripted
 

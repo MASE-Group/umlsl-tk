@@ -1,0 +1,2 @@
+CPU usage: 22.68% user, 9.14% sys, 68.16% idle 
+ 2:07  up 3 days, 15:36, 3 users, load averages: 5.20 7.77 8.71
