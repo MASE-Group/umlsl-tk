@@ -143,6 +143,11 @@ class Segment(ABC):
         self.max_speed: int
         self.h_begin: int
         self.v_begin: int
+        # Routes found by Car.astar from this segment, keyed by goal segment.
+        # A route depends on nothing but the road graph, which create_segments
+        # builds once and never changes, so an entry can never go stale; it
+        # lives exactly as long as the network it describes.
+        self.route_cache: Dict['Segment', List['Segment']] = {}
 
 
 

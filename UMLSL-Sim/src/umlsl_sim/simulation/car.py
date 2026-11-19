@@ -557,6 +557,20 @@ class Car:
         if start_seg is goal_seg:
             return [start_seg]
 
+        # The search reads only the road graph, so a route is a pure function
+        # of its two end segments. Controllers ask for the same few routes many
+        # times a tick -- once per acceleration they try -- so each is found
+        # once and remembered on its start segment. Callers get their own copy.
+        route = start_seg.route_cache.get(goal_seg)
+        if route is None:
+            route = self._astar_search(start_seg, goal_seg)
+            start_seg.route_cache[goal_seg] = route
+        return list(route)
+
+    @staticmethod
+    def _astar_search(start_seg: Segment, goal_seg: LaneSegment) -> List[Segment]:
+        """Shortest route by segment length from `start_seg` to `goal_seg`."""
+
         def heuristic(seg: Segment) -> float:
             # Center of seg in (x, y)
             match seg:
