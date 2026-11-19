@@ -39,12 +39,15 @@ class View:
     For example, if there are multiple accesses on the visible cars inside a View, we only compute the visible cars once.
     If there is a chop operation, only the cache of the *newly created* View is invalidated (since the visibility
     changes there); and is only recomputed in the newly created View when needed.
+    The same holds for the virtual lanes and segments of a View created by a chop: they are filtered to its horizon
+    when they are first read. All Views chopped from one root share a memo, in which the horizontal chop keeps its
+    verdicts per observed space (see __init__).
     """
 
     # A chop builds two Views per candidate split, so they are kept small: no per-instance dict, and the
     # lazily filtered data in plain fields rather than in a LazyEvaluator with a closure each.
     __slots__ = (
-        "_virtual_lanes", "_segments_in_view", "_unfiltered_lanes",
+        "_virtual_lanes", "_segments_in_view", "_lanes_to_filter",
         "horizon", "ego", "cars_in_view", "lane_range", "memo",
         "_visible_cars", "_reserved_segments", "_claimed_segments",
         "_visible_cars_filtered", "_reserved_segments_filtered", "_claimed_segments_filtered",
@@ -58,14 +61,14 @@ class View:
                  cars_in_view: list[str],
                  lane_range: tuple[int, int] | None = None,
                  memo: dict | None = None,
-                 unfiltered_lanes: list[VirtualLane] | None = None,
+                 lanes_to_filter: list[VirtualLane] | None = None,
                  ):
-        # A chopped View is given the lanes it was chopped from (`unfiltered_lanes`) instead of its own,
+        # A chopped View is given the lanes it was chopped from (`lanes_to_filter`) instead of its own,
         # and filters them to its horizon only when its lanes or segments are first asked for: many
         # observed spaces are never looked at (a `true` operand, a length comparison).
         self._virtual_lanes = virtual_lanes
         self._segments_in_view = segments_in_view
-        self._unfiltered_lanes = unfiltered_lanes
+        self._lanes_to_filter = lanes_to_filter
         self.horizon = horizon
         self.ego = ego
         # the cars (uids) whose reservation or claim overlaps ego's whole view, which the quantifiers
@@ -149,14 +152,14 @@ class View:
         every lane (an empty one too) and filtering by a horizon after filtering by a wider one is the
         same as filtering by it alone.
         """
-        return self._unfiltered_lanes if self._virtual_lanes is None else self._virtual_lanes
+        return self._lanes_to_filter if self._virtual_lanes is None else self._virtual_lanes
 
     def _filter_lanes(self) -> None:
         segments_in_view: list[SegmentInterval] = []
         new_virtual_lanes: list[VirtualLane] = []
         start, end = self.horizon.start, self.horizon.end
 
-        for virtual_lane in self._unfiltered_lanes:
+        for virtual_lane in self._lanes_to_filter:
             new_virtual_lane = []
 
             for segment_interval in virtual_lane.segment_intervals:
@@ -174,7 +177,7 @@ class View:
 
         self._virtual_lanes = new_virtual_lanes
         self._segments_in_view = segments_in_view
-        self._unfiltered_lanes = None
+        self._lanes_to_filter = None
 
     def _construct_view(self, horizon: Interval, lanes: list[VirtualLane], lane_range: tuple[int, int]) -> 'View':
         return View(
