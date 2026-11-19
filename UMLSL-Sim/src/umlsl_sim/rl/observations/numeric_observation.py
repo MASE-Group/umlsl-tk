@@ -80,48 +80,54 @@ class NumbericObservation(Observation):
         )
 
     def observe(self) -> np.ndarray:
-        """Build the current observation."""
+        """Build the current observation.
+
+        The per-car block is gathered as one flat list of Python numbers and
+        converted to float32 in a single call, rather than as one small array
+        per car stacked afterwards. Each value is rounded to float32 exactly as
+        before, so the vector is bit-for-bit the same.
+        """
         header = self._build_header()
 
-        cars = []
+        values: list = []
+        zero_row = [0] * CAR_RES_INFO
+        n_directions = len(Direction)
         agent_car = self.game_model.agent_car
         for car in self.game_model.cars:
-            is_agent = 1.0 if car is agent_car else 0.0
-            speed_row = np.array(
-                [[is_agent, car.speed / car.max_speed] + [0] * (CAR_RES_INFO - 2)],
-                dtype=np.float32,
-            )
+            # Speed row: [is_agent, speed / max_speed, 0, ...].
+            values.append(1.0 if car is agent_car else 0.0)
+            values.append(car.speed / car.max_speed)
+            values.extend(zero_row[2:])
 
-            reservations = []
+            rows = 0
             for seg_info in self.reservation_management.get_car_reservations(car.id):
 
                 if isinstance(seg_info.segment, LaneSegment):
-                    reservations.append([
-                        seg_info.segment.lane.num / self.max_lanes,
-                        seg_info.direction.value / len(Direction),
-                        *self._get_lane_reservation(seg_info, seg_info.segment),
-                    ])
+                    values.append(seg_info.segment.lane.num / self.max_lanes)
+                    values.append(seg_info.direction.value / n_directions)
+                    values.extend(self._get_lane_reservation(seg_info, seg_info.segment))
+                    rows += 1
 
                 elif isinstance(seg_info.segment, CrossingSegment):
                     lane_num = seg_info.segment.horiz_lane.num if seg_info.direction in (Direction.RIGHT, Direction.LEFT) else seg_info.segment.vert_lane.num
 
-                    reservations.append([
-                        lane_num / self.max_lanes,
-                        seg_info.direction.value / len(Direction),
-                        *self._get_crossing_reservation(seg_info, seg_info.segment),
-                    ])
+                    values.append(lane_num / self.max_lanes)
+                    values.append(seg_info.direction.value / n_directions)
+                    values.extend(self._get_crossing_reservation(seg_info, seg_info.segment))
+                    rows += 1
 
-            while len(reservations) < MAX_RES:
-                reservations.append([0] * CAR_RES_INFO)
+            if rows > MAX_RES:
+                raise ValueError(
+                    f"Car {car.id!r} holds {rows} reservations; the observation has "
+                    f"room for MAX_RES = {MAX_RES}."
+                )
+            values.extend(zero_row * (MAX_RES - rows))
 
-            reservations = np.array(reservations, dtype=np.float32)
-            all_info = np.vstack((speed_row, reservations))
-            cars.append(all_info)
+        missing_cars = self.max_cars - len(self.game_model.cars)
+        if missing_cars > 0:
+            values.extend([0] * (missing_cars * (1 + MAX_RES) * CAR_RES_INFO))
 
-        while len(cars) < self.max_cars:
-            cars.append(np.zeros((1 + MAX_RES, CAR_RES_INFO), dtype=np.float32))
-
-        cars = np.array(cars, dtype=np.float32).flatten()
+        cars = np.array(values, dtype=np.float32)
 
         return np.concatenate([header, cars])
 
