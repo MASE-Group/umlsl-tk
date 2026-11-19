@@ -2,8 +2,8 @@ import math
 from typing import Tuple
 
 from umlsl_sim.simulation.car import Car 
-from umlsl_sim.simulation.road_network.road_network import Intersection, LaneSegment, CrossingSegment, SegmentInfo, \
-    right_direction, direction_sign
+from umlsl_sim.simulation.road_network.road_network import Direction, Intersection, LaneSegment, CrossingSegment, \
+    Segment, SegmentInfo, right_direction, direction_sign
 from umlsl_sim.config.logic_constants import (
     BUFFER,
     CLAIM_TIME,
@@ -204,13 +204,16 @@ class AstarCarController:
         if legal_max < max_dec:
             return max_dec
 
+        # The route beyond `segments` is the same for every acceleration tried;
+        # _project_reservation works it out on first need and keeps it here.
+        plan_memo: list = []
         for acceleration in range(legal_max, max_dec - 1, -1):
             new_speed = self.car.speed + acceleration
 
             if for_current_lane and self.car.changing_lane and not self._lane_change_will_complete(segments, new_speed):
                 continue
 
-            projected = self._project_reservation(segments, new_speed)
+            projected = self._project_reservation(segments, new_speed, plan_memo)
             if projected is None:
                 continue
 
@@ -236,10 +239,45 @@ class AstarCarController:
         available_space = segments[-1].segment.length - abs(segments[-1].end)
         return available_space >= required_space
 
-    def _project_reservation(self, segments: list[SegmentInfo], new_speed: int) -> list[SegmentInfo] | None:
+    def _extension_plan(self, last: SegmentInfo) -> list[tuple[Segment, Direction, bool]] | None:
+        """The planned segments beyond `last`, up to and including the next lane
+        segment, each with the direction the car would travel it in and whether
+        entering it is a turn. None when no such plan is known.
+
+        Depends only on `last` and the car's route, never on the speed, which is
+        why get_accelerate can share one plan across every acceleration it tries.
+        """
+        next_segments = self.car.get_next_segment(self.reservation_management, last.segment)
+        if not next_segments or len(next_segments) < 2:
+            return None
+
+        plan = []
+        new_segs = next_segments[1:]
+        prev_dir = last.direction
+        for i, seg in enumerate(new_segs):
+            if isinstance(seg, CrossingSegment):
+                next_after = new_segs[i + 1] if i + 1 < len(new_segs) else None
+                seg_dir = next(
+                    (d for d, s in seg.connected_segments.items() if s is next_after),
+                    prev_dir,
+                )
+            elif isinstance(seg, LaneSegment):
+                seg_dir = seg.lane.direction
+            else:
+                continue
+            plan.append((seg, seg_dir, seg_dir != prev_dir))
+            prev_dir = seg_dir
+        return plan
+
+    def _project_reservation(self, segments: list[SegmentInfo], new_speed: int,
+                             plan_memo: list | None = None) -> list[SegmentInfo] | None:
         """Build the full reservation list that would result from advancing the
         car by new_speed for one tick (extending into the next planned segments
         when the new braking distance no longer fits inside the current one).
+
+        `plan_memo`, if given, caches the extension plan between calls on the
+        same `segments`: an empty list is filled on first need, and a filled one
+        is reused as it is.
 
         Returns None when extension is required but no next segments are known."""
         last = segments[-1]
@@ -261,8 +299,12 @@ class AstarCarController:
             return prefix + [SegmentInfo(last.segment, last.begin,
                                          last_sign * new_end_off, last.direction)]
 
-        next_segments = self.car.get_next_segment(self.reservation_management, last.segment)
-        if not next_segments or len(next_segments) < 2:
+        if plan_memo is None:
+            plan_memo = []
+        if not plan_memo:
+            plan_memo.append(self._extension_plan(last))
+        plan = plan_memo[0]
+        if plan is None:
             return None
 
         full_last = SegmentInfo(last.segment, last.begin,
@@ -270,26 +312,15 @@ class AstarCarController:
         projected = prefix + [full_last]
         potential_jump -= (last.segment.length - abs(last.end))
 
-        new_segs = next_segments[1:]
-        prev_dir = last.direction
-        for i, seg in enumerate(new_segs):
+        for seg, seg_dir, turn in plan:
             if isinstance(seg, CrossingSegment):
-                next_after = new_segs[i + 1] if i + 1 < len(new_segs) else None
-                seg_dir = next(
-                    (d for d, s in seg.connected_segments.items() if s is next_after),
-                    prev_dir,
-                )
                 projected.append(SegmentInfo(seg, 0, direction_sign[seg_dir] * seg.length,
-                                             seg_dir, seg_dir != prev_dir))
+                                             seg_dir, turn))
                 potential_jump -= seg.length
-            elif isinstance(seg, LaneSegment):
-                seg_dir = seg.lane.direction
+            else:
                 end_off = max(self.car.size + BUFFER, potential_jump)
                 projected.append(SegmentInfo(seg, 0, direction_sign[seg_dir] * end_off,
-                                             seg_dir, seg_dir != prev_dir))
-            else:
-                continue
-            prev_dir = seg_dir
+                                             seg_dir, turn))
 
         return projected
 
