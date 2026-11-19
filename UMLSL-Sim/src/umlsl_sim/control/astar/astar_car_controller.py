@@ -354,12 +354,14 @@ class AstarCarController:
         cumulative = 0
         for i, seg_info in enumerate(projected):
             seg = seg_info.segment
-            cars_on_seg = self.reservation_management.get_cars_on_segment(seg)
-            if self.car.id in cars_on_seg:
-                prior = cars_on_seg[:cars_on_seg.index(self.car.id)]
-            else:
-                prior = list(cars_on_seg)
             if isinstance(seg, CrossingSegment):
+                # Only crossings are governed by time-to-leave, so only they
+                # need to know who reserved them before this car.
+                cars_on_seg = self.reservation_management.get_cars_on_segment(seg)
+                if self.car.id in cars_on_seg:
+                    prior = cars_on_seg[:cars_on_seg.index(self.car.id)]
+                else:
+                    prior = list(cars_on_seg)
                 time_to_enter_abs = self.car.time + math.ceil((cumulative - self.car.size - BUFFER) / approach_speed)
                 if prior:
                     leave_times = [seg.crossing_segment_state.get_time_to_leave(other)
