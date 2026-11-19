@@ -155,16 +155,17 @@ class View:
     def _filter_lanes(self) -> None:
         segments_in_view: list[SegmentInterval] = []
         new_virtual_lanes: list[VirtualLane] = []
-        horizon = self.horizon
+        start, end = self.horizon.start, self.horizon.end
 
         for virtual_lane in self._unfiltered_lanes:
             new_virtual_lane = []
 
             for segment_interval in virtual_lane.segment_intervals:
                 # only take those segments that overlap the horizon; a segment that merely touches it
-                # at an endpoint shares no space with it
-                overlap = horizon.intersection(segment_interval.interval)
-                if overlap is not None and overlap.length() > 0:
+                # at an endpoint shares no space with it. This is the positive length of
+                # horizon.intersection(interval), without building the intersection.
+                interval = segment_interval.interval
+                if min(end, interval.end) - max(start, interval.start) > 0:
                     segments_in_view.append(segment_interval)
                     new_virtual_lane.append(segment_interval)
 
@@ -195,11 +196,15 @@ class View:
     def _compute_visible_cars_in_view(self, old_cars: dict[str, dict[SegmentInterval, Interval]]):
         # only consider cars that intersect with the horizon
         updated_visible_cars: dict[str, dict[SegmentInterval, Interval]] = dict()
+        segments_in_view = self.segments_in_view
+        start, end = self.horizon.start, self.horizon.end
         for intersecting_car, occupied_segment_interval in old_cars.items():
             # if there is any intersection with the horizon, we can put all the occupied segments of the car in the view
-            # this won't break the logic and safes us computation time
+            # this won't break the logic and safes us computation time. The interval test is
+            # occupied_interval.intersects(self.horizon), without building the intersection.
             any_intersects = any(
-                occupied_segment in self.segments_in_view and occupied_interval.intersects(self.horizon)
+                occupied_segment in segments_in_view
+                and max(occupied_interval.start, start) <= min(occupied_interval.end, end)
                 for occupied_segment, occupied_interval in occupied_segment_interval.items()
             )
             if any_intersects:
@@ -215,10 +220,13 @@ class View:
 
     def _recompute_segments_in_view(self, old_segments: dict[str, dict[SegmentInterval, Interval]]):
         new_segments: dict[str, dict[SegmentInterval, Interval]] = dict()
+        segments_in_view = self.segments_in_view
+        start, end = self.horizon.start, self.horizon.end
         for car, reserved_segments in old_segments.items():
             new_car_segments: dict[SegmentInterval, Interval] = dict()
             for segment, interval in reserved_segments.items():
-                if segment in self.segments_in_view and self.horizon.intersects(interval):
+                # self.horizon.intersects(interval), without building the intersection
+                if segment in segments_in_view and max(start, interval.start) <= min(end, interval.end):
                     new_car_segments[segment] = interval
 
             new_segments[car] = new_car_segments
