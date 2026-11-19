@@ -44,12 +44,13 @@ class View:
     # A chop builds two Views per candidate split, so they are kept small: no per-instance dict, and the
     # lazily filtered data in plain fields rather than in a LazyEvaluator with a closure each.
     __slots__ = (
-        "virtual_lanes", "segments_in_view", "horizon", "ego", "cars_in_view", "lane_range", "memo",
+        "_virtual_lanes", "_segments_in_view", "_unfiltered_lanes",
+        "horizon", "ego", "cars_in_view", "lane_range", "memo",
         "_visible_cars", "_reserved_segments", "_claimed_segments",
         "_visible_cars_filtered", "_reserved_segments_filtered", "_claimed_segments_filtered",
     )
 
-    def __init__(self, virtual_lanes: list[VirtualLane], segments_in_view: list[SegmentInterval],
+    def __init__(self, virtual_lanes: list[VirtualLane] | None, segments_in_view: list[SegmentInterval] | None,
                  horizon: Interval, ego: 'Car',
                  visible_cars: dict[str, dict[SegmentInterval, Interval]],
                  reserved_segments: dict[str, dict[SegmentInterval, Interval]],
@@ -57,9 +58,14 @@ class View:
                  cars_in_view: list[str],
                  lane_range: tuple[int, int] | None = None,
                  memo: dict | None = None,
+                 unfiltered_lanes: list[VirtualLane] | None = None,
                  ):
-        self.virtual_lanes = virtual_lanes
-        self.segments_in_view = segments_in_view
+        # A chopped View is given the lanes it was chopped from (`unfiltered_lanes`) instead of its own,
+        # and filters them to its horizon only when its lanes or segments are first asked for: many
+        # observed spaces are never looked at (a `true` operand, a length comparison).
+        self._virtual_lanes = virtual_lanes
+        self._segments_in_view = segments_in_view
+        self._unfiltered_lanes = unfiltered_lanes
         self.horizon = horizon
         self.ego = ego
         # the cars (uids) whose reservation or claim overlaps ego's whole view, which the quantifiers
@@ -93,13 +99,14 @@ class View:
         Returns:
             left, right: where left is the left View and right is the right View
         """
-        lane_range = self.lane_range or (0, len(self.virtual_lanes))
+        lanes = self._lanes_to_chop()
+        lane_range = self.lane_range or (0, len(lanes))
 
         left_horizon = Interval(self.horizon.start, split)
-        left_view = self._construct_view(left_horizon, self.virtual_lanes, lane_range)
+        left_view = self._construct_view(left_horizon, lanes, lane_range)
 
         right_horizon = Interval(split, self.horizon.end)
-        right_view = self._construct_view(right_horizon, self.virtual_lanes, lane_range)
+        right_view = self._construct_view(right_horizon, lanes, lane_range)
 
         return left_view, right_view
 
@@ -112,22 +119,45 @@ class View:
             lower, upper: where lower is the lower View and upper is the upper View
         """
         # the slice of the root's virtual lanes each part spans; the root spans all of them
-        low, high = self.lane_range or (0, len(self.virtual_lanes))
+        lanes = self._lanes_to_chop()
+        low, high = self.lane_range or (0, len(lanes))
 
-        lower_lanes = self.virtual_lanes[:split]  # take all lanes whose index is < split_index
+        lower_lanes = lanes[:split]  # take all lanes whose index is < split_index
         middle = low + len(lower_lanes)
         lower_view = self._construct_view(self.horizon, lower_lanes, (low, middle))
 
-        upper_lanes = self.virtual_lanes[split:]
+        upper_lanes = lanes[split:]
         upper_view = self._construct_view(self.horizon, upper_lanes, (middle, high))
 
         return lower_view, upper_view
 
-    def _construct_view(self, horizon: Interval, lanes: list[VirtualLane], lane_range: tuple[int, int]) -> 'View':
+    @property
+    def virtual_lanes(self) -> list[VirtualLane]:
+        if self._virtual_lanes is None:
+            self._filter_lanes()
+        return self._virtual_lanes
+
+    @property
+    def segments_in_view(self) -> list[SegmentInterval]:
+        if self._segments_in_view is None:
+            self._filter_lanes()
+        return self._segments_in_view
+
+    def _lanes_to_chop(self) -> list[VirtualLane]:
+        """
+        The lanes the parts of a chop filter to their horizons: this View's own if it has filtered them,
+        otherwise the ones it was chopped from. Both give the parts the same lanes, since filtering keeps
+        every lane (an empty one too) and filtering by a horizon after filtering by a wider one is the
+        same as filtering by it alone.
+        """
+        return self._unfiltered_lanes if self._virtual_lanes is None else self._virtual_lanes
+
+    def _filter_lanes(self) -> None:
         segments_in_view: list[SegmentInterval] = []
         new_virtual_lanes: list[VirtualLane] = []
+        horizon = self.horizon
 
-        for virtual_lane in lanes:
+        for virtual_lane in self._unfiltered_lanes:
             new_virtual_lane = []
 
             for segment_interval in virtual_lane.segment_intervals:
@@ -142,9 +172,14 @@ class View:
             # may end before the horizon does), so that atoms still see how many lanes it spans
             new_virtual_lanes.append(VirtualLane(new_virtual_lane))
 
+        self._virtual_lanes = new_virtual_lanes
+        self._segments_in_view = segments_in_view
+        self._unfiltered_lanes = None
+
+    def _construct_view(self, horizon: Interval, lanes: list[VirtualLane], lane_range: tuple[int, int]) -> 'View':
         return View(
-            new_virtual_lanes,
-            segments_in_view,
+            None,
+            None,
             horizon,
             self.ego,
             # filtered already if this View was asked for it, otherwise as passed in to this View
@@ -154,6 +189,7 @@ class View:
             self.cars_in_view,
             lane_range,
             self.memo,
+            lanes,
         )
 
     def _compute_visible_cars_in_view(self, old_cars: dict[str, dict[SegmentInterval, Interval]]):
