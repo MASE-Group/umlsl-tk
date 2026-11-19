@@ -99,16 +99,15 @@ class View:
         Returns:
             left, right: where left is the left View and right is the right View
         """
+        return self.horizontal_part(self.horizon.start, split), self.horizontal_part(split, self.horizon.end)
+
+    def horizontal_part(self, start: float, end: float) -> 'View':
+        """
+        The part of the View between start and end, on all of its lanes: one side of a horizontal chop. A
+        horizontal chop builds its right part only once its left part holds, which is rare.
+        """
         lanes = self._lanes_to_chop()
-        lane_range = self.lane_range or (0, len(lanes))
-
-        left_horizon = Interval(self.horizon.start, split)
-        left_view = self._construct_view(left_horizon, lanes, lane_range)
-
-        right_horizon = Interval(split, self.horizon.end)
-        right_view = self._construct_view(right_horizon, lanes, lane_range)
-
-        return left_view, right_view
+        return self._construct_view(Interval(start, end), lanes, self.lane_range or (0, len(lanes)))
 
     def chop_vertically(self, split: int) -> tuple['View', 'View']:
         """

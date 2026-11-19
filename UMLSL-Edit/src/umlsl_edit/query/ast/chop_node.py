@@ -161,11 +161,11 @@ class HorizontalChopNode(BinaryNode):
         if not (horizon.start <= split_value <= horizon.end):
             return False
 
-        left_view, right_view = view.chop_horizontally(split_value)
-
-        # if the left part is false, we can skip the computation of the right part
+        # if the left part is false, we can skip the computation of the right part, and building it
+        left_view = view.horizontal_part(horizon.start, split_value)
         left_eval = self._left.evaluate(traffic_snapshot, left_view, variable_car_map)
         if left_eval:
+            right_view = view.horizontal_part(split_value, horizon.end)
             right_eval = self._right.evaluate(traffic_snapshot, right_view, variable_car_map)
             if right_eval:
                 # print(
