@@ -239,13 +239,16 @@ class AstarCarController:
         available_space = segments[-1].segment.length - abs(segments[-1].end)
         return available_space >= required_space
 
-    def _extension_plan(self, last: SegmentInfo) -> list[tuple[Segment, Direction, bool]] | None:
+    def _extension_plan(self, last: SegmentInfo) -> list[tuple[Segment, Direction, bool, SegmentInfo | None]] | None:
         """The planned segments beyond `last`, up to and including the next lane
-        segment, each with the direction the car would travel it in and whether
-        entering it is a turn. None when no such plan is known.
+        segment, each with the direction the car would travel it in, whether
+        entering it is a turn, and -- for a crossing, which is always reserved
+        whole -- its finished SegmentInfo. None when no such plan is known.
 
         Depends only on `last` and the car's route, never on the speed, which is
         why get_accelerate can share one plan across every acceleration it tries.
+        The crossing entries are shared by every projection built from the plan;
+        projections are only ever read, so none of them can see another's edits.
         """
         next_segments = self.car.get_next_segment(self.reservation_management, last.segment)
         if not next_segments or len(next_segments) < 2:
@@ -261,11 +264,14 @@ class AstarCarController:
                     (d for d, s in seg.connected_segments.items() if s is next_after),
                     prev_dir,
                 )
+                plan.append((seg, seg_dir, seg_dir != prev_dir,
+                             SegmentInfo(seg, 0, direction_sign[seg_dir] * seg.length,
+                                         seg_dir, seg_dir != prev_dir)))
             elif isinstance(seg, LaneSegment):
                 seg_dir = seg.lane.direction
+                plan.append((seg, seg_dir, seg_dir != prev_dir, None))
             else:
                 continue
-            plan.append((seg, seg_dir, seg_dir != prev_dir))
             prev_dir = seg_dir
         return plan
 
@@ -312,10 +318,9 @@ class AstarCarController:
         projected = prefix + [full_last]
         potential_jump -= (last.segment.length - abs(last.end))
 
-        for seg, seg_dir, turn in plan:
-            if isinstance(seg, CrossingSegment):
-                projected.append(SegmentInfo(seg, 0, direction_sign[seg_dir] * seg.length,
-                                             seg_dir, turn))
+        for seg, seg_dir, turn, crossing_info in plan:
+            if crossing_info is not None:
+                projected.append(crossing_info)
                 potential_jump -= seg.length
             else:
                 end_off = max(self.car.size + BUFFER, potential_jump)
