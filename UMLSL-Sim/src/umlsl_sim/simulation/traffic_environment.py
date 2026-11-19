@@ -297,9 +297,17 @@ class TrafficEnv:
                 car.handle_car_death(self.reservation_management)
                 return True
 
-        # Crash detection:
+        # Crash detection. Two bodies can only overlap on a segment both of
+        # them hold, and a body never reaches past its own reservations, so the
+        # only cars worth testing are those holding a reservation on a segment
+        # this car's body covers. They are still tested in `self.cars` order,
+        # so the car reported -- and killed -- is the one a full scan finds.
+        rm = self.reservation_management
+        nearby = set()
+        for seg_info in car.get_size_segments(rm):
+            nearby.update(rm.get_cars_on_segment(seg_info.segment))
         for other_car in self.cars:
-            if other_car != car:
+            if other_car != car and other_car.id in nearby:
                 if collision_check(car, other_car, self.reservation_management):
                     self.total_crashes += 1
                     self.crashes[car.direction] += 1
