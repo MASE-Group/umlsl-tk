@@ -58,7 +58,11 @@ class CarMixin:
         if self.is_car_existing(car.uid):
             raise ValueError(f"Car with uid {car.uid} already exists.")
         self.cars[car.uid] = car
-        self._revalidate_cars()
+        # Whether a car is valid, and its environment, depend on its own parameters, the roads and the
+        # settings, not on the other cars, so adding a car leaves the others as they are. Revalidating
+        # all of them made loading a snapshot of n cars (from_dict, as the evaluation worker does for
+        # every query) build n * (n + 1) / 2 environments.
+        self._revalidate_cars([car])
 
     def remove_car(self: "TrafficSnapshotModel", car_uid: str) -> None:
         self.cars.pop(car_uid)
@@ -78,9 +82,10 @@ class CarMixin:
         self.cars[car_uid] = car
         self._revalidate_cars()
 
-    def _revalidate_cars(self: "TrafficSnapshotModel"):
+    def _revalidate_cars(self: "TrafficSnapshotModel", cars: list[Car] | None = None):
+        """Revalidates the given cars (all of them by default) and recomputes their environments."""
         cars_to_remove = []
-        cars_snapshot = list(self.cars.values())
+        cars_snapshot = list(self.cars.values()) if cars is None else list(cars)
         for car in cars_snapshot:
             if not self.validator.validate_car_and_autocorrect(car):
                 cars_to_remove.append(car)
