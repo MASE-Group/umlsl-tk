@@ -619,11 +619,16 @@ The result: no collision in any of the 150 episodes, with 16 to 48 cars. Traffic
 <div class="grid gap-5 items-start" style="grid-template-columns: 1fr 440px">
 <div>
 <ul class="small">
-  <li>The RL agent drives one car. The optimal controller drives the other cars.</li>
-  <li>Action: an acceleration and a lane-change direction.</li>
+  <li>The RL agent drives some cars. The NPC controller drives the others.</li>
   <li>An episode ends on a collision, a gridlock, or the step limit.</li>
-  <li>Modules: algorithm, reward profile, observation model.</li>
-  <li>Modes: train, evaluate or replay, hyperparameter search with Optuna.</li>
+  <li>Modules: RL algorithm, reward profile, observation model.</li>
+  <li>Modes: hyperparameter search with Optuna, train, evaluate or replay.</li>
+  <ul class="small">
+    <li>hyperparameter search with Optuna,</li>
+    <li>train,</li>
+    <li>evaluate, or</li>
+    <li>simulate</li>
+  </ul>
 </ul>
 </div>
 <div>
