@@ -34,6 +34,10 @@ class DataController:
     def get_all_roads(self) -> dict[str, "Road"]:
         return self._traffic_snapshot_reader.get_roads()
 
+    def get_world_extent(self) -> tuple[float, float]:
+        """Half width and half height of the world, in lanes: where the lanes end."""
+        return self._traffic_snapshot_reader.get_world_extent()
+
     def get_road_by_uid(self, uid: str) -> "Road":
         """Returns the road with the given uid."""
         return self._traffic_snapshot_reader.get_road_by_uid(uid)

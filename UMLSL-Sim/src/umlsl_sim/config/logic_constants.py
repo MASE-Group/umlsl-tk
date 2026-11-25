@@ -11,10 +11,15 @@ anything about a display: a headless run uses every one of them.
 # The simulation's length unit: one lane's width, one crossing cell's side.
 BLOCK_SIZE = 40
 
-# Extent of the world cars drive in. Road positions are given in this space, and
-# an observation model normalises car coordinates against it.
+# Extent of the world cars drive in, for a scenario that does not state its own
+# (``width`` and ``height`` in its file; every bundled scenario, and so every
+# trained RL model, uses this one). Road positions are given in this space, the
+# GUI fits it to the window, and an observation model normalises car coordinates
+# against it. The traffic logic itself never reads it: a lane wraps at its last
+# crossing, wherever that is.
 WORLD_WIDTH = 40 * BLOCK_SIZE
 WORLD_HEIGHT = 24 * BLOCK_SIZE
+DEFAULT_WORLD_SIZE = (WORLD_WIDTH, WORLD_HEIGHT)
 
 # Safety margin kept between a car and whatever is in front of it.
 BUFFER = BLOCK_SIZE // 2

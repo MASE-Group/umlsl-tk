@@ -159,6 +159,7 @@ class MlslEnv(Env, ABC):
                 self.game_model.cars,
                 self.game_model.roads,
                 self.game_model.reservation_management,
+                world_size=self.game_model.world_size,
             )
 
         self.agent_score: int = self.game_model.agent_car.score

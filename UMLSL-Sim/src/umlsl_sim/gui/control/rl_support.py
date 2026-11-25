@@ -188,6 +188,7 @@ class RLWorker:
         id_model: Optional[str] = None,
         id_hyperparams: Optional[str] = None,
         id_history: Optional[str] = None,
+        world_size=None,
     ) -> bool:
         if self.running:
             self.queue.put(("warn", "An RL job is already running."))
@@ -217,6 +218,7 @@ class RLWorker:
                     id_history=id_history,
                     id_hyperparams=id_hyperparams,
                     predefined_cars=predefined_cars,
+                    world_size=world_size,
                 )
                 controller.run()
             except Exception as exc:  # noqa: BLE001

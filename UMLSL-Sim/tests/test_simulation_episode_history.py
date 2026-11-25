@@ -36,8 +36,9 @@ class _CountingRenderer(NullRenderer):
         self.frames = 0
         self.closed = False
 
-    def bind(self, cars, roads, reservation_management=None):
+    def bind(self, cars, roads, reservation_management=None, world_size=None):
         self.bound = (list(cars), list(roads), reservation_management)
+        self.world_size = world_size
 
     def draw_frame(self):
         self.frames += 1

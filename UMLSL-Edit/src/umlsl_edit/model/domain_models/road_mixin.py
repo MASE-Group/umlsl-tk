@@ -58,7 +58,9 @@ class RoadMixin:
 
     def _on_road_added(self: "TrafficSnapshotModel", road: Road):
         self._recalculate_static_segments()
+        self._cover_roads()
         self._revalidate_cars()
+        self._update_world_extent()
         # self.revalidate_queries()
         self.notify(TrafficSnapshotEventType.ROAD_ADDED, road)
 
@@ -66,13 +68,17 @@ class RoadMixin:
         # Recalculate segments BEFORE notifying observers to ensure consistency.
         # This prevents observers from accessing stale segments that reference the removed road.
         self._recalculate_static_segments()
+        self._cover_roads()
         self._revalidate_cars()
+        self._update_world_extent()
         # self.revalidate_queries()
         self.notify(TrafficSnapshotEventType.ROAD_REMOVED, road)
 
     def _on_road_updated(self: "TrafficSnapshotModel", road: Road):
         self._recalculate_static_segments()
+        self._cover_roads()
         self._revalidate_cars()
+        self._update_world_extent()
         # self.revalidate_queries()
         self.notify(TrafficSnapshotEventType.ROAD_UPDATED, road)
 

@@ -3,6 +3,7 @@ PALE_GREEN = (121, 149, 130)  # UMLSL-Edit COLORS.GREEN #799582 (blocks between 
 WHITE = (255, 255, 255)
 ROAD_BLUE = (3, 47, 64)  # UMLSL-Edit COLORS.LAYER #032F40 (roads and crossings)
 DEAD_GREY = (145, 149, 156)
+OUTSIDE_WORLD = (1, 28, 38)  # UMLSL-Edit COLORS.BACKGROUND #011C26 (beyond the edges of the world)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)

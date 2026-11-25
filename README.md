@@ -247,13 +247,14 @@ Both export commands refuse a snapshot that UMLSL-Sim could not load or run, and
 list every reason:
 
 * no roads, or no cars;
-* a road outside the 40 × 24-lane canvas (horizontal roads within y = −11 … 11,
-  vertical roads within x = −19 … 19, inside the border roads), or two parallel
-  roads that overlap;
-* a car outside the canvas, or whose rear is inside a crossing — this includes
-  the crossings with the border roads at the canvas edge;
+* two parallel roads that overlap, or a road that overlaps a border road;
+* a car whose rear is inside a crossing;
 * two cars that overlap, or a car driving backwards;
 * more cars than the road network has lane segments.
+
+The canvas grows with the snapshot (see
+[below](#representation-differences-handled-by-the-conversion)), so roads and
+cars no longer have to fit a fixed 40 × 24 lanes.
 
 A lane change in progress, or a turn intention that UMLSL-Sim cannot express, is
 a warning: you can export anyway, and the simulation starts slightly differently
@@ -339,18 +340,39 @@ and understanding it explains small coordinate shifts you may notice:
 | :--- | :--- | :--- |
 | Unit size | 1 unit = 1 | 1 unit = 40 |
 | Origin | centre of the canvas | bottom-left corner |
-| Canvas | unbounded, view is panned | fixed 40 × 24 lanes |
+| Canvas | unbounded; the lanes end at the world extent | the world extent, as `width` × `height` px (40 × 24 lanes if the scenario states none) |
 | Lane indexing | signed, `-n … -1 \| 0 … n` around the road axis | two groups: `right` lanes counted from the road's lower edge, `left` lanes from its centre line |
 | Maximum speed | one global setting | one value per car |
 | Turning | explicit turn intention | implicit, via the car's goal |
 
-UMLSL-Sim's canvas is a bounded torus: every road spans it and wraps around at
-the edge, which needs a road along each edge. Exporting adds a one-lane border
-road along every edge that no road touches yet, and coordinates are rebased
-between the two origins. Importing leaves out the border roads that no car
-uses, if exporting would add exactly the same roads again. So an Edit ➜ Sim ➜
-Edit round trip gives back the original roads, and a Sim ➜ Edit ➜ Sim round
-trip gives back the same roads and car positions.
+**The world extent.** UMLSL-Edit's canvas is unbounded, but a lane with no
+crossing in some direction has to end somewhere: at the *world extent*, a
+rectangle centred on the origin that holds every road, every crossing and every
+car with its whole environment (view, reservation and claim), plus the view
+horizon H in each direction. H is the braking distance of the settings,
+max speed² / (2 · braking deceleration): how far a car's view reaches behind
+and ahead of it. The model checker only ever looks inside a car's view, so
+where the lanes end beyond it changes no formula's value. The dashed rectangle
+on the editor's canvas shows the extent, and it grows and shrinks as you edit.
+
+UMLSL-Sim's canvas is that same rectangle, exported as the scenario's `width`
+and `height` (pixels, 40 per lane). A scenario without them, such as every
+scenario bundled with UMLSL-Sim, keeps the old 40 × 24 lanes, which is also the
+size every trained RL model expects. Both UMLSL-Sim windows fit the world to the
+window: scroll to zoom, drag to pan, and press `F` to see all of it again.
+
+The canvas is a bounded torus: every road spans it and wraps around at the
+edge, which needs a road along each edge. Exporting adds a one-lane border road
+along every edge that no road touches yet, and coordinates are rebased between
+the two origins. Importing leaves out the border roads that no car uses, if
+exporting would add exactly the same roads again. The imported snapshot keeps
+the scenario's canvas as its world extent for as long as every road and car
+body fits inside it; its lanes then end at the canvas edges, as they do in
+UMLSL-Sim, and a view that reaches an edge is cut there. Move a road or car out
+of the canvas and the world extent described above takes over (never smaller
+than the canvas); move it back and the canvas returns. So an Edit ➜ Sim ➜ Edit
+round trip gives back the original roads, cars and extent, and a Sim ➜ Edit ➜
+Sim round trip gives back the same canvas, roads and car positions.
 
 ## Repository layout
 

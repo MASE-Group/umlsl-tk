@@ -62,8 +62,8 @@ class Renderer(Protocol):
     """Shows a running simulation. Every method is optional to *use*, but a
     renderer must provide all of them.
 
-    Input:  a world (cars, roads, reservations) through `bind`, then a redraw
-            request per frame.
+    Input:  a world (cars, roads, reservations, its size) through `bind`, then
+            a redraw request per frame.
     Output: pixels, or nothing at all -- see `NullRenderer`.
 
     `paused` is read *and written* by the runners: the pyglet renderer sets it
@@ -75,8 +75,13 @@ class Renderer(Protocol):
     def bind(self,
              cars: List["Car"],
              roads: List["Road"],
-             reservation_management: "ReservationManagement | None" = None) -> None:
-        """Attach (or re-attach, after a reset) the world to be drawn."""
+             reservation_management: "ReservationManagement | None" = None,
+             world_size: "Tuple[int, int] | None" = None) -> None:
+        """Attach (or re-attach, after a reset) the world to be drawn.
+
+        `world_size` is the world's width and height in pixels, as
+        `TrafficEnv.world_size` holds it; None means `DEFAULT_WORLD_SIZE`.
+        """
         ...
 
     def draw_frame(self) -> None:
@@ -116,7 +121,7 @@ class NullRenderer:
         self.paused = False
         self._running = False
 
-    def bind(self, cars, roads, reservation_management=None) -> None:
+    def bind(self, cars, roads, reservation_management=None, world_size=None) -> None:
         pass
 
     def draw_frame(self) -> None:

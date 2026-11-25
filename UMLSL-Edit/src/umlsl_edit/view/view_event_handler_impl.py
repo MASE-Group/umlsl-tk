@@ -14,6 +14,8 @@ class ViewEventHandlerImplementation(ViewEventHandler):
     toggle_grid_signal = Signal(bool)
     toggle_safety_distance_signal = Signal(bool)
     show_snackbar_message = Signal(str, int)
+    world_extent_changed = Signal(float, float)
+    snapshot_reloaded = Signal()
 
     def get_on_selection_changed_signal(self) -> "SignalInstance":
         return self.selection_changed
@@ -32,6 +34,12 @@ class ViewEventHandlerImplementation(ViewEventHandler):
 
     def get_on_show_snackbar_message_signal(self) -> "SignalInstance":
         return self.show_snackbar_message
+
+    def get_on_world_extent_changed_signal(self) -> "SignalInstance":
+        return self.world_extent_changed
+
+    def get_on_snapshot_reloaded_signal(self) -> "SignalInstance":
+        return self.snapshot_reloaded
 
     def __init__(self, view_models: ViewModels) -> None:
         super().__init__()
@@ -95,6 +103,9 @@ class ViewEventHandlerImplementation(ViewEventHandler):
         # self.show_snackbar_message.emit("All queries evaluated", 3000)
         pass
 
+    def update_world_extent_view(self, world_extent: tuple[float, float]) -> None:
+        self.world_extent_changed.emit(float(world_extent[0]), float(world_extent[1]))
+
     def revalidation_started(self) -> None:
         self.view_models.query_list_model.set_all_queries_loading()
 
@@ -122,6 +133,8 @@ class ViewEventHandlerImplementation(ViewEventHandler):
 
         self.current_selected_uid = ""
         self.selection_changed.emit(self.current_selected_uid)
+        self.world_extent_changed.emit(*map(float, snapshot_model.get_world_extent()))
+        self.snapshot_reloaded.emit()
 
     def set_coordinate_system(self, render_coordinate_system: bool) -> None:
         self.should_render_coordinate_system = render_coordinate_system

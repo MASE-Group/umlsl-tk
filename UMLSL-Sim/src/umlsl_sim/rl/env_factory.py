@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from umlsl_sim.config.render_mode import RenderMode
 from umlsl_sim.rl.constants import MAX_EPISODE_STEPS
@@ -51,6 +51,10 @@ class EnvSpec:
             caller's network is never mutated by training.
         players (int): Number of NPC cars; the RL agent is spawned on top.
         predefined_cars (List[CarSpec]): Scenario-supplied car specs, if any.
+        world_size (Tuple[int, int] | None): Width and height of the world, in
+            pixels; None for the default world. An observation model normalises
+            positions against it, so a policy only applies to the world size it
+            was trained on.
         observation_model_type (ObservationModelType): How game state becomes an
             observation vector.
         reward_type (RewardType): Which reward profile the environment scores by.
@@ -74,6 +78,7 @@ class EnvSpec:
     reward_type: RewardType
     uses_action_masks: bool
     predefined_cars: List[CarSpec] = field(default_factory=list)
+    world_size: Optional[Tuple[int, int]] = None
     render_mode: RenderMode = RenderMode.NO_GUI
     show_reservation: bool = False
     max_episode_steps: int = MAX_EPISODE_STEPS
@@ -99,6 +104,7 @@ class EnvSpec:
             players=self.players,
             predefined_cars=copy.deepcopy(self.predefined_cars),
             with_agent=True,
+            world_size=self.world_size,
         )
 
         observation_model = get_observation_model(self.observation_model_type)(game_model)

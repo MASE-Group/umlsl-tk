@@ -171,7 +171,19 @@ class TrafficSnapshotReader(ABC):
         pass
 
     @abstractmethod
-    def get_scene_size(self) -> float:
+    def get_world_extent(self) -> tuple[float, float]:
+        """
+        Half width and half height of the world, in lanes: a lane with no crossing in some direction ends at
+        x = +-half width (horizontal lanes) or y = +-half height (vertical lanes).
+        """
+        pass
+
+    @abstractmethod
+    def get_simulator_canvas(self) -> tuple[float, float] | None:
+        """
+        Half width and half height of the UMLSL-Sim canvas the snapshot was imported with, or None. The world keeps
+        this canvas while every road and car body fits inside it.
+        """
         pass
 
     @abstractmethod

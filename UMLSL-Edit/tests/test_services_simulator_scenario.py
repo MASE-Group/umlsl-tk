@@ -260,10 +260,11 @@ class TestShowcaseScenes(unittest.TestCase):
         scenario = build_simulator_scenario(
             load_native(SAMPLE_SCENES / "sim_demo_not_simulatable.json"), "x", 15)
         errors = messages(scenario, Severity.ERROR)
-        self.assertEqual(len(errors), 3)
-        self.assertTrue(any("Road 'Far'" in e for e in errors))
-        self.assertTrue(any("Car 'Edge'" in e for e in errors))
+        self.assertEqual(len(errors), 2)
+        self.assertTrue(any("Car 'Backwards' drives backwards" in e for e in errors))
         self.assertTrue(any("'P' and 'Q' overlap" in e for e in errors))
+        # road 'Far' (y = 13) used to lie outside the 40 x 24 canvas; the canvas now grows around it
+        self.assertFalse(any("Far" in e for e in errors))
 
     @unittest.skipUnless(importlib.util.find_spec("umlsl_sim"), "UMLSL-Sim is not installed")
     def test_exported_scenes_run_in_umlsl_sim(self):
@@ -280,7 +281,8 @@ class TestShowcaseScenes(unittest.TestCase):
                 roads = [Road(r["name"], r["horizontal"], r["top"], r["right"], r["left"])
                          for r in payload["roads"]]
                 env = TrafficEnv(roads=roads, players=payload["players"],
-                                 predefined_cars=[CarSpec.from_dict(c) for c in payload["cars"]])
+                                 predefined_cars=[CarSpec.from_dict(c) for c in payload["cars"]],
+                                 world_size=(payload["width"], payload["height"]))
                 for _ in range(200):
                     env.play_step()
                 self.assertEqual(env.total_crashes, 0)

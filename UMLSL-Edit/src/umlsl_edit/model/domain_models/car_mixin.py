@@ -17,6 +17,9 @@ class CarMixin:
             self: "TrafficSnapshotModel", car_params: CarParams, new_instantiation: bool, car_uid: str | None = None
     ) -> None:
         self.validator.validate_car_params(car_params, new_instantiation, car_uid)
+        # Whoever validates these parameters builds the car's environment next (Car.from_params,
+        # Car.update_from_params), and that needs the car inside the world.
+        self._cover_car_params(car_params)
 
     def _on_car_added(self: "TrafficSnapshotModel", car: Car):
         self.notify(TrafficSnapshotEventType.CAR_ADDED, car)
@@ -63,10 +66,12 @@ class CarMixin:
         # all of them made loading a snapshot of n cars (from_dict, as the evaluation worker does for
         # every query) build n * (n + 1) / 2 environments.
         self._revalidate_cars([car])
+        self._update_world_extent()
 
     def remove_car(self: "TrafficSnapshotModel", car_uid: str) -> None:
         self.cars.pop(car_uid)
         self._revalidate_cars()
+        self._update_world_extent()
 
     def update_car_with_params(self: "TrafficSnapshotModel", car_uid: str, car_params: CarParams) -> None:
         car = self.cars.get(car_uid)
@@ -83,6 +88,7 @@ class CarMixin:
         # only this car can have changed (see add_car); revalidating all of them also notified every
         # other car as updated, and the canvas redraws a car's segments on each such notification
         self._revalidate_cars([car])
+        self._update_world_extent()
 
     def _revalidate_cars(self: "TrafficSnapshotModel", cars: list[Car] | None = None):
         """Revalidates the given cars (all of them by default) and recomputes their environments."""

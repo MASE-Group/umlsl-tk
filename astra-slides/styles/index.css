@@ -1,0 +1,246 @@
+/*
+ * KIT 2025 theme for Slidev, derived from KIT_Presentation_Template/sdqbeamer.cls.
+ * Canvas is 960 x 540 px, i.e. 1 px = 1 pt of the 33.867 cm x 19.05 cm beamer page.
+ */
+@import '@fontsource/libre-franklin/400.css';
+@import '@fontsource/libre-franklin/600.css';
+
+:root {
+  /* sdqbeamer.cls colours */
+  --kit-green: #009682;            /* kit-green100, brand + "safe" */
+  --kit-green-20: #ccebe6;         /* title on green */
+  --kit-green-15: #d9efec;         /* block body */
+  --kit-red: #a22223;              /* kit-red100, "unsafe / collision" */
+  --kit-red-15: #f1dede;
+  --kit-royalblue: #002d4c;        /* normal text, structure */
+  --kit-iceblue-70: #445e6f;       /* grey: strong */
+  --kit-iceblue-50: #a8b9c4;       /* grey: framesubtitle, gray block */
+  --kit-iceblue-30: #dae1e6;       /* grey: light */
+  --kit-iceblue-15: #edf1f3;
+  --kit-footer: #8096a6;           /* kit-royalblue100!50!white */
+
+  /* geometry (pt == px) */
+  --kit-margin: 29.2px;            /* 1.03 cm */
+  --kit-bottom: 45.9px;            /* 1.62 cm footer */
+  --kit-content-top: 104.9px;      /* 37 mm */
+  --kit-nav-h: 22px;
+
+  --kit-font-title: 'Libre Franklin', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --kit-font-body: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --kit-font-mono: 'Menlo', 'DejaVu Sans Mono', monospace;
+
+  --slidev-theme-primary: var(--kit-green);
+  --slidev-code-font-family: var(--kit-font-mono);
+}
+
+.slidev-layout {
+  font-family: var(--kit-font-body);
+  color: var(--kit-royalblue);
+  font-size: 17px;                 /* \normalsize at 17 pt */
+  line-height: 1.35;
+  background: #fff;
+}
+
+.slidev-layout h1,
+.slidev-layout h2,
+.slidev-layout h3 {
+  font-family: var(--kit-font-title);
+  font-weight: 600;
+  color: var(--kit-royalblue);
+  margin: 0;
+  letter-spacing: 0;
+}
+
+/* itemize: square bullets in KIT green */
+.slidev-layout ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+.slidev-layout ul > li {
+  position: relative;
+  padding-left: 1.05em;
+  margin: 0.28em 0;
+}
+.slidev-layout ul > li::before {
+  content: '';
+  position: absolute;
+  left: 0.1em;
+  top: 0.5em;
+  width: 0.38em;
+  height: 0.38em;
+  background: var(--kit-green);
+}
+.slidev-layout ol { padding-left: 1.2em; margin: 0; }
+.slidev-layout ol > li { margin: 0.28em 0; }
+.slidev-layout ol > li::marker { color: var(--kit-iceblue-70); font-weight: 700; }
+
+.slidev-layout p { margin: 0.3em 0; }
+.slidev-layout strong { font-weight: 700; }
+.slidev-layout code {
+  font-family: var(--kit-font-mono);
+  font-size: 0.86em;
+  background: var(--kit-iceblue-15);
+  color: var(--kit-royalblue);
+  padding: 0.05em 0.25em;
+  border-radius: 2px;
+}
+
+/* KaTeX inherits text colour */
+.slidev-layout .katex { font-size: 1.05em; color: inherit; }
+
+/* --- colour semantics: green = brand / safe, red = unsafe / collision, grey = rest --- */
+.safe { color: var(--kit-green); }
+.unsafe { color: var(--kit-red); }
+.muted { color: var(--kit-iceblue-70); }
+.small { font-size: 14px; }
+.tiny { font-size: 12px; }
+
+/* boxes from sdqbeamer.cls (standardbox, gray/lightgray highlight box, blocks) */
+.box {
+  padding: 8px 12px;
+  border-radius: 0;
+}
+.box-safe { background: var(--kit-green-15); border-left: 4px solid var(--kit-green); }
+.box-unsafe { background: var(--kit-red-15); border-left: 4px solid var(--kit-red); }
+.box-grey { background: var(--kit-iceblue-15); border-left: 4px solid var(--kit-iceblue-50); }
+.box-title {
+  font-family: var(--kit-font-title);
+  font-weight: 600;
+  font-size: 17px;
+  margin-bottom: 4px;
+}
+
+/* screenshot frames */
+.shot {
+  display: block;
+  border: 1px solid var(--kit-iceblue-50);
+  max-width: 100%;
+  max-height: 100%;
+}
+.shot-cap {
+  font-size: 12px;
+  color: var(--kit-iceblue-70);
+  margin-top: 3px;
+}
+
+/* placeholder for screenshots that could not be captured */
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 2px dashed var(--kit-red);
+  color: var(--kit-red);
+  font-weight: 700;
+  background: repeating-linear-gradient(45deg, #fff, #fff 8px, var(--kit-red-15) 8px, var(--kit-red-15) 16px);
+}
+
+/* plain table in template style */
+.kit-table {
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.kit-table th {
+  font-family: var(--kit-font-title);
+  font-weight: 600;
+  text-align: right;
+  padding: 4px 10px;
+  border-bottom: 2px solid var(--kit-royalblue);
+}
+.kit-table th:first-child,
+.kit-table td:first-child { text-align: left; }
+.kit-table td {
+  text-align: right;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--kit-iceblue-30);
+  font-variant-numeric: tabular-nums;
+}
+
+/* step labels for click-revealed demo steps */
+.step-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--kit-royalblue);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  margin-right: 6px;
+  flex: none;
+}
+
+/* no slide transitions, no fade on v-click: elements just appear */
+.slidev-vclick-target { transition: none !important; }
+.slidev-vclick-hidden { opacity: 0 !important; pointer-events: none; }
+
+/* neutralise theme-default rules that clash with the KIT layout */
+.slidev-layout h1 + p { opacity: 1 !important; }
+.slidev-layout h1 { margin-bottom: 0 !important; }
+.slidev-page { background: #fff; }
+
+/* Talk revision: retain KIT geometry, palette and typography; enlarge explanatory content. */
+.slidev-layout { font-size: 20px; }
+.wide-diagram { margin: 0 auto; max-width: 100%; }
+.wide-diagram svg { display: block; width: 100%; }
+.takeaway { margin-top: 15px; padding: 10px 0 0; border-top: 2px solid var(--kit-green); font-size: 21px; font-weight: 600; }
+.source { position: absolute; bottom: 0; left: 0; font-size: 12px; color: var(--kit-iceblue-70); line-height: 1.2; }
+.question-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 16px; }
+.question-pair > div { display:flex; flex-direction:column; gap:5px; }
+.question-pair b { font-size: 22px; }
+.eyebrow { font-size: 16px; color: var(--kit-iceblue-70); }
+.visual-split { display: grid; grid-template-columns: 590px 1fr; gap: 28px; align-items: center; }
+.visual-split > .shot { width:590px; height:285px; object-fit:contain; background:#edf1f3; }
+.labels { font-size:20px; }
+.labels p { margin: 0 0 20px; }
+.labels p:last-child { margin-bottom:0; }
+.definition-strip { display:flex; justify-content:space-between; gap:22px; margin-top: 14px; font-size:19px; }
+.crop-frame { overflow:hidden; border:1px solid var(--kit-iceblue-50); position:relative; }
+.editor-focus { height:285px; }
+.editor-focus img { width:100%; max-width:none; transform:translateY(-53px); }
+.query-showcase { display:grid; grid-template-columns:420px 1fr; gap:28px; align-items:stretch; height:301px; }
+.query-showcase img { width:420px; }
+.query-meanings { display:flex; flex-direction:column; padding-top:75px; justify-content:space-around; font-size:20px; }
+.check-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.check-grid .box { min-height:109px; padding:17px 20px; }
+.check-grid p { font-size:20px; margin-top:8px; }
+.formula-lead { font-size:20px; margin-bottom:8px !important; }
+.cp-legend { display:flex; justify-content:center; gap:30px; margin-top:7px; font-size:19px; }
+.theorem { padding:10px 14px; background:var(--kit-iceblue-15); font-size:21px; margin-bottom:12px; }
+.chart-split { display:grid; grid-template-columns:565px 1fr; gap:28px; align-items:center; }
+.chart-split .labels { font-size:18px; }
+.chart-split .labels p { margin-bottom:15px; }
+.handoff-pair { display:grid; grid-template-columns:1fr 44px 1fr; gap:15px; align-items:center; }
+.handoff-pair > div:not(.large-arrow) { display:flex; flex-direction:column; gap:12px; }
+.handoff-pair img.shot { width:100%; height:263px; object-fit:contain; background:#edf1f3; }
+.handoff-pair b { font-size:20px; }
+.handoff-editor { height:263px; }
+.handoff-editor img { width:100%; transform:translateY(-20px); }
+.large-arrow { font-size:38px; color:var(--kit-green); text-align:center; }
+.metric-column { display:flex; flex-direction:column; gap:19px; }
+.metric-column > div { display:flex; flex-direction:column; }
+.metric { font-size:43px; line-height:1.15; }
+.metric-column span, .metric-column p { font-size:17px; }
+.conclusion-grid { display:grid; grid-template-columns:1fr 300px; gap:35px; }
+.contribution { display:flex; flex-direction:column; margin-bottom:16px; gap:3px; }
+.contribution b { font-size:22px; }
+.contribution span { font-size:19px; }
+.future { border-top:2px solid var(--kit-green); padding-top:13px; margin-top:18px; font-size:19px; }
+.qr-block { display:flex; flex-direction:column; align-items:center; text-align:center; gap:7px; }
+.qr-block img { width:244px; height:244px; }
+.qr-block b { font-size:18px; }
+.qr-block span { font-size:15px; }
+/* Reserve a separate line above the KIT footer for sources. */
+.query-showcase { height:285px; }
+.query-showcase img { height:285px; object-fit:contain; }
+.query-meanings { padding-top:65px; }
+.chart-split .times-chart { height:330px; }
+.chart-split > div > svg:not(.times-chart) { height:285px; width:100%; }
+.handoff-pair img.shot, .handoff-editor { height:250px; }
+.qr-block a { border:0 !important; }
+.takeaway { margin-top:10px; padding-top:8px; }
+.kit-body .chart-split .times-chart { height:320px; display:block; }
+.editor-focus img { width:1040px; transform:translate(-30px, -260px); }

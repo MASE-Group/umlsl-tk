@@ -1,9 +1,11 @@
 """The scenario parser: JSON files in, a runnable world description out.
 
 Input:  a scenario key naming one of the bundled files in `scenario/scenarios/`.
-Output: a dict of `roads`, `players`, `scenario_name` and `predefined_cars`
+Output: a dict of `roads`, `players`, `scenario_name`, `predefined_cars`
         (`CarSpec` objects -- the description type belongs to
-        `umlsl_sim.factories`, which builds cars from them),
+        `umlsl_sim.factories`, which builds cars from them) and `world_size`
+        (width and height in pixels; `DEFAULT_WORLD_SIZE` unless the file
+        states ``width`` and ``height``),
         which is exactly the keyword set `umlsl_sim.app.main.main` takes -- so
         `main(**load_scenario("two_crossings"), ...)` is the whole contract.
 

@@ -9,8 +9,6 @@ from umlsl_sim.config.logic_constants import (
     BLOCK_SIZE,
     CLAIM_TIME,
     LANECHANGE_TIME_STEPS,
-    WORLD_HEIGHT,
-    WORLD_WIDTH,
 )
 from umlsl_sim.simulation.traffic_environment import TrafficEnv
 from umlsl_sim.simulation.road_network.road_network import Direction, LaneSegment, CrossingSegment, SegmentInfo, right_direction
@@ -36,7 +34,9 @@ class NumbericObservation(Observation):
     Layout of the flat observation vector:
     - HEADER_INFO values describing the agent's state relative to its current goal
       and its own lane change: [goal_dx, goal_dy, agent_speed, agent_dir,
-      claim_side, claim_age]. Deltas are signed and normalized by window size;
+      claim_side, claim_age]. Deltas are signed and normalized by the world size
+      (`TrafficEnv.world_size`, so a policy only applies to the world size it was
+      trained on);
       speed by the agent's max_speed; direction by len(Direction). claim_side is
       -1 (claiming right), +1 (claiming left) or 0 (no lane change running), and
       claim_age is the manoeuvre's progress in [0, 1] -- below
@@ -52,6 +52,7 @@ class NumbericObservation(Observation):
 
     def __init__(self, game_model: TrafficEnv) -> None:
         super().__init__(game_model)
+        self.world_width, self.world_height = game_model.world_size
         self.max_cars = game_model.npcs + (1 if game_model.agent else 0)
         # Used only to normalize lane indices in the per-car reservation rows;
         # the static lane geometry block has been removed from the observation.
@@ -139,8 +140,8 @@ class NumbericObservation(Observation):
 
         goal = agent.goal
         if goal is not None:
-            goal_dx = (goal.pos.x - agent.pos.x) / WORLD_WIDTH
-            goal_dy = (goal.pos.y - agent.pos.y) / WORLD_HEIGHT
+            goal_dx = (goal.pos.x - agent.pos.x) / self.world_width
+            goal_dy = (goal.pos.y - agent.pos.y) / self.world_height
         else:
             goal_dx = 0.0
             goal_dy = 0.0
@@ -189,10 +190,10 @@ class NumbericObservation(Observation):
             res_end_y = seg.begin + seg_info.end
 
         return [
-            res_begin_x / WORLD_WIDTH,
-            res_begin_y / WORLD_HEIGHT,
-            res_end_x / WORLD_WIDTH,
-            res_end_y / WORLD_HEIGHT,
+            res_begin_x / self.world_width,
+            res_begin_y / self.world_height,
+            res_end_x / self.world_width,
+            res_end_y / self.world_height,
         ]
 
     def _get_crossing_reservation(self, seg_info: SegmentInfo, seg: CrossingSegment) -> Tuple[float, float, float, float]:
@@ -212,10 +213,10 @@ class NumbericObservation(Observation):
                 if lane.direction is Direction.UP:
                     return [lane.top, blocks - BLOCK_SIZE, lane.top, blocks]
                 elif lane.direction is Direction.DOWN:
-                    return [lane.top, WORLD_HEIGHT - blocks + BLOCK_SIZE, lane.top, WORLD_HEIGHT - blocks]
+                    return [lane.top, self.world_height - blocks + BLOCK_SIZE, lane.top, self.world_height - blocks]
                 elif lane.direction is Direction.RIGHT:
                     return [blocks - BLOCK_SIZE, lane.top, blocks, lane.top]
                 elif lane.direction is Direction.LEFT:
-                    return [WORLD_WIDTH - blocks + BLOCK_SIZE, lane.top, WORLD_WIDTH - blocks, lane.top]
+                    return [self.world_width - blocks + BLOCK_SIZE, lane.top, self.world_width - blocks, lane.top]
 
         raise ValueError("Target segment not found in lane")

@@ -1,14 +1,16 @@
 """Draws the simulation world into a sub-rectangle of the control window.
 
 The existing :class:`~umlsl_sim.gui.scene_drawer.GameDrawer` produces pyglet
-shapes in scene coordinates (0..WINDOW_WIDTH, 0..WINDOW_HEIGHT). Here we place
-those shapes inside an arbitrary on-screen viewport by temporarily swapping the
-window's view matrix (scene -> viewport pixels) and clipping with a scissor box,
-so the map, cars and goals render exactly like the standalone simulation but
-embedded next to the control panel.
+shapes in world coordinates (0..width, 0..height of the scenario's world). Here
+we place those shapes inside an arbitrary on-screen viewport by temporarily
+swapping the window's view matrix (world -> viewport pixels) and clipping with a
+scissor box, so the map, cars and goals render exactly like the standalone
+simulation but embedded next to the control panel. Where in the viewport the
+world goes is the :class:`~umlsl_sim.gui.camera.Camera`'s business: fitted to
+the viewport by default, then zoomed and panned by the user.
 
 The static map (roads, lane lines, arrows) is cached and only rebuilt when the
-road network changes; goals and cars are rebuilt every frame.
+road network or the world changes; goals and cars are rebuilt every frame.
 """
 from __future__ import annotations
 
@@ -19,41 +21,47 @@ from pyglet import shapes
 from pyglet.gl import GL_SCISSOR_TEST, glDisable, glEnable, glScissor
 from pyglet.math import Mat4, Vec3
 
-from umlsl_sim.gui.gui_constants import WINDOW_HEIGHT, WINDOW_WIDTH
+from umlsl_sim.config.logic_constants import DEFAULT_WORLD_SIZE
+from umlsl_sim.gui.camera import Camera, WorldSize
 from umlsl_sim.gui.scene_drawer import GameDrawer
 from umlsl_sim.gui.control import theme
-
-SCENE_W = WINDOW_WIDTH
-SCENE_H = WINDOW_HEIGHT
 
 Viewport = Tuple[float, float, float, float]  # (x, y, w, h) in window (logical) coords
 
 
-def fit_transform(viewport: Viewport) -> Mat4:
-    """View matrix that letterboxes the scene into ``viewport``."""
-    vx, vy, vw, vh = viewport
-    scale = min(vw / SCENE_W, vh / SCENE_H)
-    ox = vx + (vw - SCENE_W * scale) / 2
-    oy = vy + (vh - SCENE_H * scale) / 2
+def camera_transform(camera: Camera, viewport: Viewport, world_size: WorldSize) -> Mat4:
+    """View matrix that draws the world where ``camera`` puts it in ``viewport``."""
+    scale, ox, oy = camera.transform(viewport, world_size)
     return Mat4.from_translation(Vec3(ox, oy, 0)) @ Mat4.from_scale(Vec3(scale, scale, 1))
+
+
+def fit_transform(viewport: Viewport, world_size: WorldSize = DEFAULT_WORLD_SIZE) -> Mat4:
+    """View matrix that letterboxes the whole world into ``viewport``."""
+    return camera_transform(Camera(), viewport, world_size)
 
 
 class SceneRenderer:
     def __init__(self, window) -> None:
         self.window = window
+        self.camera = Camera()
         self._roads = None
+        self._world_size: Optional[WorldSize] = None
         self._map_batch: Optional[pyglet.graphics.Batch] = None
         self._map_shapes: List = []
 
-    def _ensure_map(self, roads) -> None:
-        if roads is self._roads and self._map_batch is not None:
+    def _ensure_map(self, roads, world_size: WorldSize) -> None:
+        if roads is self._roads and world_size == self._world_size and self._map_batch is not None:
             return
+        if world_size != self._world_size:
+            self.camera.reset()  # another world: show all of it again
         self._roads = roads
+        self._world_size = world_size
         self._map_batch = pyglet.graphics.Batch()
+        # the world's own background, so that zoomed out its edge shows against the viewport card
         self._map_shapes = [
-            shapes.Rectangle(0, 0, SCENE_W, SCENE_H, color=theme.SCENE_BG)
+            shapes.Rectangle(0, 0, world_size[0], world_size[1], color=theme.SCENE_BG)
         ]
-        self._map_shapes += GameDrawer.draw_map(roads)
+        self._map_shapes += GameDrawer.draw_map(roads, world_size)
         for sh in self._map_shapes:
             sh.batch = self._map_batch
 
@@ -76,8 +84,8 @@ class SceneRenderer:
     def draw(self, viewport: Viewport, world, flash_count: int, show_reservation: bool) -> None:
         if world is None:
             return
-        roads, cars, reservation_management = world
-        self._ensure_map(roads)
+        roads, cars, reservation_management, world_size = world
+        self._ensure_map(roads, world_size)
 
         dyn_batch = pyglet.graphics.Batch()
         dyn_shapes: List = []
@@ -91,10 +99,24 @@ class SceneRenderer:
         old_view = self.window.view
         glEnable(GL_SCISSOR_TEST)
         glScissor(int(vx * sx), int(vy * sy), int(vw * sx), int(vh * sy))
-        self.window.view = fit_transform(viewport)
+        self.window.view = camera_transform(self.camera, viewport, world_size)
         self._map_batch.draw()
         dyn_batch.draw()
         self.window.view = old_view
         glDisable(GL_SCISSOR_TEST)
 
         del dyn_shapes  # hold refs until after draw
+
+    # --- zoom and pan -------------------------------------------------------
+    def zoom_at(self, viewport: Viewport, x: float, y: float, factor: float) -> None:
+        """Zoom the shown world by ``factor`` about window point ``(x, y)``."""
+        if self._world_size is not None:
+            self.camera.zoom_at(viewport, self._world_size, x, y, factor)
+
+    def pan(self, viewport: Viewport, dx: float, dy: float) -> None:
+        if self._world_size is not None:
+            self.camera.pan(viewport, self._world_size, dx, dy)
+
+    def reset_view(self) -> None:
+        """Show the whole world again."""
+        self.camera.reset()

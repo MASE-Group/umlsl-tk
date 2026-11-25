@@ -21,6 +21,9 @@ from umlsl_edit.view.ui.traffic_canvas.graphic_items.crossing_item import (
     CrossingItem,
 )
 from umlsl_edit.view.ui.traffic_canvas.graphic_items.road_item import RoadItem
+from umlsl_edit.view.ui.traffic_canvas.graphic_items.world_boundary_item import (
+    WorldBoundaryItem,
+)
 from umlsl_edit.view.view_constants import DIMENSION
 
 logger = logging.getLogger(__name__)
@@ -41,13 +44,20 @@ class TrafficScene(QGraphicsScene):
     ) -> None:
         super().__init__(parent)
 
-        size = DIMENSION.SCENE_SIZE
-        self.setSceneRect(QRectF(-size / 2, -size / 2, size, size))
+        # The canvas is unbounded: the scene rect only bounds how far the view can pan.
+        size = DIMENSION.SCENE_HALF_SIZE
+        self.setSceneRect(QRectF(-size, -size, 2 * size, 2 * size))
 
         self._app_controller = application_controller
 
         # Registries
         self._item_registry: Dict[str, QGraphicsItem] = {}
+
+        self._world_boundary: WorldBoundaryItem | None = None
+        self._show_world_boundary()
+        application_controller.view_event_handler.get_on_world_extent_changed_signal().connect(
+            self._on_world_extent_changed
+        )
 
         # Models
         view_models = application_controller.view_event_handler.view_models
@@ -81,6 +91,33 @@ class TrafficScene(QGraphicsScene):
                         self._remove_crossing(listener)
         self.clear()
         self._item_registry.clear()
+        # clear() deleted the outline, too; the snapshot may be a new one with another extent
+        self._world_boundary = None
+        self._show_world_boundary()
+        self._refresh_segments()
+
+    # -------------------------------------------------------------------------
+    # World Extent
+    # -------------------------------------------------------------------------
+
+    def _show_world_boundary(self) -> None:
+        half_width, half_height = self._app_controller.data_controller.get_world_extent()
+        if self._world_boundary is None:
+            self._world_boundary = WorldBoundaryItem(half_width, half_height)
+            self.addItem(self._world_boundary)
+        else:
+            self._world_boundary.set_extent(half_width, half_height)
+
+    def _on_world_extent_changed(self, half_width: float, half_height: float) -> None:
+        """The lanes end elsewhere now: redraw the roads to the new extent, and every car's segments.
+
+        The model rebuilt every environment for the new extent (the outer lane segments moved), so the segments
+        drawn for the cars have to be rebuilt from them, too.
+        """
+        self._show_world_boundary()
+        for item in self._item_registry.values():
+            if isinstance(item, RoadItem):
+                item.refresh_world_extent()
         self._refresh_segments()
 
     # -------------------------------------------------------------------------

@@ -32,14 +32,18 @@ class _Dimension:
     CAR_WIDTH: float = 0.6
     CAR_TRIANGLE_LENGTH: float = 0.4
 
-    # Scene configuration
-    SCENE_SIZE: int = 40
+    # Scene configuration. The canvas is unbounded: the scene only has to be large enough to pan to anything a
+    # snapshot can hold. The lanes themselves end at the world extent the model computes.
+    SCENE_HALF_SIZE: float = 1_000_000.0
 
-    # Zoom constraints
+    # Zoom constraints, in pixels per lane. The minimum only keeps the view transform from degenerating; at it a
+    # viewport of a thousand pixels shows a million lanes.
     MAX_ZOOM: float = 100.0
-    MIN_ZOOM: float = 3.0
+    MIN_ZOOM: float = 0.001
     INITIAL_ZOOM: float = 40.0
     BUTTON_ZOOM_AMOUNT: float = 1.4
+    # Share of the viewport the world fills when the view fits it
+    FIT_WORLD_MARGIN: float = 0.9
 
     # Zoom thresholds for detail levels
     LANE_LABEL_MIN_ZOOM: float = 0
@@ -52,6 +56,8 @@ class _Dimension:
     # Line widths
     LINE_WIDTH_ROAD_DIVIDER: float = 0.05
     LINE_WIDTH_CROSSING_SEGMENT: float = 0.02
+    # Outline of the world extent, in pixels (cosmetic pen)
+    LINE_WIDTH_WORLD_BOUNDARY: float = 1.5
 
     # Zoom sensitivity
     TOUCHPAD_ZOOM_SENSITIVITY: float = 0.01

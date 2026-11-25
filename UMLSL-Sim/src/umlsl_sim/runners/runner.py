@@ -10,7 +10,7 @@ subclasses share a constructor shape, not an implementation.
 """
 
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Tuple
 
 from umlsl_sim.config.render_mode import RenderMode
 from umlsl_sim.simulation.ports import Renderer, create_renderer
@@ -22,6 +22,8 @@ class SimulationRunner(ABC):
 
     Attributes:
         roads (List[Road]): The network to run on.
+        world_size (Tuple[int, int] | None): Width and height of the world the
+            network lies in, in pixels; None for the default world.
         players (int): Number of NPC cars.
         render_mode (RenderMode): Whether the run is watched.
         show_reservation (bool): Whether reserved space is drawn (GUI only).
@@ -35,9 +37,11 @@ class SimulationRunner(ABC):
             players: int,
             render_mode: RenderMode,
             show_reservation: bool,
+            world_size: None | Tuple[int, int] = None,
             ):
 
         self.roads = roads
+        self.world_size = world_size
         self.players = players
         self.render_mode = render_mode
         self.show_reservation = show_reservation

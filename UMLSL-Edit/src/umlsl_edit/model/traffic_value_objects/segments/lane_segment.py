@@ -32,24 +32,22 @@ class LaneSegment(Segment):
             # Horizontal lane: Y is fixed from lane position, X from left neighbor
             y = lane_pos
             left_neighbor = traffic_snapshot_reader.get_adjacent_segment(self.uid, Direction.LEFT)
-            if left_neighbor is None:
-                x = -traffic_snapshot_reader.get_scene_size()
-            elif isinstance(left_neighbor, CrossingSegment):
+            if isinstance(left_neighbor, CrossingSegment):
                 # Start after the crossing ends (crossing's right edge)
                 x = left_neighbor.get_position(traffic_snapshot_reader)[0] + lane_width
             else:
-                x = -traffic_snapshot_reader.get_scene_size()
+                # no crossing to the left: the lane starts at the west end of the world
+                x = -traffic_snapshot_reader.get_world_extent()[0]
         else:
             # Vertical lane: X is fixed from lane position, Y from top neighbor (higher y)
             x = lane_pos
             top_neighbor = traffic_snapshot_reader.get_adjacent_segment(self.uid, Direction.UP)
-            if top_neighbor is None:
-                y = traffic_snapshot_reader.get_scene_size()
-            elif isinstance(top_neighbor, CrossingSegment):
+            if isinstance(top_neighbor, CrossingSegment):
                 # Start after the crossing ends (crossing's bottom edge, higher y is up)
                 y = top_neighbor.get_position(traffic_snapshot_reader)[1] - lane_width
             else:
-                y = traffic_snapshot_reader.get_scene_size()
+                # no crossing above: the lane starts at the north end of the world
+                y = traffic_snapshot_reader.get_world_extent()[1]
 
         return x, y
 
@@ -67,40 +65,42 @@ class LaneSegment(Segment):
             left_neighbor = traffic_snapshot_reader.get_adjacent_segment(self.uid, Direction.LEFT)
             right_neighbor = traffic_snapshot_reader.get_adjacent_segment(self.uid, Direction.RIGHT)
 
-            scene_size = traffic_snapshot_reader.get_scene_size()
+            # a lane with no crossing in a direction runs to that end of the world
+            half_extent = traffic_snapshot_reader.get_world_extent()[0]
             if left_neighbor is None and isinstance(right_neighbor, CrossingSegment):
                 right_x = right_neighbor.get_position(traffic_snapshot_reader)[0]
-                width = right_x + scene_size
+                width = right_x + half_extent
             elif right_neighbor is None and isinstance(left_neighbor, CrossingSegment):
                 left_x = left_neighbor.get_position(traffic_snapshot_reader)[0]
-                width = scene_size - (left_x + lane_width)
+                width = half_extent - (left_x + lane_width)
             elif isinstance(left_neighbor, CrossingSegment) and isinstance(right_neighbor, CrossingSegment):
                 # Width = right_crossing.x - (left_crossing.x + lane_width)
                 right_x = right_neighbor.get_position(traffic_snapshot_reader)[0]
                 left_x = left_neighbor.get_position(traffic_snapshot_reader)[0]
                 width = right_x - (left_x + lane_width)
             else:
-                width = scene_size * 2  # No crossings, lane extends to the edge of the scene
+                width = half_extent * 2  # no crossings: the lane spans the world
         else:
             # Vertical lane: width is lane_width, height varies based on crossings
             width = lane_width
             top_neighbor = traffic_snapshot_reader.get_adjacent_segment(self.uid, Direction.UP)
             bottom_neighbor = traffic_snapshot_reader.get_adjacent_segment(self.uid, Direction.DOWN)
 
-            scene_size = traffic_snapshot_reader.get_scene_size()
+            # a lane with no crossing in a direction runs to that end of the world
+            half_extent = traffic_snapshot_reader.get_world_extent()[1]
             if top_neighbor is None and isinstance(bottom_neighbor, CrossingSegment):
                 bottom_y = bottom_neighbor.get_position(traffic_snapshot_reader)[1]
-                height = scene_size - bottom_y
+                height = half_extent - bottom_y
             elif bottom_neighbor is None and isinstance(top_neighbor, CrossingSegment):
                 top_y = top_neighbor.get_position(traffic_snapshot_reader)[1]
-                height = scene_size + top_y - lane_width
+                height = half_extent + top_y - lane_width
             elif isinstance(top_neighbor, CrossingSegment) and isinstance(bottom_neighbor, CrossingSegment):
                 # Height = (top_crossing.y - lane_width) - bottom_crossing.y
                 bottom_y = bottom_neighbor.get_position(traffic_snapshot_reader)[1]
                 top_y = top_neighbor.get_position(traffic_snapshot_reader)[1]
                 height = (top_y - lane_width) - bottom_y
             else:
-                height = scene_size * 2  # No crossings, lane extends to the edge of the scene
+                height = half_extent * 2  # no crossings: the lane spans the world
 
         return width, height
 

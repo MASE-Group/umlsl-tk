@@ -19,8 +19,9 @@ from typing import List, Optional
 
 import pyglet
 from pyglet.text import Label
-from pyglet.window import key
+from pyglet.window import key, mouse
 
+from umlsl_sim.gui.camera import WHEEL_ZOOM_STEP
 from umlsl_sim.scenario.loader import load_scenario
 from umlsl_sim.gui.control import rl_support, theme
 from umlsl_sim.gui.control.editor_launcher import EditorNotInstalledError, EditorProcess, open_in_editor
@@ -96,6 +97,8 @@ class ControlWindow(pyglet.window.Window):
         self.text_fields: List[TextField] = []
         self.open_dropdown: Optional[Dropdown] = None
         self.focused_field: Optional[TextField] = None
+        # whether a left drag that started on the scene is panning it
+        self._panning_scene = False
         self._captions: List[Label] = []
         self._rl_captions: List[Label] = []
         self._model_caption: Optional[Label] = None
@@ -117,6 +120,7 @@ class ControlWindow(pyglet.window.Window):
             self.activate()
         else:
             self.log("Ready. Pick a scenario and press Run.")
+        self.log("Scene: scroll to zoom, drag to pan, F to show the whole world.")
 
         pyglet.clock.schedule_interval(self.engine.update, STEP_INTERVAL)
         pyglet.clock.schedule_interval(self._tick, 0.1)
@@ -455,7 +459,9 @@ class ControlWindow(pyglet.window.Window):
 
         if mode is None:
             try:
-                self.engine.start_plain(scenario["roads"], players, scenario["predefined_cars"], show_res)
+                self.engine.start_plain(scenario["roads"], players, scenario["predefined_cars"], show_res,
+                                        world_size=scenario["world_size"])
+                self.scene.reset_view()
                 self.log(f"Started simulation: {stem} ({players} NPCs).")
             except Exception as exc:
                 self.log(f"[error] Failed to start: {exc}")
@@ -479,7 +485,9 @@ class ControlWindow(pyglet.window.Window):
                 self.engine.start_rl_eval(
                     scenario["roads"], players, scenario["predefined_cars"], show_res,
                     scenario["scenario_name"], algo, obs, reward, model_id,
+                    world_size=scenario["world_size"],
                 )
+                self.scene.reset_view()
                 self.log(f"Running trained model '{model_id}'.")
             except Exception as exc:
                 self.log(f"[error] Failed to load model: {exc}")
@@ -491,6 +499,7 @@ class ControlWindow(pyglet.window.Window):
             roads=scenario["roads"], players=players, predefined_cars=scenario["predefined_cars"],
             scenario_name=scenario["scenario_name"], rl_mode=mode,
             rl_algorithm_type=algo, observation_model_type=obs, reward_type=reward,
+            world_size=scenario["world_size"],
         )
         if started:
             self.log(f"Launched {mode.name} with {algo.name} / {reward.name} (headless). "
@@ -623,13 +632,28 @@ class ControlWindow(pyglet.window.Window):
             if w.on_mouse_press(x, y, button):
                 return
 
+        # 5. anything else on the scene starts panning it
+        if button == mouse.LEFT and self._in_scene(x, y):
+            self._panning_scene = True
+
     def on_mouse_release(self, x, y, button, modifiers) -> None:
+        self._panning_scene = False
         for b in self.buttons:
             b.on_mouse_release(x, y, button)
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers) -> None:
         if self.open_dropdown is not None:
             self.open_dropdown.on_mouse_motion(x, y)
+        elif self._panning_scene:
+            self.scene.pan(self.scene_viewport, dx, dy)
+
+    def on_mouse_scroll(self, x, y, scroll_x, scroll_y) -> None:
+        if self.open_dropdown is None and scroll_y and self._in_scene(x, y):
+            self.scene.zoom_at(self.scene_viewport, x, y, WHEEL_ZOOM_STEP ** scroll_y)
+
+    def _in_scene(self, x, y) -> bool:
+        sx, sy, sw, sh = self.scene_viewport
+        return sx <= x <= sx + sw and sy <= y <= sy + sh
 
     # --- keyboard ---------------------------------------------------------
     def on_text(self, text) -> None:
@@ -647,6 +671,8 @@ class ControlWindow(pyglet.window.Window):
 
         if symbol == key.SPACE:
             self.engine.toggle_pause()
+        elif symbol == key.F:
+            self.scene.reset_view()
         elif symbol == key.ESCAPE:
             if self.open_dropdown is not None:
                 self.open_dropdown.close()

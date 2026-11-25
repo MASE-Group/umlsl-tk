@@ -58,7 +58,16 @@ class SerializationMixin:
 
             cars_data.append(car_payload)
 
-        return {"roads": roads_data, "cars": cars_data}
+        world_extent = self.get_world_extent()
+        simulator_canvas = self.get_simulator_canvas()
+        return {
+            "roads": roads_data,
+            "cars": cars_data,
+            # Derived from the roads, cars, settings and simulator canvas, but carrying it spares a loader (the
+            # evaluation worker, the command preflight) rebuilding every environment to fit it again.
+            "world_extent": [world_extent[0], world_extent[1]],
+            "simulator_canvas": None if simulator_canvas is None else [simulator_canvas[0], simulator_canvas[1]],
+        }
 
     def to_json(self: "TrafficSnapshotModel") -> str:
         """
@@ -77,7 +86,8 @@ class SerializationMixin:
         Creates a TrafficSnapshot instance from a dictionary.
 
         Args:
-            data: A dictionary containing 'roads' and 'cars' keys.
+            data: A dictionary containing 'roads' and 'cars' keys, and optionally the 'world_extent' and
+                'simulator_canvas' that ``to_dict`` writes.
             writer: A TrafficSnapshotWriter instance that will receive new entities.
             reader: A TrafficSnapshotReader instance used for validation and lookups.
             settings_model: Settings used when constructing cars and validating context.
@@ -102,6 +112,32 @@ class SerializationMixin:
         if not isinstance(cars_data, list):
             raise ValueError("Traffic snapshot 'cars' must be a list.")
 
+        bulk_load = isinstance(writer, TrafficSnapshotModel)
+        if bulk_load:
+            writer._begin_bulk_load(data)
+        try:
+            SerializationMixin._add_entities(roads_data, cars_data, writer, reader, settings_model)
+        except Exception:
+            if bulk_load:
+                writer._abort_bulk_load()
+            raise
+        if bulk_load:
+            writer._end_bulk_load()
+
+        if not isinstance(writer, TrafficSnapshotModel):
+            raise ValueError(
+                "TrafficSnapshotModel.from_dict expects a TrafficSnapshotModel writer."
+            )
+        return writer
+
+    @staticmethod
+    def _add_entities(
+            roads_data: list[Any],
+            cars_data: list[Any],
+            writer: TrafficSnapshotWriter,
+            reader: TrafficSnapshotReader,
+            settings_model: SettingsModel,
+    ) -> None:
         for road_data in roads_data:
             if not isinstance(road_data, dict):
                 raise ValueError("Each road must be a dictionary.")
@@ -198,12 +234,6 @@ class SerializationMixin:
                 raise ValueError("Car uid is required.")
             car.uid = car_uid
             writer.add_car(car)
-
-        if not isinstance(writer, TrafficSnapshotModel):
-            raise ValueError(
-                "TrafficSnapshotModel.from_dict expects a TrafficSnapshotModel writer."
-            )
-        return writer
 
     @classmethod
     def from_json(

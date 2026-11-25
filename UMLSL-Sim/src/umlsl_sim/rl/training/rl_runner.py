@@ -49,9 +49,10 @@ class RLRunner(SimulationRunner):
             id_history: None | str = None,
             id_hyperparams: None | str = None,
             predefined_cars: None | List[CarSpec] = None,
+            world_size: None | Tuple[int, int] = None,
             ):
 
-            super().__init__(roads, players, render_mode, show_reservation)
+            super().__init__(roads, players, render_mode, show_reservation, world_size)
             self.scenario_name = scenario_name
 
             self.id_history = id_history
@@ -90,6 +91,7 @@ class RLRunner(SimulationRunner):
                 reward_type=self.reward_type,
                 uses_action_masks=self.uses_action_masks,
                 predefined_cars=list(predefined_cars) if predefined_cars else [],
+                world_size=self.world_size,
                 render_mode=self.render_mode,
                 show_reservation=self.show_reservation,
                 # Watching a trained agent is a single episode that nothing is
@@ -256,7 +258,7 @@ class RLRunner(SimulationRunner):
             map_history, car_history, action_history = load_game_history(self.path_center, self.id_model, self.id_history)
 
             game_history = GameHistory()
-            game_history.set_map(map_history)
+            game_history.set_map(map_history, self.world_size)
             game_history.set_list_of_cars(car_history)
             game_history.set_action_history_dict(action_history)
 

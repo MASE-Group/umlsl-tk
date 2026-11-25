@@ -13,12 +13,25 @@ from umlsl_sim.simulation.car_types import CarType
 from umlsl_sim.simulation.event_checks import collision_check, reached_goal
 from umlsl_sim.simulation.road_network.road_network import Direction, Road, Problem
 from umlsl_sim.factories.create_segments import create_segments
-from umlsl_sim.config.logic_constants import NO_LANE_CHANGE, WITHDRAW_CLAIM
+from umlsl_sim.config.logic_constants import DEFAULT_WORLD_SIZE, NO_LANE_CHANGE, WITHDRAW_CLAIM
 from umlsl_sim.config.simulation_constants import DEADLOCK_FRAMES, WINNING_SCORE
 from umlsl_sim.simulation.ports import CarController, CarControllerFactory
 from umlsl_sim.simulation.reservations.reservation_management import ReservationManagement
 from umlsl_sim.simulation.episode_history import GameHistory
 from umlsl_sim.factories.car_spec import CarSpec
+
+
+def _check_roads_fit(roads: List[Road], world_size: Tuple[int, int]) -> None:
+    """Every road must lie inside the world, across its own direction."""
+    width, height = world_size
+    for road in roads:
+        extent = height if road.horizontal else width
+        if road.top < 0 or road.bottom > extent:
+            axis = "y" if road.horizontal else "x"
+            raise ValueError(
+                f"Road '{road.name}' spans {axis} = {road.top} .. {road.bottom}, "
+                f"outside the {width} x {height} px world."
+            )
 
 
 def _default_npc_controller_factory() -> CarControllerFactory:
@@ -62,6 +75,10 @@ class TrafficEnv:
 
     Attributes:
         roads (List[Road]): List of roads in the environment.
+        world_size (Tuple[int, int]): Width and height of the world, in pixels.
+            The traffic logic does not use it (a lane wraps at its last
+            crossing); it is what a renderer draws and what an observation
+            model normalises positions against.
         segments (List[Segment]): List of segments created from the roads.
         npcs (int): Number of npcs in the environment.
         agents (int): Number of ai controlled agents in the environment.
@@ -78,7 +95,8 @@ class TrafficEnv:
                  players: int,
                  predefined_cars: None | List[CarSpec] = None,
                  with_agent: bool = False,
-                 npc_controller_factory: None | CarControllerFactory = None):
+                 npc_controller_factory: None | CarControllerFactory = None,
+                 world_size: None | Tuple[int, int] = None):
         """
         Initialize the TrafficEnv.
 
@@ -99,9 +117,17 @@ class TrafficEnv:
                 `factory(car, all_cars, reservation_management)`. Defaults to
                 the A* controller; pass another to swap the NPC driving policy
                 without touching the traffic logic.
+            world_size (Optional[Tuple[int, int]]): Width and height of the
+                world, in pixels, as the scenario states it. Defaults to
+                `DEFAULT_WORLD_SIZE`, the world of every bundled scenario.
+
+        Raises:
+            ValueError: If a road does not lie inside the world.
         """
         super().__init__()
         self.roads = roads
+        self.world_size: Tuple[int, int] = tuple(world_size) if world_size is not None else DEFAULT_WORLD_SIZE
+        _check_roads_fit(roads, self.world_size)
         self.segments, self.intersections = create_segments(roads)
         self.npcs: int = players
         self.agent: bool = with_agent
@@ -210,7 +236,7 @@ class TrafficEnv:
             )
 
         self.game_history.set_list_of_cars(self.cars, self.reservation_management)
-        self.game_history.set_map(self.roads)
+        self.game_history.set_map(self.roads, self.world_size)
 
         self.total_crashes = 0
         self.crashes = {Direction.RIGHT: 0, Direction.UP: 0, Direction.LEFT: 0, Direction.DOWN: 0}

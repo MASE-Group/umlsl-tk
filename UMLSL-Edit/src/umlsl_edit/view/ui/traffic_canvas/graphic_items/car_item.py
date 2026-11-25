@@ -5,6 +5,7 @@ from PySide6.QtCore import QPointF, QRectF
 from PySide6.QtGui import QBrush, QColor, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import QGraphicsScene, QStyleOptionGraphicsItem, QWidget
 
+from umlsl_edit.model.environment.helpers.environment_reach_helper import to_view_segment_intervals
 from umlsl_edit.model.entities.car import Car
 from umlsl_edit.model.entities.road import RoadOrientation
 from umlsl_edit.model.errors.car_errors import (
@@ -120,15 +121,8 @@ class CarItem(SelectableGraphicsItem):
 
     def _to_view_segment_intervals(self, segment_intervals) -> list[ViewSegmentIntervall]:
         """Converts standard segment intervals to ViewSegmentIntervall objects with offsets."""
-        view_intervals = []
-        offset = 0.0
-        path_segments = tuple(seg_interval.segment for seg_interval in segment_intervals)
-        for seg_interval in segment_intervals:
-            view_intervals.append(
-                ViewSegmentIntervall(seg_interval.segment, seg_interval.interval, offset, path_segments)
-            )
-            offset = seg_interval.interval.end
-        return view_intervals
+        # the model measures the world extent from the same intervals
+        return to_view_segment_intervals(segment_intervals)
 
     def _clear_segments(self) -> None:
         """Removes all currently displayed segment items associated with this car."""

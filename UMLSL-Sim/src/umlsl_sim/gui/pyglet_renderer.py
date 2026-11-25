@@ -29,13 +29,13 @@ class PygletRenderer:
 
     # --- Renderer port ------------------------------------------------------
 
-    def bind(self, cars: List, roads: List, reservation_management=None) -> None:
+    def bind(self, cars: List, roads: List, reservation_management=None, world_size=None) -> None:
         if self.window is None:
             from umlsl_sim.gui.simulation_window import GameWindow
 
-            self.window = GameWindow(cars, roads, reservation_management, self.show_reservations)
+            self.window = GameWindow(cars, roads, reservation_management, self.show_reservations, world_size)
         else:
-            self.window.reset_model(cars, roads)
+            self.window.reset_model(cars, roads, world_size)
             if reservation_management is not None:
                 self.window.reservation_management = reservation_management
 

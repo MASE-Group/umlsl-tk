@@ -239,3 +239,65 @@ class TestPausedSimulatorRuns(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestCanvasFollowsTheWorld(unittest.TestCase):
+    """The simulator canvas is the editor's world extent, and comes back as it went."""
+
+    ROADS = [road("H", "HORIZONTAL", 0.0, 2, 1), road("V", "VERTICAL", 30.0, 1, 2),
+             road("far", "HORIZONTAL", 13.0, 1, 1)]
+    CARS = [car("A", "H", 0, 40.0), car("B", "far", -1, -35.0)]
+
+    def snapshot(self):
+        settings = SettingsModel(braking_acceleration=8.0, max_speed=15)
+        snapshot = TrafficSnapshotModel(settings_model=settings)
+        TrafficSnapshotModel.from_dict({"roads": self.ROADS, "cars": self.CARS}, snapshot, snapshot, settings)
+        return snapshot
+
+    def test_the_canvas_is_twice_the_world_extent_and_holds_everything(self):
+        snapshot = self.snapshot()
+        half_width, half_height = snapshot.get_world_extent()
+        scenario = build_simulator_scenario(snapshot.to_dict(), "big", 15)
+        self.assertEqual((scenario.payload["width"], scenario.payload["height"]),
+                         (round(2 * half_width * 40), round(2 * half_height * 40)))
+        # far beyond the 40 x 24 lanes of old, and nothing of it outside the canvas
+        self.assertGreater(scenario.payload["width"], 40 * 40)
+        self.assertEqual(scenario.issues, [])
+        borders = {r["name"]: r for r in scenario.payload["roads"] if r["name"] in ("right", "top")}
+        self.assertEqual(borders["right"]["top"], scenario.payload["width"] - 40)
+        self.assertEqual(borders["top"]["top"], scenario.payload["height"] - 40)
+
+    def test_edit_to_sim_to_edit_is_exact_and_keeps_the_canvas(self):
+        original = self.snapshot().to_dict()
+        payload = build_simulator_scenario(original, "big", 15).payload
+        back, _, _ = import_payload(payload)
+
+        roads, cars = named(back)
+        for r in self.ROADS:
+            mapped = roads[r["name"]]
+            self.assertEqual(
+                {k: mapped[k] for k in ("orientation", "position", "number_of_forward_lanes", "number_of_backward_lanes")},
+                {k: r[k] for k in ("orientation", "position", "number_of_forward_lanes", "number_of_backward_lanes")},
+            )
+        for c in self.CARS:
+            self.assertEqual((cars[c["name"]]["road"], cars[c["name"]]["lane_index"],
+                              cars[c["name"]]["position_on_lane"]),
+                             (c["road_uid"], c["lane_index"], c["position_on_lane"]))
+        self.assertEqual(back["world_extent"], original["world_extent"])
+        self.assertEqual(back["simulator_canvas"], original["world_extent"])
+
+    def test_sim_to_edit_to_sim_keeps_the_canvas_of_the_scenario(self):
+        payload = build_simulator_scenario(self.snapshot().to_dict(), "big", 15).payload
+        back, _, _ = import_payload(payload)
+        again = build_simulator_scenario(back, "big", 15).payload
+        self.assertEqual((again["width"], again["height"]), (payload["width"], payload["height"]))
+        key = lambda r: (r["name"], r["horizontal"], r["top"], r["right"], r["left"])
+        self.assertEqual(sorted(map(key, again["roads"])), sorted(map(key, payload["roads"])))
+
+    def test_a_scenario_that_states_no_canvas_has_the_old_one(self):
+        payload = export(CROSSING, [car("A", "H", 0, -8.0)])
+        for field in ("width", "height"):
+            payload.pop(field)
+        back, _, _ = import_payload(payload)
+        self.assertEqual(back["simulator_canvas"], [20.0, 12.0])
+        self.assertEqual(back["world_extent"], [20.0, 12.0])

@@ -126,6 +126,31 @@ class ViewEventHandler(QObject):
         pass
 
     @abstractmethod
+    def update_world_extent_view(self, world_extent: tuple[float, float]) -> None:
+        """
+        Handle a change of the world extent: the lanes now end elsewhere.
+
+        Args:
+            world_extent: Half width and half height of the world, in lanes.
+        """
+        pass
+
+    @abstractmethod
+    def get_on_snapshot_reloaded_signal(self) -> "SignalInstance":
+        """
+        Returns a signal that is emitted after a different snapshot was loaded and the view models hold it.
+        """
+        pass
+
+    @abstractmethod
+    def get_on_world_extent_changed_signal(self) -> "SignalInstance":
+        """
+        Returns a signal that is emitted when the world extent changes.
+        The signal carries the half width and the half height of the world, in lanes.
+        """
+        pass
+
+    @abstractmethod
     def revalidation_finished(self) -> None:
         pass
 

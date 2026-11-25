@@ -63,7 +63,7 @@ class RoadItem(SelectableGraphicsItem):
     """
     Graphics item representing a road with multiple lanes.
 
-    Displays a road spanning the scene with:
+    Displays a road spanning the world (the lanes end at the world extent) with:
         - Asphalt background colored by selection/hover state
         - Solid center line separating forward and backward lanes
         - Dashed lane dividers between lanes in the same direction
@@ -98,6 +98,12 @@ class RoadItem(SelectableGraphicsItem):
     @property
     def orientation(self) -> RoadOrientation:
         return self._orientation
+
+    def refresh_world_extent(self) -> None:
+        """Redraw the road to the current world extent."""
+        self.prepareGeometryChange()
+        self._recalculate_geometry()
+        self.update()
 
     def update_data(self, road: Road) -> None:
         """Update the road's display data and refresh geometry."""
@@ -261,9 +267,11 @@ class RoadItem(SelectableGraphicsItem):
         padding_h = RoadItemStyle.TEXT_PADDING_H * text_scale
         padding_v = RoadItemStyle.TEXT_PADDING_V * text_scale
 
+        # Stick to the viewport's top-left corner, but not past the start of the road: zoomed out, the world can
+        # end inside the viewport.
         view_bounds = QPointF(
-            screen_top_left.x() + padding_h,
-            screen_top_left.y() - padding_v
+            max(screen_top_left.x(), self._bounding_rect.left()) + padding_h,
+            min(screen_top_left.y(), self._bounding_rect.bottom()) - padding_v
         )
 
         painter.save()
@@ -434,8 +442,10 @@ class RoadItem(SelectableGraphicsItem):
     def _recalculate_geometry(self) -> None:
         """Recalculate bounding rect and line paths."""
         road = self._road
-        scene_size = DIMENSION.SCENE_SIZE
         lane_width = DIMENSION.LANE_WIDTH
+        half_width, half_height = self.application_controller.data_controller.get_world_extent()
+        # the road runs from one end of the world to the other, where the model's lanes end
+        half_length = half_width if road.orientation == RoadOrientation.HORIZONTAL else half_height
 
         w_fwd = road.number_of_forward_lanes * lane_width
         w_bwd = road.number_of_backward_lanes * lane_width
@@ -443,22 +453,22 @@ class RoadItem(SelectableGraphicsItem):
 
         if road.orientation == RoadOrientation.HORIZONTAL:
             self._bounding_rect = QRectF(
-                -scene_size / 2,
+                -half_length,
                 road.position - w_fwd,
-                scene_size,
+                2 * half_length,
                 total_width,
             )
-            center_p1 = QPointF(-scene_size / 2, road.position)
-            center_p2 = QPointF(scene_size / 2, road.position)
+            center_p1 = QPointF(-half_length, road.position)
+            center_p2 = QPointF(half_length, road.position)
         else:
             self._bounding_rect = QRectF(
                 road.position - w_bwd,
-                -scene_size / 2,
+                -half_length,
                 total_width,
-                scene_size,
+                2 * half_length,
             )
-            center_p1 = QPointF(road.position, -scene_size / 2)
-            center_p2 = QPointF(road.position, scene_size / 2)
+            center_p1 = QPointF(road.position, -half_length)
+            center_p2 = QPointF(road.position, half_length)
 
         # Center Line
         self._center_line = QPainterPath()
@@ -468,10 +478,10 @@ class RoadItem(SelectableGraphicsItem):
 
         # Lane Dividers
         self._dashed_lines = QPainterPath()
-        self._add_dividers(road.number_of_forward_lanes, is_forward=True, scene_size=scene_size)
-        self._add_dividers(road.number_of_backward_lanes, is_forward=False, scene_size=scene_size)
+        self._add_dividers(road.number_of_forward_lanes, is_forward=True, half_length=half_length)
+        self._add_dividers(road.number_of_backward_lanes, is_forward=False, half_length=half_length)
 
-    def _add_dividers(self, num_lanes: int, is_forward: bool, scene_size: int) -> None:
+    def _add_dividers(self, num_lanes: int, is_forward: bool, half_length: float) -> None:
         """Adds dashed divider lines to the painter path."""
         road = self._road
         lane_width = DIMENSION.LANE_WIDTH
@@ -490,11 +500,11 @@ class RoadItem(SelectableGraphicsItem):
                 pos_offset = (road.position + offset_val) if is_forward else (road.position - offset_val)
 
             if is_horiz:
-                self._dashed_lines.moveTo(-scene_size / 2, pos_offset)
-                self._dashed_lines.lineTo(scene_size / 2, pos_offset)
+                self._dashed_lines.moveTo(-half_length, pos_offset)
+                self._dashed_lines.lineTo(half_length, pos_offset)
             else:
-                self._dashed_lines.moveTo(pos_offset, -scene_size / 2)
-                self._dashed_lines.lineTo(pos_offset, scene_size / 2)
+                self._dashed_lines.moveTo(pos_offset, -half_length)
+                self._dashed_lines.lineTo(pos_offset, half_length)
 
     @property
     def position_listeners(self) -> list[GeometryListener]:

@@ -67,6 +67,7 @@ class SpyView:
         self.updated_queries = []
         self.warnings = []
         self.snapshot_reloaded = []
+        self.world_extents = []
         self.loading_queries = []
         self.revalidation_started_count = 0
         self.revalidation_finished_count = 0
@@ -124,6 +125,9 @@ class SpyView:
 
     def on_snapshot_reloaded(self, snapshot, queries=None):
         self.snapshot_reloaded.append((snapshot, queries))
+
+    def update_world_extent_view(self, world_extent):
+        self.world_extents.append(world_extent)
 
 
 def wait_until(predicate, timeout=1.0, interval=0.01):

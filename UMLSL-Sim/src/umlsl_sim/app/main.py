@@ -22,7 +22,7 @@ command.
 from __future__ import annotations
 
 import logging
-from typing import List
+from typing import List, Tuple
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s | %(levelname)s | %(filename)s:%(lineno)s | %(message)s')
 
@@ -56,6 +56,7 @@ def main(
         id_history: None | str = None,
         id_hyperparams: None | str = None,
         predefined_cars: None | List[CarSpec] = None,
+        world_size: None | Tuple[int, int] = None,
         ):
 
     if not rl_mode:
@@ -65,6 +66,7 @@ def main(
             render_mode,
             show_reservation,
             predefined_cars=predefined_cars,
+            world_size=world_size,
         )
     else:
         if RL_IMPORT_ERROR is not None:
@@ -87,6 +89,7 @@ def main(
             id_history,
             id_hyperparams,
             predefined_cars=predefined_cars,
+            world_size=world_size,
         )
 
     runner.run()

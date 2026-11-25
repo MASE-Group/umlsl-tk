@@ -49,7 +49,7 @@ scenes showcase **Simulate in UMLSL-Sim** (see below).
 
 ## Editor Features & Navigation
 
-* **Canvas Navigation:** Click and drag the left mouse button or use the arrow keys to pan across the canvas. Zoom using the mouse wheel or the `+`/`-` buttons.
+* **Canvas Navigation:** Click and drag the left mouse button or use the arrow keys to pan across the canvas. Zoom using the mouse wheel or the `+`/`-` buttons. The canvas is unbounded and zooms out as far as you like; the dashed rectangle is the *world extent*, where lanes without a crossing end: around every road, crossing and car view, plus the view horizon (the braking distance of the settings). It grows and shrinks as you edit, and it is the canvas a scenario gets in UMLSL-Sim. Opening a file fits the view to it.
 * **Entity Management:** Use the left panel to manage your environment. Click `+` to add entities, or use the pen icon to edit/delete them.
 * **Drag & Drop:** Select any car or road and drag it with the mouse to quickly reposition it.
 * **Settings & Files:** Access `Settings` and `File` management (`Open`, `Save`, `Save As`, `Export to UMLSL-Sim`, `Import from UMLSL-Sim`, `Simulate in UMLSL-Sim…`) from the top-left menu.
@@ -67,9 +67,10 @@ into UMLSL-Sim's scenario folder and opens the UMLSL-Sim control GUI, already
 simulating it. UMLSL-Sim must be installed in the same Python environment.
 
 Before anything is written, the snapshot is checked against what UMLSL-Sim can
-run. A scenario with no roads or no cars, a road or car outside the simulator's
-40 × 24-lane canvas, a car inside a crossing, overlapping cars or parallel
-roads, or a car driving backwards is refused with a list of every problem.
+run. A scenario with no roads or no cars, a car inside a crossing, overlapping
+cars or parallel roads, or a car driving backwards is refused with a list of
+every problem. The simulator's canvas is the world extent, so nothing lies
+outside it.
 Differences that still let the simulation run, such as a lane change in
 progress, are listed for you to confirm. `Export to UMLSL-Sim` runs the same
 check.
@@ -90,7 +91,7 @@ Try Simulate in UMLSL-Sim with the sample scenes:
 | :--- | :--- |
 | `sim_demo_one_crossing.json` | Five cars at one crossing, turning left and right and going straight. |
 | `sim_demo_asymmetric_roads.json` | Two-by-two crossings of roads with different lane counts per direction. |
-| `sim_demo_not_simulatable.json` | The alert: a road off the canvas, a car in a border crossing, two overlapping cars. |
+| `sim_demo_not_simulatable.json` | The alert: a car driving backwards and two overlapping cars. |
 
 ## Keyboard Shortcuts
 

@@ -48,6 +48,9 @@ class CarSnapshot:
 class GameHistory():
     def __init__(self):
         self.map: List[Road] = list()
+        # None: the default world. Not pickled with a saved history; a replay
+        # runs inside a runner that knows its scenario's world (see `set_map`).
+        self.world_size: Optional[Tuple[int, int]] = None
         self.list_of_cars: List[Car] = list()
         self.action_history_dict: Dict[str, List[Tuple[int, int]]] = dict()
         self.car_snapshots: List[CarSnapshot] = list()
@@ -98,8 +101,10 @@ class GameHistory():
             ))
 
 
-    def set_map(self, roads: List[Road]) -> None:
+    def set_map(self, roads: List[Road], world_size: Optional[Tuple[int, int]] = None) -> None:
+        """Record the roads the episode runs on, and the size of the world they lie in (pixels)."""
         self.map = roads.copy()
+        self.world_size = world_size
 
 
     def set_action_history_dict(self, action_history_dict: Dict) -> None:
@@ -182,7 +187,7 @@ class GameHistory():
                             reservation_management=reservation_management))
             actions_by_car.append(list(self.action_history_dict.get(snapshot.key, [])))
 
-        renderer.bind(cars, self.map, reservation_management)
+        renderer.bind(cars, self.map, reservation_management, world_size=self.world_size)
 
         ticks = max((len(actions) for actions in actions_by_car), default=0)
         for i in range(ticks):
@@ -206,6 +211,7 @@ class GameHistory():
 
     def reset_history(self) -> None:
         self.map.clear()
+        self.world_size = None
         self.list_of_cars.clear()
         self.action_history_dict.clear()
         self.car_snapshots.clear()

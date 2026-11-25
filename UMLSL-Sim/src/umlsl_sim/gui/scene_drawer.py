@@ -3,12 +3,10 @@ from pyglet import text
 from typing import List, Tuple, Union
 from umlsl_sim.simulation.road_network.road_network import Color, Road, Point, Direction, LaneSegment, CrossingSegment, horiz_direction, true_direction
 from umlsl_sim.simulation.car import Car
-from umlsl_sim.config.logic_constants import BLOCK_SIZE
+from umlsl_sim.config.logic_constants import BLOCK_SIZE, DEFAULT_WORLD_SIZE
 from umlsl_sim.gui.gui_constants import (
     FLASH_CYCLE,
     LANE_DISPLACEMENT,
-    WINDOW_HEIGHT,
-    WINDOW_WIDTH,
 )
 from umlsl_sim.simulation.reservations.reservation_management import ReservationManagement
 from umlsl_sim.gui.colors.map_colors import *
@@ -50,45 +48,49 @@ class GameDrawer():
         return goal_shapes
 
     @classmethod
-    def draw_map(cls, roads: List[Road]) -> List[Union[shapes.Line, shapes.Rectangle]]:
+    def draw_map(cls, roads: List[Road],
+                 world_size: Tuple[int, int] = DEFAULT_WORLD_SIZE) -> List[Union[shapes.Line, shapes.Rectangle]]:
+        """The static map, in world coordinates: every road spans the world (``world_size``, in pixels)."""
         map_shapes = []
 
         for road in roads:
-            map_shapes += GameDrawer.draw_road(road)
+            map_shapes += GameDrawer.draw_road(road, world_size)
 
         for road in roads:
-            map_shapes += GameDrawer.draw_lane_lines(road)
+            map_shapes += GameDrawer.draw_lane_lines(road, world_size)
 
         return map_shapes
 
     @classmethod
-    def draw_road(cls, road: Road) -> List[shapes.Rectangle]:
+    def draw_road(cls, road: Road, world_size: Tuple[int, int] = DEFAULT_WORLD_SIZE) -> List[shapes.Rectangle]:
         road_shapes = []
+        world_width, world_height = world_size
 
         if road.horizontal:
-            road_shapes.append(shapes.Rectangle(0, road.top, WINDOW_WIDTH, road.bottom - road.top,
+            road_shapes.append(shapes.Rectangle(0, road.top, world_width, road.bottom - road.top,
                                                      color=ROAD_BLUE
                                                      ))
         else:
-            road_shapes.append(shapes.Rectangle(road.top, 0, road.bottom - road.top, WINDOW_HEIGHT,
+            road_shapes.append(shapes.Rectangle(road.top, 0, road.bottom - road.top, world_height,
                                                      color=ROAD_BLUE
                                                      ))
             
         return road_shapes
 
     @classmethod
-    def draw_lane_lines(cls, road: Road) -> List[shapes.Line]:
+    def draw_lane_lines(cls, road: Road, world_size: Tuple[int, int] = DEFAULT_WORLD_SIZE) -> List[shapes.Line]:
         lane_shapes = []
+        world_width, world_height = world_size
 
         for i, lane in enumerate(road.right_lanes + road.left_lanes):
             if road.horizontal:
                 if i == len(road.right_lanes) - 1 and len(road.left_lanes) > 0:
                     lane_shapes.append(shapes.Line(0, lane.top + BLOCK_SIZE - LANE_DISPLACEMENT // 2,
-                                                        WINDOW_WIDTH, lane.top + BLOCK_SIZE - LANE_DISPLACEMENT // 2,
+                                                        world_width, lane.top + BLOCK_SIZE - LANE_DISPLACEMENT // 2,
                                                         LANE_DISPLACEMENT, color=WHITE))
                 elif i < len(road.right_lanes + road.left_lanes) - 1:
                     dashed_lines = GameDrawer.draw_dash_line(Point(0, lane.top + BLOCK_SIZE),
-                                                  Point(WINDOW_WIDTH, lane.top + BLOCK_SIZE))
+                                                  Point(world_width, lane.top + BLOCK_SIZE))
                     for line in dashed_lines:
                         lane_shapes.append(line)
                 arrow = GameDrawer.draw_arrow(Point(3 * BLOCK_SIZE // 2, lane.top + BLOCK_SIZE // 2),
@@ -98,11 +100,11 @@ class GameDrawer():
             else:
                 if i == len(road.right_lanes) - 1 and len(road.left_lanes) > 0:
                     lane_shapes.append(shapes.Line(lane.top + BLOCK_SIZE - LANE_DISPLACEMENT // 2, 0,
-                                                        lane.top + BLOCK_SIZE - LANE_DISPLACEMENT // 2, WINDOW_HEIGHT,
+                                                        lane.top + BLOCK_SIZE - LANE_DISPLACEMENT // 2, world_height,
                                                         color=WHITE))
                 elif i < len(road.right_lanes + road.left_lanes) - 1:
                     dashed_lines = GameDrawer.draw_dash_line(Point(lane.top + BLOCK_SIZE, 0),
-                                                  Point(lane.top + BLOCK_SIZE, WINDOW_HEIGHT))
+                                                  Point(lane.top + BLOCK_SIZE, world_height))
                     for line in dashed_lines:
                         lane_shapes.append(line)
                 arrow = GameDrawer.draw_arrow(Point(lane.top + BLOCK_SIZE // 2, 1.5 * BLOCK_SIZE),

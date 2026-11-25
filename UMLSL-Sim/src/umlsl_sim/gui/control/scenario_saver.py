@@ -213,6 +213,9 @@ def save_current_scenario(
         "name": stem.upper(),
         "scenario_name": stem,
         "players": n_npcs,
+        # the world the scenario runs in, so that it reloads (and opens in the editor) at the same size
+        "width": game_model.world_size[0],
+        "height": game_model.world_size[1],
         "roads": [road_to_dict(r) for r in game_model.roads],
         "cars": car_specs,
     }

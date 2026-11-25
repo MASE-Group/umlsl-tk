@@ -8,7 +8,7 @@ and coordinate labels for navigating the traffic canvas.
 import math
 
 from PySide6.QtCore import QEvent, QPointF, QRectF, Qt, Slot
-from PySide6.QtGui import QPainter, QPen, QWheelEvent
+from PySide6.QtGui import QPainter, QPen, QTransform, QWheelEvent
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsView, QPinchGesture
 
 from umlsl_edit.controllers import ApplicationController
@@ -54,7 +54,11 @@ class TrafficView(QGraphicsView):
         self.application_controller.view_event_handler.get_on_toggle_grid_signal().connect(
             self._on_toggle_grid
         )
+        self.application_controller.view_event_handler.get_on_snapshot_reloaded_signal().connect(
+            self.fit_world
+        )
 
+        self._fit_world_pending = False
         self._configure_view()
         self.scale(DIMENSION.INITIAL_ZOOM, -DIMENSION.INITIAL_ZOOM)
 
@@ -140,6 +144,26 @@ class TrafficView(QGraphicsView):
     # Zoom Handling
     # -------------------------------------------------------------------------
 
+    @Slot()
+    def fit_world(self) -> None:
+        """Zoom and centre the view so that the whole world (where the lanes end) fits the viewport."""
+        if not self.isVisible():
+            # the viewport has no size of its own yet; fit once the view is laid out (see resizeEvent)
+            self._fit_world_pending = True
+            return
+        self._fit_world_pending = False
+        half_width, half_height = self.application_controller.data_controller.get_world_extent()
+        viewport = self.viewport().size()
+        if viewport.width() <= 0 or viewport.height() <= 0 or half_width <= 0 or half_height <= 0:
+            return
+        scale = DIMENSION.FIT_WORLD_MARGIN * min(
+            viewport.width() / (2 * half_width), viewport.height() / (2 * half_height)
+        )
+        scale = min(max(scale, DIMENSION.MIN_ZOOM), DIMENSION.MAX_ZOOM)
+        # positive y points up
+        self.setTransform(QTransform.fromScale(scale, -scale))
+        self.centerOn(0.0, 0.0)
+
     def button_zoom(self, amount: float) -> None:
         """
         Apply zoom from a button click, centered on the viewport.
@@ -166,6 +190,8 @@ class TrafficView(QGraphicsView):
         self.setTransformationAnchor(QGraphicsView.AnchorViewCenter)
         super().resizeEvent(event)
         self._enforce_zoom_constraints()
+        if self._fit_world_pending and self.isVisible():
+            self.fit_world()
 
     def wheelEvent(self, event: QWheelEvent) -> None:
         """
@@ -237,38 +263,19 @@ class TrafficView(QGraphicsView):
         """
         current_scale = abs(self.transform().m11())
         future_scale = current_scale * scale_factor
-        min_scale = self._get_min_scale_for_scene()
 
         if future_scale > DIMENSION.MAX_ZOOM:
             return DIMENSION.MAX_ZOOM / current_scale
-        if future_scale < min_scale:
-            return min_scale / current_scale
+        if future_scale < DIMENSION.MIN_ZOOM:
+            return DIMENSION.MIN_ZOOM / current_scale
         return scale_factor
 
     def _enforce_zoom_constraints(self) -> None:
-        """Ensure zoom level stays within valid range for current viewport size."""
+        """Ensure zoom level stays within valid range."""
         current_scale = abs(self.transform().m11())
-        min_scale = self._get_min_scale_for_scene()
-
-        if current_scale < min_scale:
-            self.scale(min_scale / current_scale, min_scale / current_scale)
-
-    def _get_min_scale_for_scene(self) -> float:
-        """
-        Calculate the minimum zoom scale to fill the viewport with the scene.
-
-        Returns:
-            The minimum scale factor ensuring the scene fills the viewport.
-        """
-        viewport_size = self.viewport().size()
-        scene_rect = self.scene().sceneRect()
-
-        if scene_rect.width() == 0 or scene_rect.height() == 0:
-            return DIMENSION.MIN_ZOOM
-
-        scale_x = viewport_size.width() / scene_rect.width()
-        scale_y = viewport_size.height() / scene_rect.height()
-        return max(scale_x, scale_y, DIMENSION.MIN_ZOOM)
+        clamped = min(max(current_scale, DIMENSION.MIN_ZOOM), DIMENSION.MAX_ZOOM)
+        if clamped != current_scale:
+            self.scale(clamped / current_scale, clamped / current_scale)
 
     # -------------------------------------------------------------------------
     # Grid Drawing
@@ -321,13 +328,18 @@ class TrafficView(QGraphicsView):
         """
         Determine grid spacing based on current zoom level.
 
+        The finest power of ten whose lines lie more than GRID_FINE_THRESHOLD pixels apart: one lane when zoomed in,
+        ten lanes at the usual zoom, and a further tenfold for every tenfold the view is zoomed out from there, so
+        the grid and its labels stay readable however far out the view is.
+
         Returns:
-            The grid step size (coarse when zoomed out, fine when zoomed in).
+            The grid step size, in lanes.
         """
-        scale = self.transform().m11()
-        if scale <= DIMENSION.GRID_FINE_THRESHOLD:
-            return DIMENSION.GRID_STEP_COARSE
-        return DIMENSION.GRID_STEP_FINE
+        scale = abs(self.transform().m11())
+        step = DIMENSION.GRID_STEP_FINE
+        while step * scale <= DIMENSION.GRID_FINE_THRESHOLD:
+            step *= DIMENSION.GRID_STEP_COARSE / DIMENSION.GRID_STEP_FINE
+        return step
 
     # -------------------------------------------------------------------------
     # Coordinate Labels
@@ -362,8 +374,8 @@ class TrafficView(QGraphicsView):
             painter: The QPainter to use for drawing.
         """
         viewport_rect = self.viewport().rect()
-        step = self._get_grid_step()
         left, right, min_y, max_y = self._get_visible_bounds()
+        step = self._get_label_step(painter, max(abs(left), abs(right), abs(min_y), abs(max_y)))
 
         # X-axis labels (bottom edge)
         for x in self._iter_grid_values(left, right, step):
@@ -384,6 +396,24 @@ class TrafficView(QGraphicsView):
                 screen_y - DIMENSION.LABEL_PADDING,
                 label,
             )
+
+    def _get_label_step(self, painter: QPainter, largest_value: float) -> float:
+        """
+        Spacing of the coordinate labels: the grid step, or a multiple of it (2, 5, 10, ...) wide enough that the
+        widest label fits between two of them. Zoomed far out, the numbers outgrow the grid lines.
+        """
+        scale = abs(self.transform().m11())
+        widest = painter.fontMetrics().horizontalAdvance(str(-int(math.ceil(largest_value))))
+        needed = widest + 2 * DIMENSION.LABEL_PADDING
+        grid_step = self._get_grid_step()
+        for multiple in (1, 2, 5):
+            factor = 1.0
+            while grid_step * multiple * factor * scale < needed:
+                factor *= 10
+            candidate = grid_step * multiple * factor
+            if multiple == 1 or candidate < best:
+                best = candidate
+        return best
 
     # -------------------------------------------------------------------------
     # Utility Methods

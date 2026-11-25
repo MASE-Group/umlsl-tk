@@ -15,9 +15,9 @@ from umlsl_edit.model.domain_models.traffic_snapshot_writer import (
 )
 from umlsl_edit.query.lexer import TokenType
 from umlsl_edit.services.simulator_scenario import (
-    HEIGHT_LANES,
+    DEFAULT_CANVAS,
     UNIT,
-    WIDTH_LANES,
+    Canvas,
     _Network,
     build_simulator_scenario,
     removable_border_roads,
@@ -39,8 +39,10 @@ class ExternalPersistenceService:
     mapping here.
     """
 
-    HEIGHT_SIMULATOR: Final[int] = HEIGHT_LANES
-    WIDTH_SIMULATOR: Final[int] = WIDTH_LANES
+    HEIGHT_SIMULATOR: Final[float] = DEFAULT_CANVAS.height
+    """Height, in lanes, of a scenario that does not state its canvas."""
+    WIDTH_SIMULATOR: Final[float] = DEFAULT_CANVAS.width
+    """Width, in lanes, of a scenario that does not state its canvas."""
     UNIT_SIZE: Final[int] = UNIT
 
     @staticmethod
@@ -100,6 +102,10 @@ class ExternalPersistenceService:
           crossing cannot be expressed, so those cars go straight on.
         * Border roads that no car uses are left out when exporting would add
           exactly the same road again (``removable_border_roads``).
+        * The scenario's canvas (``width`` and ``height``, 40 x 24 lanes if it
+          states none) becomes the snapshot's simulator canvas: while every
+          road and car body fits inside it, the lanes end at its edges and
+          exporting again gives back the same canvas.
 
         Three rules of the editor have no counterpart in UMLSL-Sim, so the
         data is adjusted to fit them:
@@ -123,6 +129,7 @@ class ExternalPersistenceService:
         ext_cars = data.get("cars", [])
         original_max_speed = settings_model.max_speed
 
+        canvas = Canvas.of_payload(data)
         sim_roads = [sim_road(r) for r in ext_roads]
         sim_road_by_name = {r.name: r for r in sim_roads}
         network = _Network(sim_roads)
@@ -138,7 +145,7 @@ class ExternalPersistenceService:
             for c in ext_cars
         ]
         used = {start_of(c).get("road", "") for c in ext_cars} | {t.road for t in turns if t is not None}
-        left_out = removable_border_roads(sim_roads, used)
+        left_out = removable_border_roads(sim_roads, used, canvas)
 
         internal_roads = []
         road_name_to_uid = {}
@@ -147,7 +154,7 @@ class ExternalPersistenceService:
                 continue
             road_uid = str(uuid.uuid4())
             road_name_to_uid[road.name] = road_uid
-            internal_roads.append({"uid": road_uid, "name": road.name, **unmap_road(road)})
+            internal_roads.append({"uid": road_uid, "name": road.name, **unmap_road(road, canvas)})
 
         internal_cars = []
         for idx, (c, turn) in enumerate(zip(ext_cars, turns)):
@@ -166,7 +173,7 @@ class ExternalPersistenceService:
             position = float(start.get("position", 0.0))
             if road is not None:
                 position = _off_crossing_edge(network.segments_along(road), position)
-            position_on_lane = unmap_position(horizontal, position)
+            position_on_lane = unmap_position(horizontal, position, canvas)
 
             next_turn = None
             if turn is not None:
@@ -213,7 +220,13 @@ class ExternalPersistenceService:
             settings_model.max_speed = required
 
         TrafficSnapshotModel.from_dict(
-            {"roads": internal_roads, "cars": internal_cars},
+            {
+                "roads": internal_roads,
+                "cars": internal_cars,
+                "simulator_canvas": list(canvas.world_extent),
+                # build the environments for the canvas straight away, unless something does not fit it
+                "world_extent": list(canvas.world_extent),
+            },
             traffic_snapshot_writer,
             traffic_snapshot_reader,
             settings_model

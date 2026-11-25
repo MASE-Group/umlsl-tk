@@ -19,7 +19,7 @@ RL training / optimization is long-running and headless; it lives in
 from __future__ import annotations
 
 import logging
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Tuple
 
 from umlsl_sim.gui.gui_constants import FLASH_CYCLE, TIME_PER_FRAME
 from umlsl_sim.simulation.traffic_environment import TrafficEnv
@@ -81,10 +81,11 @@ class SimulationEngine:
         players: int,
         predefined_cars: Optional[List[CarSpec]],
         show_reservation: bool,
+        world_size: Optional[Tuple[int, int]] = None,
     ) -> None:
         def _build() -> None:
             self.game_model = TrafficEnv(
-                roads=roads, players=players, predefined_cars=predefined_cars
+                roads=roads, players=players, predefined_cars=predefined_cars, world_size=world_size
             )
             self.game_model.reset()
             self._env = None
@@ -110,6 +111,7 @@ class SimulationEngine:
         observation_model_type,
         reward_type,
         id_model: str,
+        world_size: Optional[Tuple[int, int]] = None,
     ) -> None:
         # Imported lazily; RL extras may not be installed.
         from umlsl_sim.rl.rewards.reward_registry import get_reward_model
@@ -125,6 +127,7 @@ class SimulationEngine:
                 players=players,
                 predefined_cars=predefined_cars,
                 with_agent=True,
+                world_size=world_size,
             )
             observation_model = get_observation_model(observation_model_type)(game_model)
             env_class = get_reward_model(reward_type)
@@ -222,8 +225,8 @@ class SimulationEngine:
 
     # --- rendering data ---------------------------------------------------
     def world(self):
-        """(roads, cars, reservation_management) for the scene renderer, or None."""
+        """(roads, cars, reservation_management, world_size) for the scene renderer, or None."""
         if self.game_model is None:
             return None
         gm = self.game_model
-        return gm.roads, gm.cars, gm.reservation_management
+        return gm.roads, gm.cars, gm.reservation_management, gm.world_size

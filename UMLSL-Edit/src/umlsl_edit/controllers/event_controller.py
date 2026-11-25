@@ -85,6 +85,8 @@ class EventController:
             self._view.remove_road_view(data)
         elif event_type == TrafficSnapshotEventType.ROAD_UPDATED:
             self._view.update_road_view(data)
+        elif event_type == TrafficSnapshotEventType.WORLD_EXTENT_CHANGED:
+            self._view.update_world_extent_view(data)
         elif event_type == TrafficSnapshotEventType.SNAPSHOT_RELOADED:
             if hasattr(self._view, "on_snapshot_reloaded"):
                 if isinstance(data, dict):

@@ -31,12 +31,12 @@
   "cars": [
     {
       "uid": "62bfe21e-f3d6-5e88-9d6c-33392a8f867e",
-      "name": "Edge",
+      "name": "Backwards",
       "road_uid": "f1228fd6-c7cf-5ebd-a1d0-439f966940f7",
       "lane_index": 0,
-      "position_on_lane": 19.3,
+      "position_on_lane": -15.0,
       "transition": 0.0,
-      "speed": 3.0,
+      "speed": -3.0,
       "length": 1.0,
       "color": "#E4572E",
       "acceleration": 0.0,

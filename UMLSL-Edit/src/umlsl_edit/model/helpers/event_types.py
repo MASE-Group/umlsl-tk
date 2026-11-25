@@ -19,6 +19,8 @@ class TrafficSnapshotEventType(Enum):
     TRAFFIC_SNAPSHOT_WARNING = auto()
 
     SEGMENTS_RECALCULATED = auto()
+    WORLD_EXTENT_CHANGED = auto()
+    """The lanes end somewhere else now (data: the new world extent, half width and half height)."""
 
 
 class SettingsEventType(Enum):

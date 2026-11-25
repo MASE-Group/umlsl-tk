@@ -342,7 +342,7 @@ class TestRecordAndReplay(unittest.TestCase):
                 super().__init__()
                 self.cars = None
 
-            def bind(self, cars, roads, reservation_management=None):
+            def bind(self, cars, roads, reservation_management=None, world_size=None):
                 self.cars = list(cars)
 
         renderer = Capture()

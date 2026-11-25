@@ -34,10 +34,10 @@ only ever imports the ones below it.
 | --- | --- |
 | `app/` | The entry points, and the composition root: the only place that knows every module at once. `main()` takes a scenario plus run options and picks a runner. Importing `umlsl_sim.app` is what binds the renderer and the default car controller. |
 | `runners/` | A world → a completed run. `SimulationRunner` is the shared shape; `ScenarioRunner` runs NPC traffic, and `rl.training.RLRunner` is its RL sibling. |
-| `gui/` | Drawing state → pixels. Pyglet windows, the scene drawer, GUI-only constants, and the interactive control panel. `PygletRenderer` implements the `Renderer` port; nothing below this module imports it. |
+| `gui/` | Drawing state → pixels. Pyglet windows, the scene drawer, the `Camera` that fits a world of any size to a window (and zooms and pans it), GUI-only constants, and the interactive control panel. `PygletRenderer` implements the `Renderer` port; nothing below this module imports it. |
 | `rl/` | A simulation → a trained policy. Four independently swappable parts, each behind a registry: `algorithms`, `hyperparameters`, `observations`, `rewards`. |
 | `control/` | A car and its surroundings → an action. Two implementations: `astar` (the NPC driver) and `safety` (what is *safe* rather than what is best, feeding RL through the action shield or the safety-aware reward). |
-| `scenario/` | A scenario key → `roads`, `players`, `scenario_name`, `predefined_cars` — exactly the keywords `main()` takes. |
+| `scenario/` | A scenario key → `roads`, `players`, `scenario_name`, `predefined_cars`, `world_size` — exactly the keywords `main()` takes. |
 | `factories/` | A road network (and optionally a `CarSpec`) → placed `Car` objects, goals, and the segment graph. |
 | `simulation/` | Actions → the next world state. Roads, cars, reservations, crash/goal/deadlock detection, and the ports the layer is driven through. Depends on no GUI and no RL. |
 | `palettes/`, `config/` | Plain data with no dependencies: named colour tables, the traffic model's constants (`logic_constants`, `simulation_constants`) and `RenderMode`. |
@@ -85,7 +85,10 @@ python -m umlsl_sim.app.run_control_gui
 ```
 
 Pick a scenario and the number of NPC cars, start / pause / rerun the run,
-configure the RL options, and save a paused run as a new scenario.
+configure the RL options, and save a paused run as a new scenario. The scene
+shows the whole world, whatever its size: scroll to zoom (out as far as you
+like), drag to pan, and press `F` to see all of it again. The standalone
+simulation window works the same way.
 **Open in UMLSL-Edit** pauses the run, saves it as a new scenario, and opens it
 in UMLSL-Edit, or in the UMLSL-Edit window that is already open (see the
 [toolkit README](../README.md#umlsl-sim--umlsl-edit-in-one-step)).
@@ -114,7 +117,16 @@ main(
 ```
 
 `load_scenario` returns exactly the `scenario_name` / `roads` / `players` /
-`predefined_cars` keys `main()` expects, which is why `**` works.
+`predefined_cars` / `world_size` keys `main()` expects, which is why `**` works.
+
+**World size.** A scenario file may state the size of its world as `width` and
+`height`, in pixels (40 per lane). Without them the world is 1600 × 960 px
+(40 × 24 lanes), as in every bundled scenario. UMLSL-Edit writes them, because
+its world grows with the scenario. Every road must lie inside the world.
+`BLOCK_SIZE`, the width of a lane, is a unit of the traffic logic and never
+changes; the windows fit the world to the screen instead. The numeric
+observation normalises positions by the world size, so a trained model only
+applies to scenarios of the world size it was trained on.
 
 There are also two small standalone launchers:
 `python -m umlsl_sim.app.run_manual_drive` (drive a car with the arrow keys) and
@@ -153,7 +165,8 @@ def main(
     id_model=None,                    # ID of saved model to load
     id_history=None,                  # ID of saved episode to replay
     id_hyperparams=None,              # ID of saved hyperparameters
-    predefined_cars=None              # Scenario-supplied car specs
+    predefined_cars=None,             # Scenario-supplied car specs
+    world_size=None                   # (width, height) of the world in px; None: 1600 x 960
 )
 ```
 
@@ -169,6 +182,7 @@ naming the missing dependency.
 | `players` | int | Yes | Number of A\*-controlled NPC vehicles in the simulation |
 | `roads` | list | Yes | Road network configuration (from `load_scenario`) |
 | `predefined_cars` | list | No | Scenario-supplied car specs (from `load_scenario`) |
+| `world_size` | tuple | No | Width and height of the world in pixels (from `load_scenario`); defaults to 1600 × 960 |
 | `scenario_name` | str | Yes | Name of scenario (for logging/saving) |
 | `render_mode` | RenderMode | Yes | `RenderMode.GUI` (show window) or `RenderMode.NO_GUI` (headless) |
 | `show_reservation` | bool | Yes | Show reserved segments of cars |

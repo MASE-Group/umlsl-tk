@@ -7,7 +7,7 @@ renderer calls it as fast as it can and never pauses. There is no `if gui:`
 here, and nothing in this module -- not even a constant -- comes from the GUI.
 """
 
-from typing import List
+from typing import List, Tuple
 
 from umlsl_sim.runners.runner import SimulationRunner
 from umlsl_sim.config.render_mode import RenderMode
@@ -18,7 +18,7 @@ from umlsl_sim.simulation.traffic_environment import TrafficEnv
 
 
 class ScenarioRunner(SimulationRunner):
-    """Input: roads, a car count and an optional list of predefined cars.
+    """Input: roads, a car count, an optional list of predefined cars and the world size.
     Output: a run of `TrafficEnv` played to its end state.
     """
 
@@ -30,15 +30,17 @@ class ScenarioRunner(SimulationRunner):
             show_reservation: bool = True,
             predefined_cars: None | List[CarSpec] = None,
             npc_controller_factory: None | CarControllerFactory = None,
+            world_size: None | Tuple[int, int] = None,
             ):
 
-        super().__init__(roads, players, render_mode, show_reservation)
+        super().__init__(roads, players, render_mode, show_reservation, world_size)
 
         self.game_model: TrafficEnv = TrafficEnv(
             roads=self.roads,
             players=self.players,
             predefined_cars=predefined_cars,
             npc_controller_factory=npc_controller_factory,
+            world_size=self.world_size,
         )
         self.done = None
 
@@ -55,6 +57,7 @@ class ScenarioRunner(SimulationRunner):
             self.game_model.cars,
             self.game_model.roads,
             self.game_model.reservation_management,
+            world_size=self.game_model.world_size,
         )
 
     def _update(self, delta_time: float) -> None:

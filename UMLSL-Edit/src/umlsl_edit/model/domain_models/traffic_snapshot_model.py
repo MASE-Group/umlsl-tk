@@ -14,6 +14,7 @@ from umlsl_edit.model.domain_models.settings_model import SettingsModel
 from umlsl_edit.model.domain_models.traffic_snapshot_validator import (
     TrafficSnapshotValidator,
 )
+from umlsl_edit.model.domain_models.world_extent_mixin import WorldExtentMixin
 from umlsl_edit.model.entities.car import Car
 from umlsl_edit.model.entities.road import Road
 from umlsl_edit.model.helpers.event_types import (
@@ -37,6 +38,7 @@ class TrafficSnapshotModel(
     CarMixin,
     SegmentMixin,
     SerializationMixin,
+    WorldExtentMixin,
 ):
     """
     Represents the complete state of a traffic simulation.
@@ -95,19 +97,16 @@ class TrafficSnapshotModel(
         """Read-only view of the roads dictionary."""
 
         self.lane_width = DIMENSION.LANE_WIDTH
-        self.screen_size = (DIMENSION.SCENE_SIZE + 100) / 2
 
         self.validator = TrafficSnapshotValidator(self)
         self.settings_model: SettingsModel = settings_model
         self.settings_model.attach(self._on_settings_event)
+        self._init_world_extent()
 
         if not hasattr(TrafficSnapshotModel, '_shared_process_pool') or TrafficSnapshotModel._shared_process_pool is None:
             TrafficSnapshotModel._shared_process_pool = ProcessPoolExecutor(max_workers=2)
         self.process_pool = TrafficSnapshotModel._shared_process_pool
         self.evaluation_version = 0
-
-    def get_scene_size(self) -> float:
-        return self.screen_size
 
     def _on_settings_event(self, event_type: SettingsEventType, data=None) -> None:
         if event_type in (
@@ -115,3 +114,4 @@ class TrafficSnapshotModel(
                 SettingsEventType.CHANGE_MAX_SPEED,
         ):
             self._revalidate_cars()
+            self._update_world_extent()

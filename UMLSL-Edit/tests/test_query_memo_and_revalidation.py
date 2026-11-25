@@ -128,13 +128,33 @@ class TestRevalidationOfOneCar(unittest.TestCase):
     def environments(self) -> dict:
         return {car.name: car.environment for car in self.snapshot.get_car_list()}
 
+    def world_horizons(self) -> dict:
+        """Each car's view along the road, in world coordinates (the lanes start at the west end of the world)."""
+        west_end = -self.snapshot.get_world_extent()[0]
+        return {car.name: (west_end + car.environment.horizon.start, west_end + car.environment.horizon.end)
+                for car in self.snapshot.get_car_list()}
+
     def test_adding_a_car_leaves_the_others(self):
+        # D's environment ends before C's does, so the world, and with it every other environment, stays as it is
+        extent = self.snapshot.get_world_extent()
         before = self.environments()
-        self.add("D", 0, 70.0)
+        self.add("D", 0, 20.0)
         after = self.environments()
         self.assertIn("D", after)
+        self.assertEqual(self.snapshot.get_world_extent(), extent)
         for name in ("A", "B", "C"):
             self.assertIs(after[name], before[name])
+        self.assertTrue(set(self.updated) <= {"D"})
+
+    def test_adding_a_car_past_every_environment_grows_the_world_but_changes_no_view(self):
+        extent = self.snapshot.get_world_extent()
+        before = self.world_horizons()
+        self.add("D", 0, 70.0)
+        self.assertGreater(self.snapshot.get_world_extent()[0], extent[0])
+        after = self.world_horizons()
+        for name in ("A", "B", "C"):
+            self.assertEqual(after[name], before[name])
+        # the others' outer lane segment moved, so their environments were rebuilt, but nothing about them changed
         self.assertTrue(set(self.updated) <= {"D"})
 
     def test_editing_a_car_leaves_the_others(self):

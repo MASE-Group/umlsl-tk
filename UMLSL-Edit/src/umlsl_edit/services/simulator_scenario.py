@@ -7,9 +7,11 @@ The two tools share a y-up world but differ in origin, unit and lane order:
                        Editor                          Simulator
     unit             1 lane                          40 px (``UNIT``)
     origin           canvas centre                   bottom-left corner
-    canvas           unbounded                       40 x 24 lanes, a torus:
-                                                     every road spans the canvas
-                                                     and wraps at its edges
+    canvas           unbounded; the lanes end at     the editor's world extent,
+                     the world extent (half sizes    2x by 2y lanes (``Canvas``),
+                     x, y; ``WorldExtentMixin``)     a torus: every road spans
+                                                     the canvas and wraps at its
+                                                     edges
     road position    centre line                     ``top``: lowest edge
     horizontal road  forward = +x, below centre      ``right`` = +x, ``left`` = -x
     vertical road    forward = +y, east of centre    ``right`` = -y (west),
@@ -19,6 +21,12 @@ The two tools share a y-up world but differ in origin, unit and lane order:
                                                      lanes from the centre line
     car anchor       rear of the car                 rear of the car
     turning          explicit turn intent            implicit, via a goal
+
+The world extent holds every road, crossing and car environment plus the view
+horizon, so a snapshot always fits its canvas. The canvas travels in the
+scenario as ``width`` and ``height`` (pixels); a scenario without them has the
+40 x 24 lanes every scenario had before (``DEFAULT_CANVAS``), and so do the
+bundled ones the RL models were trained on.
 
 The simulator only places cars and goals on *lane segments*, the stretches of a
 lane between two crossings, and needs a road along each canvas edge so that the
@@ -43,9 +51,73 @@ from PIL import ImageColor
 UNIT: Final[int] = 40
 """Simulator pixels per editor lane."""
 WIDTH_LANES: Final[int] = 40
-"""Simulator canvas width, in lanes."""
+"""Width, in lanes, of a simulator canvas a scenario does not state."""
 HEIGHT_LANES: Final[int] = 24
-"""Simulator canvas height, in lanes."""
+"""Height, in lanes, of a simulator canvas a scenario does not state."""
+
+
+@dataclass(frozen=True)
+class Canvas:
+    """
+    The simulator canvas, in lanes. The editor's origin is its centre.
+
+    Exporting takes it from the editor's world extent (``of_snapshot``), so
+    the simulator's lanes end where the editor's do; importing takes it from
+    the scenario (``of_payload``), and the editor keeps it as its world
+    extent while everything fits, so that exporting again gives back the
+    same canvas.
+    """
+
+    width: float = WIDTH_LANES
+    height: float = HEIGHT_LANES
+
+    @classmethod
+    def of_snapshot(cls, snapshot_data: dict[str, Any]) -> "Canvas":
+        """The canvas of a snapshot (``to_dict`` form): twice its world extent."""
+        extent = snapshot_data.get("world_extent")
+        if not extent:
+            return DEFAULT_CANVAS
+        return cls(width=2 * float(extent[0]), height=2 * float(extent[1]))
+
+    @classmethod
+    def of_payload(cls, payload: dict[str, Any]) -> "Canvas":
+        """The canvas of an interchange payload: its ``width`` and ``height`` in pixels, if it states them."""
+        return cls(
+            width=float(payload.get("width", WIDTH_LANES * UNIT)) / UNIT,
+            height=float(payload.get("height", HEIGHT_LANES * UNIT)) / UNIT,
+        )
+
+    def to_payload(self) -> dict[str, int]:
+        return {"width": self.pixels(self.width), "height": self.pixels(self.height)}
+
+    @property
+    def world_extent(self) -> tuple[float, float]:
+        """The editor's world extent this canvas stands for: half its width and half its height."""
+        return self.width / 2, self.height / 2
+
+    @staticmethod
+    def pixels(lanes: float) -> int:
+        return round(lanes * UNIT)
+
+    def extent_across(self, horizontal: bool) -> int:
+        """Canvas size across roads of this orientation, in pixels."""
+        return self.pixels(self.height if horizontal else self.width)
+
+    def extent_along(self, horizontal: bool) -> int:
+        """Canvas size along roads of this orientation, in pixels."""
+        return self.pixels(self.width if horizontal else self.height)
+
+    def along_offset(self, horizontal: bool) -> float:
+        """Editor -> simulator shift along a road of this orientation, in lanes."""
+        return self.width / 2 if horizontal else self.height / 2
+
+    def across_offset(self, horizontal: bool) -> float:
+        """Editor -> simulator shift across a road of this orientation, in lanes."""
+        return self.height / 2 if horizontal else self.width / 2
+
+
+DEFAULT_CANVAS: Final[Canvas] = Canvas()
+"""The canvas of a scenario that states none, and of a snapshot without a world extent."""
 
 Segment = tuple[int, int]
 """A lane segment as its (low, high) interval on the road's axis, in pixels."""
@@ -110,27 +182,7 @@ class SimRoad:
         }
 
 
-def _extent_across(horizontal: bool) -> int:
-    """Canvas size across roads of this orientation, in pixels."""
-    return (HEIGHT_LANES if horizontal else WIDTH_LANES) * UNIT
-
-
-def _extent_along(horizontal: bool) -> int:
-    """Canvas size along roads of this orientation, in pixels."""
-    return (WIDTH_LANES if horizontal else HEIGHT_LANES) * UNIT
-
-
-def along_offset(horizontal: bool) -> float:
-    """Editor -> simulator shift along a road of this orientation, in lanes."""
-    return WIDTH_LANES / 2 if horizontal else HEIGHT_LANES / 2
-
-
-def across_offset(horizontal: bool) -> float:
-    """Editor -> simulator shift across a road of this orientation, in lanes."""
-    return HEIGHT_LANES / 2 if horizontal else WIDTH_LANES / 2
-
-
-def map_road(road: dict[str, Any]) -> SimRoad:
+def map_road(road: dict[str, Any], canvas: Canvas = DEFAULT_CANVAS) -> SimRoad:
     """An editor road (``to_dict`` form) in simulator terms."""
     horizontal = road.get("orientation") == "HORIZONTAL"
     forward = int(road.get("number_of_forward_lanes", 0))
@@ -139,7 +191,7 @@ def map_road(road: dict[str, Any]) -> SimRoad:
     # "right" lanes. Vertical: forward lanes run +y east of the centre line, the
     # simulator's "left" lanes. Either way "right" lanes sit on the low side.
     right, left = (forward, backward) if horizontal else (backward, forward)
-    low_edge = float(road.get("position", 0.0)) + across_offset(horizontal) - right
+    low_edge = float(road.get("position", 0.0)) + canvas.across_offset(horizontal) - right
     return SimRoad(
         name=str(road.get("name", "")),
         horizontal=horizontal,
@@ -203,7 +255,7 @@ def _unique_name(base: str, taken: set[str]) -> str:
     return name
 
 
-def border_roads(roads: list[SimRoad]) -> list[SimRoad]:
+def border_roads(roads: list[SimRoad], canvas: Canvas = DEFAULT_CANVAS) -> list[SimRoad]:
     """
     One-lane roads for each canvas edge that no road occupies yet.
 
@@ -212,7 +264,7 @@ def border_roads(roads: list[SimRoad]) -> list[SimRoad]:
     orientation touches it, so round trips from the simulator stay stable.
     """
     taken = {r.name for r in roads}
-    width, height = WIDTH_LANES * UNIT, HEIGHT_LANES * UNIT
+    width, height = canvas.pixels(canvas.width), canvas.pixels(canvas.height)
     edges: list[tuple[str, bool, int, int, int, Callable[[SimRoad], bool]]] = [
         ("bottom", True, 0, 1, 0, lambda r: r.horizontal and r.top == 0),
         ("right", False, width - UNIT, 0, 1, lambda r: not r.horizontal and r.bottom == width),
@@ -230,20 +282,20 @@ def _describe(road: SimRoad) -> str:
     return f"the {road.name} border road UMLSL-Sim adds" if road.border else f"road '{road.name}'"
 
 
-def _canvas_hint(horizontal: bool) -> str:
-    half = (HEIGHT_LANES if horizontal else WIDTH_LANES) // 2
+def _canvas_hint(horizontal: bool, canvas: Canvas) -> str:
+    half = canvas.across_offset(horizontal)
     axis = "y" if horizontal else "x"
     kind = "Horizontal" if horizontal else "Vertical"
-    return f"{kind} roads must lie within {axis} = {-half + 1} … {half - 1}."
+    return f"{kind} roads must lie within {axis} = {-half + 1:g} … {half - 1:g}."
 
 
-def _check_roads(user_roads: list[SimRoad], all_roads: list[SimRoad]) -> list[SimulationIssue]:
+def _check_roads(user_roads: list[SimRoad], all_roads: list[SimRoad], canvas: Canvas) -> list[SimulationIssue]:
     issues = []
     for road in user_roads:
-        if road.top < 0 or road.bottom > _extent_across(road.horizontal):
+        if road.top < 0 or road.bottom > canvas.extent_across(road.horizontal):
             issues.append(SimulationIssue(
                 Severity.ERROR,
-                f"Road '{road.name}' lies outside the UMLSL-Sim canvas. {_canvas_hint(road.horizontal)}",
+                f"Road '{road.name}' lies outside the UMLSL-Sim canvas. {_canvas_hint(road.horizontal, canvas)}",
             ))
     for horizontal in (True, False):
         parallel = sorted((r for r in all_roads if r.horizontal == horizontal), key=lambda r: r.top)
@@ -252,9 +304,9 @@ def _check_roads(user_roads: list[SimRoad], all_roads: list[SimRoad]) -> list[Si
                 continue
             if low.border or high.border:
                 border, road = (low, high) if low.border else (high, low)
-                if road.top < 0 or road.bottom > _extent_across(horizontal):
+                if road.top < 0 or road.bottom > canvas.extent_across(horizontal):
                     continue  # already reported as outside the canvas
-                message = f"Road '{road.name}' overlaps {_describe(border)}. {_canvas_hint(horizontal)}"
+                message = f"Road '{road.name}' overlaps {_describe(border)}. {_canvas_hint(horizontal, canvas)}"
             else:
                 message = (f"Roads '{low.name}' and '{high.name}' overlap. "
                            f"UMLSL-Sim cannot simulate overlapping parallel roads.")
@@ -338,10 +390,11 @@ def build_simulator_scenario(
         issues.append(SimulationIssue(
             Severity.ERROR, "The scenario has no cars. Add at least one car to simulate."))
 
-    road_by_uid = {r.get("uid"): map_road(r) for r in editor_roads}
+    canvas = Canvas.of_snapshot(snapshot_data)
+    road_by_uid = {r.get("uid"): map_road(r, canvas) for r in editor_roads}
     user_roads = list(road_by_uid.values())
-    network = _Network(user_roads + border_roads(user_roads))
-    issues += _check_roads(user_roads, network.roads)
+    network = _Network(user_roads + border_roads(user_roads, canvas))
+    issues += _check_roads(user_roads, network.roads, canvas)
 
     placed: list[_PlacedCar] = []
     external_cars = []
@@ -355,17 +408,17 @@ def build_simulator_scenario(
         lane_index = int(car.get("lane_index", 0))
         direction, lane = map_lane(road, lane_index)
         positive = lane_index >= 0
-        rear = round((float(car.get("position_on_lane", 0.0)) + along_offset(road.horizontal)) * UNIT)
+        rear = round((float(car.get("position_on_lane", 0.0)) + canvas.along_offset(road.horizontal)) * UNIT)
         size = round(float(car.get("length", 1.0)) * UNIT)
         speed = float(car.get("speed", 0.0))
         segments = network.segments_along(road)
         segment = _segment_index(segments, rear)
 
-        if not 0 <= rear <= _extent_along(road.horizontal):
-            axis, half = ("x", WIDTH_LANES // 2) if road.horizontal else ("y", HEIGHT_LANES // 2)
+        if not 0 <= rear <= canvas.extent_along(road.horizontal):
+            axis, half = ("x" if road.horizontal else "y"), canvas.along_offset(road.horizontal)
             issues.append(SimulationIssue(
                 Severity.ERROR,
-                f"Car '{name}' is outside the UMLSL-Sim canvas. Place it within {axis} = {-half} … {half}.",
+                f"Car '{name}' is outside the UMLSL-Sim canvas. Place it within {axis} = {-half:g} … {half:g}.",
             ))
             segment = None
         elif segment is None:
@@ -424,6 +477,7 @@ def build_simulator_scenario(
         "name": scenario_key.upper(),
         "scenario_name": scenario_key.lower(),
         "players": len(external_cars),
+        **canvas.to_payload(),
         "roads": [r.to_payload() for r in network.roads],
         "cars": external_cars,
     }
@@ -509,7 +563,7 @@ def sim_road(payload: dict[str, Any]) -> SimRoad:
     )
 
 
-def unmap_road(road: SimRoad) -> dict[str, Any]:
+def unmap_road(road: SimRoad, canvas: Canvas = DEFAULT_CANVAS) -> dict[str, Any]:
     """
     The editor fields of a simulator road. Inverse of ``map_road``.
 
@@ -520,15 +574,15 @@ def unmap_road(road: SimRoad) -> dict[str, Any]:
     forward, backward = (road.right, road.left) if road.horizontal else (road.left, road.right)
     return {
         "orientation": "HORIZONTAL" if road.horizontal else "VERTICAL",
-        "position": road.top / UNIT - across_offset(road.horizontal) + road.right,
+        "position": road.top / UNIT - canvas.across_offset(road.horizontal) + road.right,
         "number_of_forward_lanes": forward,
         "number_of_backward_lanes": backward,
     }
 
 
-def unmap_position(horizontal: bool, position: float) -> float:
+def unmap_position(horizontal: bool, position: float, canvas: Canvas = DEFAULT_CANVAS) -> float:
     """Simulator axis coordinate on a road -> editor ``position_on_lane``."""
-    return position / UNIT - along_offset(horizontal)
+    return position / UNIT - canvas.along_offset(horizontal)
 
 
 def _drives_positive(road: SimRoad, direction: str) -> bool:
@@ -620,7 +674,7 @@ def _road_key(road: SimRoad) -> tuple[str, bool, int, int, int]:
     return road.name, road.horizontal, road.top, road.right, road.left
 
 
-def removable_border_roads(roads: list[SimRoad], used: set[str]) -> set[str]:
+def removable_border_roads(roads: list[SimRoad], used: set[str], canvas: Canvas = DEFAULT_CANVAS) -> set[str]:
     """
     Names of the roads the editor can leave out, because exporting adds them again.
 
@@ -632,11 +686,12 @@ def removable_border_roads(roads: list[SimRoad], used: set[str]) -> set[str]:
     Args:
         roads: All roads of the payload.
         used: Names of the roads a car starts on or turns into.
+        canvas: The payload's canvas, whose edges the border roads run along.
     """
     removable = {r.name for r in roads if r.name not in used}
     while True:
         kept = [r for r in roads if r.name not in removable]
-        added = {_road_key(r) for r in border_roads(kept)}
+        added = {_road_key(r) for r in border_roads(kept, canvas)}
         still = {r.name for r in roads if r.name in removable and _road_key(r) in added}
         if still == removable:
             return removable
