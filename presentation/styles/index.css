@@ -1,0 +1,183 @@
+/*
+ * KIT 2025 theme for Slidev, derived from KIT_Presentation_Template/sdqbeamer.cls.
+ * Canvas is 960 x 540 px, i.e. 1 px = 1 pt of the 33.867 cm x 19.05 cm beamer page.
+ */
+@import '@fontsource/libre-franklin/400.css';
+@import '@fontsource/libre-franklin/600.css';
+
+:root {
+  /* sdqbeamer.cls colours */
+  --kit-green: #009682;            /* kit-green100, brand + "safe" */
+  --kit-green-20: #ccebe6;         /* title on green */
+  --kit-green-15: #d9efec;         /* block body */
+  --kit-red: #a22223;              /* kit-red100, "unsafe / collision" */
+  --kit-red-15: #f1dede;
+  --kit-royalblue: #002d4c;        /* normal text, structure */
+  --kit-iceblue-70: #445e6f;       /* grey: strong */
+  --kit-iceblue-50: #a8b9c4;       /* grey: framesubtitle, gray block */
+  --kit-iceblue-30: #dae1e6;       /* grey: light */
+  --kit-iceblue-15: #edf1f3;
+  --kit-footer: #8096a6;           /* kit-royalblue100!50!white */
+
+  /* geometry (pt == px) */
+  --kit-margin: 29.2px;            /* 1.03 cm */
+  --kit-bottom: 45.9px;            /* 1.62 cm footer */
+  --kit-content-top: 104.9px;      /* 37 mm */
+  --kit-nav-h: 22px;
+
+  --kit-font-title: 'Libre Franklin', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --kit-font-body: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --kit-font-mono: 'Menlo', 'DejaVu Sans Mono', monospace;
+
+  --slidev-theme-primary: var(--kit-green);
+  --slidev-code-font-family: var(--kit-font-mono);
+}
+
+.slidev-layout {
+  font-family: var(--kit-font-body);
+  color: var(--kit-royalblue);
+  font-size: 17px;                 /* \normalsize at 17 pt */
+  line-height: 1.35;
+  background: #fff;
+}
+
+.slidev-layout h1,
+.slidev-layout h2,
+.slidev-layout h3 {
+  font-family: var(--kit-font-title);
+  font-weight: 600;
+  color: var(--kit-royalblue);
+  margin: 0;
+  letter-spacing: 0;
+}
+
+/* itemize: square bullets in KIT green */
+.slidev-layout ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+.slidev-layout ul > li {
+  position: relative;
+  padding-left: 1.05em;
+  margin: 0.28em 0;
+}
+.slidev-layout ul > li::before {
+  content: '';
+  position: absolute;
+  left: 0.1em;
+  top: 0.5em;
+  width: 0.38em;
+  height: 0.38em;
+  background: var(--kit-green);
+}
+.slidev-layout ol { padding-left: 1.2em; margin: 0; }
+.slidev-layout ol > li { margin: 0.28em 0; }
+.slidev-layout ol > li::marker { color: var(--kit-iceblue-70); font-weight: 700; }
+
+.slidev-layout p { margin: 0.3em 0; }
+.slidev-layout strong { font-weight: 700; }
+.slidev-layout code {
+  font-family: var(--kit-font-mono);
+  font-size: 0.86em;
+  background: var(--kit-iceblue-15);
+  color: var(--kit-royalblue);
+  padding: 0.05em 0.25em;
+  border-radius: 2px;
+}
+
+/* KaTeX inherits text colour */
+.slidev-layout .katex { font-size: 1.05em; color: inherit; }
+
+/* --- colour semantics: green = brand / safe, red = unsafe / collision, grey = rest --- */
+.safe { color: var(--kit-green); }
+.unsafe { color: var(--kit-red); }
+.muted { color: var(--kit-iceblue-70); }
+.small { font-size: 14px; }
+.tiny { font-size: 12px; }
+
+/* boxes from sdqbeamer.cls (standardbox, gray/lightgray highlight box, blocks) */
+.box {
+  padding: 8px 12px;
+  border-radius: 0;
+}
+.box-safe { background: var(--kit-green-15); border-left: 4px solid var(--kit-green); }
+.box-unsafe { background: var(--kit-red-15); border-left: 4px solid var(--kit-red); }
+.box-grey { background: var(--kit-iceblue-15); border-left: 4px solid var(--kit-iceblue-50); }
+.box-title {
+  font-family: var(--kit-font-title);
+  font-weight: 600;
+  font-size: 17px;
+  margin-bottom: 4px;
+}
+
+/* screenshot frames */
+.shot {
+  display: block;
+  border: 1px solid var(--kit-iceblue-50);
+  max-width: 100%;
+  max-height: 100%;
+}
+.shot-cap {
+  font-size: 12px;
+  color: var(--kit-iceblue-70);
+  margin-top: 3px;
+}
+
+/* placeholder for screenshots that could not be captured */
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 2px dashed var(--kit-red);
+  color: var(--kit-red);
+  font-weight: 700;
+  background: repeating-linear-gradient(45deg, #fff, #fff 8px, var(--kit-red-15) 8px, var(--kit-red-15) 16px);
+}
+
+/* plain table in template style */
+.kit-table {
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.kit-table th {
+  font-family: var(--kit-font-title);
+  font-weight: 600;
+  text-align: right;
+  padding: 4px 10px;
+  border-bottom: 2px solid var(--kit-royalblue);
+}
+.kit-table th:first-child,
+.kit-table td:first-child { text-align: left; }
+.kit-table td {
+  text-align: right;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--kit-iceblue-30);
+  font-variant-numeric: tabular-nums;
+}
+
+/* step labels for click-revealed demo steps */
+.step-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--kit-royalblue);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  margin-right: 6px;
+  flex: none;
+}
+
+/* no slide transitions, no fade on v-click: elements just appear */
+.slidev-vclick-target { transition: none !important; }
+.slidev-vclick-hidden { opacity: 0 !important; pointer-events: none; }
+
+/* neutralise theme-default rules that clash with the KIT layout */
+.slidev-layout h1 + p { opacity: 1 !important; }
+.slidev-layout h1 { margin-bottom: 0 !important; }
+.slidev-page { background: #fff; }
